@@ -1,0 +1,28 @@
+names: Ninth House Daily Cycle
+on:
+  schedule:
+    - cron: '30 5 * * *'   # 05:30 UTC daily (06:30 UK summer) — work ready before you wake
+  workflow_dispatch: {}     # manual "Run workflow" button for testing
+
+permissions:
+  contents: write
+
+jobs:
+  run-the-firm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Run daily cycle
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: node scripts/daily.mjs
+      - name: Commit overnight work
+        run: |
+          git config user.name "Ninth House Autopilot"
+          git config user.email "autopilot@users.noreply.github.com"
+          git add autopilot.json sitemap.xml press/ || git add autopilot.json sitemap.xml
+          git diff --cached --quiet || git commit -m "Overnight cycle $(date -u +%F)"
+          git push
