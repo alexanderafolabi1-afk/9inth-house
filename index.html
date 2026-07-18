@@ -154,6 +154,11 @@ footer .fine{text-align:center}
 .tw-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:12px}
 .tw-btn{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:11px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer;font-family:'Albert Sans',sans-serif}
 .tw-btn.gold{background:var(--gold);border-color:var(--gold);color:#FFFDF8}
+#tw3d{position:relative;height:min(62dvh,540px);cursor:grab;touch-action:pan-y}
+#tw3d:active{cursor:grabbing}
+#tw3d canvas{display:block;width:100%;height:100%}
+.tw-artwrap{position:relative}
+.tw-art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:0}
 /* Corridor & doors */
 .tw-corridor{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;padding:6px 18px 18px}
 .tw-door{position:relative;background:linear-gradient(#2A2320,#1C1712);border:2px solid #3E2E1E;border-bottom-width:8px;border-radius:8px 8px 2px 2px;aspect-ratio:3/4.6;cursor:pointer;overflow:hidden;transition:transform .15s;box-shadow:0 4px 12px rgba(28,33,40,.18)}
@@ -197,6 +202,7 @@ footer .fine{text-align:center}
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"Organization","name":"Ninth House Growth Partners","alternateName":"Ninth House","url":"https://YOUR-USERNAME.github.io/ninth-house/","logo":"https://YOUR-USERNAME.github.io/ninth-house/avatars/ceo.jpg","founder":{"@type":"Person","name":"Alexander Afolabi"},"parentOrganization":{"@type":"Organization","name":"Lyrion Ltd"},"email":"hello@lyrion.co.uk","description":"The world's first openly AI-operated growth studio: nineteen partners, six departments, one human Chief Executive."}
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 <nav>
@@ -548,7 +554,8 @@ function officeProps(kind){
 }
 
 function officeScene(p, grand){
-  return '<svg class="tw-scene" viewBox="0 0 400 250" xmlns="http://www.w3.org/2000/svg">'
+  return '<div class="tw-artwrap">'
+   + '<svg class="tw-scene" viewBox="0 0 400 250" xmlns="http://www.w3.org/2000/svg">'
    +'<rect width="400" height="250" fill="#F4EDDC"/>'
    +'<rect x="0" y="196" width="400" height="54" fill="#EAD6AE"/>'
    +'<rect x="0" y="192" width="400" height="5" fill="#C9A557" opacity=".5"/>'
@@ -559,27 +566,101 @@ function officeScene(p, grand){
    +'<rect x="120" y="142" width="52" height="6" rx="2" fill="#C9A557"/>'
    +'<g transform="translate(132,86)"><rect x="8" y="30" width="36" height="44" rx="8" fill="#2A2320"/><foreignObject x="0" y="-14" width="52" height="52"><div xmlns="http://www.w3.org/1999/xhtml" style="position:relative;width:52px;height:52px;border-radius:50%;overflow:hidden;border:2px solid #C9A557">'+(FACES[p.id]||'')+'</div></foreignObject></g>'
    +'<rect x="30" y="120" width="16" height="40" rx="8" fill="#5FA98B"/><path d="M38 120 q-8 -14 -2 -22 q8 8 10 20" fill="#5FA98B"/><rect x="32" y="160" width="12" height="14" fill="#8F7434"/>'
-   +'</svg>';
+   +'</svg>'
+   + '<img class="tw-art" src="art/'+(grand?'ceo-office':'office')+'.jpg" alt="" onerror="this.parentElement.replaceWith(...this.parentElement.childNodes); this.remove()">'
+   + '</div>';
 }
 
+function svgExterior(){
+  return `<svg class="tw-scene" viewBox="0 0 400 520" xmlns="http://www.w3.org/2000/svg">
+     <defs>
+       <linearGradient id="twsky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${NIGHT?'#1B2432':'#F9EFD8'}"/><stop offset="1" stop-color="${NIGHT?'#0F141C':'#EAD6AE'}"/></linearGradient>
+       <linearGradient id="twglass" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${NIGHT?'#232E3C':'#3A4A5C'}"/><stop offset=".55" stop-color="${NIGHT?'#151C26':'#26313E'}"/><stop offset="1" stop-color="${NIGHT?'#10151D':'#1C2430'}"/></linearGradient>
+       <linearGradient id="twsheen" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFFDF8" stop-opacity="${NIGHT?'.05':'.22'}"/><stop offset=".5" stop-color="#FFFDF8" stop-opacity="0"/></linearGradient>
+       <linearGradient id="twside" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${NIGHT?'#0C1118':'#141A22'}"/><stop offset="1" stop-color="${NIGHT?'#151C26':'#232C38'}"/></linearGradient>
+     </defs>
+     <rect width="400" height="520" fill="url(#twsky)"/>
+     ${NIGHT?Array.from({length:30},()=>'<circle cx="'+(Math.random()*400).toFixed(0)+'" cy="'+(Math.random()*200).toFixed(0)+'" r="'+(Math.random()>.8?1.4:0.9)+'" fill="#E9E2D0" opacity="'+(0.25+Math.random()*0.6).toFixed(2)+'"/>').join(''):''}
+     ${NIGHT?'<circle cx="322" cy="66" r="20" fill="#E9E2D0" opacity=".92"/><circle cx="330" cy="60" r="17" fill="#1B2432"/>':'<circle cx="322" cy="66" r="24" fill="#C9A557" opacity=".85"/><circle cx="322" cy="66" r="34" fill="#C9A557" opacity=".14"/>'}
+     <g opacity="${NIGHT?0:.45}"><ellipse cx="80" cy="82" rx="36" ry="9" fill="#FFFDF8"><animateTransform attributeName="transform" type="translate" values="0 0; 26 0; 0 0" dur="30s" repeatCount="indefinite"/></ellipse><ellipse cx="270" cy="46" rx="30" ry="8" fill="#FFFDF8"><animateTransform attributeName="transform" type="translate" values="0 0; -22 0; 0 0" dur="36s" repeatCount="indefinite"/></ellipse></g>
+
+     <!-- distant skyline -->
+     <g opacity="${NIGHT?'.5':'.30'}" fill="${NIGHT?'#131A24':'#8F7434'}">
+       <rect x="0" y="330" width="34" height="160"/><rect x="36" y="300" width="26" height="190"/><rect x="316" y="312" width="30" height="178"/><rect x="352" y="286" width="48" height="204"/>
+     </g>
+     <!-- flanking towers -->
+     <g>
+       <rect x="52" y="238" width="58" height="252" fill="url(#twside)"/>
+       ${(function(){let w='';for(let r=0;r<14;r++)for(let cc=0;cc<3;cc++){if(Math.random()>(NIGHT?.55:.8))w+='<rect x="'+(59+cc*17)+'" y="'+(246+r*17)+'" width="10" height="9" fill="#C9A557" opacity=".55"/>';}return w;})()}
+       <rect x="292" y="210" width="62" height="280" fill="url(#twside)"/>
+       ${(function(){let w='';for(let r=0;r<16;r++)for(let cc=0;cc<3;cc++){if(Math.random()>(NIGHT?.55:.8))w+='<rect x="'+(300+cc*18)+'" y="'+(218+r*17)+'" width="11" height="9" fill="#C9A557" opacity=".55"/>';}return w;})()}
+     </g>
+
+     <!-- NINTH HOUSE TOWER: three setback tiers -->
+     <g>
+       <rect x="122" y="286" width="156" height="204" fill="url(#twglass)"/>
+       <rect x="134" y="164" width="132" height="126" fill="url(#twglass)"/>
+       <rect x="148" y="84" width="104" height="84" fill="url(#twglass)"/>
+       <!-- mullions -->
+       ${(function(){let w='';
+         for(let x=132;x<=268;x+=13.6)w+='<line x1="'+x+'" y1="288" x2="'+x+'" y2="488" stroke="#0D131B" stroke-width="1" opacity=".6"/>';
+         for(let y=298;y<488;y+=17)w+='<line x1="123" y1="'+y+'" x2="277" y2="'+y+'" stroke="#0D131B" stroke-width="1" opacity=".5"/>';
+         for(let x=144;x<=258;x+=12.4)w+='<line x1="'+x+'" y1="166" x2="'+x+'" y2="288" stroke="#0D131B" stroke-width="1" opacity=".6"/>';
+         for(let y=176;y<288;y+=16)w+='<line x1="135" y1="'+y+'" x2="265" y2="'+y+'" stroke="#0D131B" stroke-width="1" opacity=".5"/>';
+         for(let x=158;x<=244;x+=11.5)w+='<line x1="'+x+'" y1="86" x2="'+x+'" y2="166" stroke="#0D131B" stroke-width="1" opacity=".6"/>';
+         for(let y=96;y<166;y+=15)w+='<line x1="149" y1="'+y+'" x2="251" y2="'+y+'" stroke="#0D131B" stroke-width="1" opacity=".5"/>';
+         return w;})()}
+       <!-- lit offices -->
+       ${(function(){let w='';
+         const grids=[[132,298,10,17,10.5,13,10.6,11],[144,176,9,16,9.5,9,9.4,6],[158,96,8,15,8.6,7,8.5,4]];
+         for(const [x0,y0,wd,ht,sx,nx,sy,ny] of [[132,298,10,13,13.6,10,17,11],[144,176,9,12,12.4,9,16,7],[158,96,8,11,11.5,7,15,4]]){
+           for(let r=0;r<ny;r++)for(let cc=0;cc<nx;cc++){
+             const lit=Math.random()>(NIGHT?.35:.68);
+             if(lit)w+='<rect x="'+(x0+cc*sx).toFixed(1)+'" y="'+(y0+r*sy).toFixed(1)+'" width="'+wd+'" height="'+ht+'" fill="#C9A557" opacity=".85">'+(Math.random()>.92?'<animate attributeName="opacity" values=".85;.25;.85" dur="'+(3+Math.random()*5).toFixed(1)+'s" repeatCount="indefinite"/>':'')+'</rect>';
+           }
+         }return w;})()}
+       <!-- light sweep -->
+       <polygon points="122,286 200,84 252,84 190,490 122,490" fill="url(#twsheen)"/>
+       <!-- tier trims + crown -->
+       <rect x="122" y="284" width="156" height="4" fill="#C9A557" opacity=".9"/>
+       <rect x="134" y="162" width="132" height="4" fill="#C9A557" opacity=".9"/>
+       <rect x="148" y="70" width="104" height="16" fill="#12161C"/>
+       <text x="200" y="82" text-anchor="middle" font-family="Marcellus, serif" font-size="10.5" fill="#C9A557" letter-spacing="3.2">NINTH HOUSE</text>
+       <line x1="200" y1="34" x2="200" y2="70" stroke="#C9A557" stroke-width="2"/>
+       <circle cx="200" cy="30" r="3" fill="#C9A557">${NIGHT?'<animate attributeName="opacity" values="1;.2;1" dur="2s" repeatCount="indefinite"/>':''}</circle>
+       <text x="200" y="24" text-anchor="middle" font-size="13" fill="#A97F2F" font-family="serif">\u2643</text>
+     </g>
+
+     <!-- entrance: canopy + revolving door -->
+     <g>
+       <rect x="150" y="446" width="100" height="44" fill="#0D131B"/>
+       <rect x="142" y="440" width="116" height="8" rx="2" fill="#C9A557"/>
+       <rect x="146" y="448" width="4" height="42" fill="#8F7434"/><rect x="250" y="448" width="4" height="42" fill="#8F7434"/>
+       <circle cx="200" cy="472" r="19" fill="#1C2430" stroke="#C9A557" stroke-width="1.6"/>
+       <line x1="200" y1="453" x2="200" y2="491" stroke="#C9A557" stroke-width="1.4"/>
+       <line x1="181" y1="472" x2="219" y2="472" stroke="#C9A557" stroke-width="1.4"/>
+       <rect x="158" y="456" width="16" height="34" fill="#26313E" stroke="#8F7434" stroke-width="1"/>
+       <rect x="226" y="456" width="16" height="34" fill="#26313E" stroke="#8F7434" stroke-width="1"/>
+       <text x="200" y="437" text-anchor="middle" font-size="6.5" fill="#8F7434" font-family="Marcellus, serif" letter-spacing="2">GROWTH PARTNERS</text>
+     </g>
+
+     <!-- street -->
+     <rect x="0" y="490" width="400" height="30" fill="${NIGHT?'#10151D':'#D9C79C'}"/>
+     <rect x="0" y="488" width="400" height="3" fill="#8F7434" opacity=".6"/>
+     <g>
+       <rect x="96" y="452" width="3" height="38" fill="#3E2E1E"/><circle cx="97.5" cy="450" r="4" fill="${NIGHT?'#C9A557':'#8F7434'}"/>${NIGHT?'<circle cx="97.5" cy="450" r="10" fill="#C9A557" opacity=".22"/>':''}
+       <rect x="301" y="452" width="3" height="38" fill="#3E2E1E"/><circle cx="302.5" cy="450" r="4" fill="${NIGHT?'#C9A557':'#8F7434'}"/>${NIGHT?'<circle cx="302.5" cy="450" r="10" fill="#C9A557" opacity=".22"/>':''}
+       <rect x="70" y="470" width="4" height="20" fill="#5B4128"/><circle cx="72" cy="462" r="12" fill="#5FA98B" opacity="${NIGHT?'.5':'.85'}"/>
+       <rect x="326" y="470" width="4" height="20" fill="#5B4128"/><circle cx="328" cy="462" r="12" fill="#5FA98B" opacity="${NIGHT?'.5':'.85'}"/>
+       <circle cx="130" cy="492" r="2.6" fill="#8F7434"/><circle cx="270" cy="492" r="2.6" fill="#8F7434"/>
+     </g>
+   </svg>`;
+}
+let tw3dRenderer = null;
 function goExterior(){
   document.getElementById('tw-lift').classList.remove('on');
   twStage.innerHTML = `<div class="tw-screen" style="text-align:center">
-   <svg class="tw-scene" viewBox="0 0 400 480" xmlns="http://www.w3.org/2000/svg">
-     <rect width="400" height="480" fill="url(#twsky)"/>
-     <defs><linearGradient id="twsky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${NIGHT?'#1B2432':'#F9EFD8'}"/><stop offset="1" stop-color="${NIGHT?'#0F141C':'#EAD6AE'}"/></linearGradient></defs>
-     ${NIGHT?'<circle cx="330" cy="70" r="22" fill="#E9E2D0" opacity=".9"/><circle cx="338" cy="64" r="18" fill="#1B2432"/>'+Array.from({length:26},()=>'<circle cx="'+(Math.random()*400).toFixed(0)+'" cy="'+(Math.random()*180).toFixed(0)+'" r="1" fill="#E9E2D0" opacity="'+(0.3+Math.random()*0.6).toFixed(2)+'"/>').join(''):'<circle cx="330" cy="70" r="26" fill="#C9A557" opacity=".85"/>'}
-     <g opacity="${NIGHT?0:.5}"><ellipse cx="90" cy="60" rx="34" ry="10" fill="#FFFDF8"><animateTransform attributeName="transform" type="translate" values="0 0; 30 0; 0 0" dur="26s" repeatCount="indefinite"/></ellipse><ellipse cx="250" cy="110" rx="42" ry="12" fill="#FFFDF8"><animateTransform attributeName="transform" type="translate" values="0 0; -34 0; 0 0" dur="32s" repeatCount="indefinite"/></ellipse></g>
-     <path d="M18 470 L18 300 58 300 58 470 Z M340 470 L340 260 386 260 386 470 Z" fill="#8F7434" opacity=".35"/>
-     <rect x="120" y="64" width="160" height="406" fill="#1C2128"/>
-     <rect x="120" y="64" width="160" height="26" fill="#12161C"/>
-     <text x="200" y="82" text-anchor="middle" font-family="Marcellus, serif" font-size="13" fill="#C9A557" letter-spacing="3">NINTH HOUSE</text>
-     <line x1="200" y1="30" x2="200" y2="64" stroke="#C9A557" stroke-width="2"/><text x="200" y="26" text-anchor="middle" font-size="16" fill="#A97F2F" font-family="serif">\u2643</text>
-     ${(function(){let w='';for(let r=0;r<12;r++){for(let c2=0;c2<5;c2++){const lit=Math.random()>(NIGHT?.2:.45);w+='<rect x="'+(132+c2*28)+'" y="'+(100+r*28)+'" width="18" height="16" rx="1.5" fill="'+(lit?'#C9A557':'#2A333E')+'" opacity="'+(lit?'.9':'.8')+'">'+(Math.random()>.9?'<animate attributeName="opacity" values=".9;.3;.9" dur="'+(3+Math.random()*4)+'s" repeatCount="indefinite"/>':'')+'</rect>';}}return w;})()}
-     <rect x="150" y="436" width="100" height="34" fill="#12161C"/>
-     <rect x="186" y="442" width="28" height="28" rx="2" fill="#C9A557" opacity=".9"/>
-     <rect x="60" y="470" width="280" height="10" fill="#8F7434" opacity=".5"/>
-   </svg>
+   <div id="tw3d"></div>
    <div class="tw-panel" style="text-align:center">
      <h3>Ninth House Tower</h3>
      <p>${NIGHT?'The city sleeps. The house does not.':'Nineteen partners. Six floors. One human at the top.'} The doors are open.</p>
@@ -588,6 +669,160 @@ function goExterior(){
        <button class="tw-btn" onclick="document.getElementById('brochure').scrollIntoView({behavior:'smooth'})">Prefer the brochure?</button>
      </div>
    </div></div>`;
+  try{ init3D(document.getElementById('tw3d')); }
+  catch(e){ const el = document.getElementById('tw3d'); if(el) el.outerHTML = svgExterior(); }
+}
+
+function windowTexture(cols, rows, litProb, glass){
+  const cv = document.createElement('canvas'); cv.width = 256; cv.height = 256;
+  const g = cv.getContext('2d');
+  g.fillStyle = glass; g.fillRect(0,0,256,256);
+  const cw = 256/cols, ch = 256/rows;
+  for(let r=0;r<rows;r++)for(let cc=0;cc<cols;cc++){
+    const lit = Math.random() < litProb;
+    g.fillStyle = lit ? '#C9A557' : (NIGHT?'#0D131B':'#2A3644');
+    g.fillRect(cc*cw+cw*0.18, r*ch+ch*0.18, cw*0.64, ch*0.55);
+  }
+  const t = new THREE.CanvasTexture(cv); return t;
+}
+function glowTexture(color){
+  const cv = document.createElement('canvas'); cv.width = 128; cv.height = 128;
+  const g = cv.getContext('2d');
+  const gr = g.createRadialGradient(64,64,4,64,64,64);
+  gr.addColorStop(0,color); gr.addColorStop(1,'rgba(0,0,0,0)');
+  g.fillStyle = gr; g.fillRect(0,0,128,128);
+  return new THREE.CanvasTexture(cv);
+}
+
+function init3D(container){
+  if(!window.THREE) throw new Error('no three');
+  const W = container.clientWidth, H = container.clientHeight;
+  const scene = new THREE.Scene();
+  const skyTop = NIGHT ? 0x141B28 : 0xF6E9CB;
+  scene.background = new THREE.Color(skyTop);
+  scene.fog = new THREE.Fog(skyTop, 60, 220);
+  const camera = new THREE.PerspectiveCamera(46, W/H, 0.1, 500);
+  const renderer = new THREE.WebGLRenderer({antialias:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.6));
+  renderer.setSize(W, H);
+  container.appendChild(renderer.domElement);
+  tw3dRenderer = renderer;
+
+  // lights
+  scene.add(new THREE.AmbientLight(NIGHT?0x33405A:0xFFF4DC, NIGHT?0.7:0.9));
+  const sun = new THREE.DirectionalLight(NIGHT?0xAABBDD:0xFFE9BE, NIGHT?0.35:0.9);
+  sun.position.set(40, 60, 30); scene.add(sun);
+  const doorGlow = new THREE.PointLight(0xC9A557, 1.4, 30); doorGlow.position.set(0, 3, 12); scene.add(doorGlow);
+
+  // ground
+  const ground = new THREE.Mesh(new THREE.CircleGeometry(200, 48),
+    new THREE.MeshPhongMaterial({color: NIGHT?0x10151D:0xD9C79C, shininess: 60}));
+  ground.rotation.x = -Math.PI/2; scene.add(ground);
+  const plaza = new THREE.Mesh(new THREE.CircleGeometry(26, 40),
+    new THREE.MeshPhongMaterial({color: NIGHT?0x171E28:0xE6D3A6, shininess: 90}));
+  plaza.rotation.x = -Math.PI/2; plaza.position.y = 0.02; scene.add(plaza);
+
+  // tower tiers: [w, h, d, cols, rows]
+  const litP = NIGHT ? 0.55 : 0.3;
+  const glassC = NIGHT ? '#10161F' : '#26313E';
+  const tiers = [[20, 26, 20, 10, 12],[16, 22, 16, 8, 10],[12, 18, 12, 6, 9]];
+  let y = 0;
+  const tower = new THREE.Group();
+  for(const [w,h,d,cols,rows] of tiers){
+    const tex = windowTexture(cols, rows, litP, glassC);
+    const side = new THREE.MeshBasicMaterial({map: tex});
+    const cap = new THREE.MeshPhongMaterial({color: 0x0D131B});
+    const box = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), [side,side,cap,cap,side,side]);
+    box.position.y = y + h/2; tower.add(box);
+    const trim = new THREE.Mesh(new THREE.BoxGeometry(w+0.5, 0.5, d+0.5),
+      new THREE.MeshBasicMaterial({color: 0xC9A557}));
+    trim.position.y = y + h; tower.add(trim);
+    y += h;
+  }
+  // crown + spire + beacon
+  const crown = new THREE.Mesh(new THREE.BoxGeometry(12.6, 2.6, 12.6), new THREE.MeshPhongMaterial({color:0x0B1017}));
+  crown.position.y = y + 1.3; tower.add(crown);
+  const spire = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.4, 9, 8), new THREE.MeshBasicMaterial({color:0xC9A557}));
+  spire.position.y = y + 2.6 + 4.5; tower.add(spire);
+  const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.7, 12, 12), new THREE.MeshBasicMaterial({color:0xC9A557}));
+  beacon.position.y = y + 2.6 + 9.2; tower.add(beacon);
+  const beaconHalo = new THREE.Sprite(new THREE.SpriteMaterial({map: glowTexture('rgba(201,165,87,0.9)'), transparent:true, depthWrite:false}));
+  beaconHalo.scale.set(6,6,1); beaconHalo.position.y = beacon.position.y; tower.add(beaconHalo);
+  // entrance
+  const canopy = new THREE.Mesh(new THREE.BoxGeometry(10, 0.5, 5), new THREE.MeshBasicMaterial({color:0xC9A557}));
+  canopy.position.set(0, 4.4, 12); tower.add(canopy);
+  const doors = new THREE.Mesh(new THREE.BoxGeometry(9, 4.2, 0.6), new THREE.MeshBasicMaterial({color: NIGHT?0xC9A557:0x8F7434}));
+  doors.position.set(0, 2.1, 10.2); tower.add(doors);
+  scene.add(tower);
+
+  // neighbours
+  for(const [nx, nz, nh, nw] of [[-32, -14, 34, 12],[30, -20, 42, 14],[-46, -34, 52, 16],[48, -40, 46, 14]]){
+    const tex = windowTexture(6, 14, NIGHT?0.4:0.2, NIGHT?'#0B1017':'#1E2833');
+    const m = new THREE.MeshBasicMaterial({map: tex});
+    const b = new THREE.Mesh(new THREE.BoxGeometry(nw, nh, nw), [m,m,new THREE.MeshPhongMaterial({color:0x0B1017}),new THREE.MeshPhongMaterial({color:0x0B1017}),m,m]);
+    b.position.set(nx, nh/2, nz); scene.add(b);
+  }
+  // street lamps
+  for(const lx of [-14, 14]){
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.14,0.14,5,6), new THREE.MeshPhongMaterial({color:0x3E2E1E}));
+    pole.position.set(lx, 2.5, 16); scene.add(pole);
+    const lamp = new THREE.Sprite(new THREE.SpriteMaterial({map: glowTexture('rgba(201,165,87,'+(NIGHT?0.95:0.5)+')'), transparent:true, depthWrite:false}));
+    lamp.scale.set(NIGHT?5:2.4, NIGHT?5:2.4, 1); lamp.position.set(lx, 5.2, 16); scene.add(lamp);
+  }
+  // trees
+  for(const tx of [-20, 20]){
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.4,2.4,6), new THREE.MeshPhongMaterial({color:0x5B4128}));
+    trunk.position.set(tx, 1.2, 14); scene.add(trunk);
+    const crown2 = new THREE.Mesh(new THREE.SphereGeometry(2.2, 10, 10), new THREE.MeshPhongMaterial({color:0x5FA98B}));
+    crown2.position.set(tx, 3.6, 14); scene.add(crown2);
+  }
+  // sky bodies
+  if(NIGHT){
+    const starGeo = new THREE.BufferGeometry();
+    const pos = new Float32Array(360);
+    for(let i=0;i<120;i++){ pos[i*3]= (Math.random()-0.5)*300; pos[i*3+1]= 30+Math.random()*120; pos[i*3+2]= -80-Math.random()*120; }
+    starGeo.setAttribute('position', new THREE.BufferAttribute(pos,3));
+    scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({color:0xE9E2D0, size:0.7, sizeAttenuation:true})));
+    const moon = new THREE.Mesh(new THREE.SphereGeometry(5, 16, 16), new THREE.MeshBasicMaterial({color:0xE9E2D0}));
+    moon.position.set(-50, 70, -120); scene.add(moon);
+  } else {
+    const sunBall = new THREE.Sprite(new THREE.SpriteMaterial({map: glowTexture('rgba(201,165,87,0.95)'), transparent:true, depthWrite:false}));
+    sunBall.scale.set(36,36,1); sunBall.position.set(55, 68, -120); scene.add(sunBall);
+    for(let i=0;i<4;i++){
+      const cl = new THREE.Sprite(new THREE.SpriteMaterial({map: glowTexture('rgba(255,253,248,0.85)'), transparent:true, depthWrite:false}));
+      cl.scale.set(26+Math.random()*14, 8, 1);
+      cl.position.set(-70+Math.random()*140, 45+Math.random()*30, -90-Math.random()*40);
+      cl.userData.v = 0.008+Math.random()*0.012; cl.userData.cloud = true; scene.add(cl);
+    }
+  }
+
+  // camera orbit + drag
+  let az = 0.35, target = 0.35, dragging = false, lastX = 0, idle = 0;
+  const el = renderer.domElement;
+  const down = (x)=>{ dragging = true; lastX = x; idle = 0; };
+  const move = (x)=>{ if(dragging){ target += (x-lastX)*0.006; lastX = x; } };
+  el.addEventListener('mousedown', e=>down(e.clientX));
+  window.addEventListener('mousemove', e=>move(e.clientX));
+  window.addEventListener('mouseup', ()=>dragging=false);
+  el.addEventListener('touchstart', e=>down(e.touches[0].clientX), {passive:true});
+  el.addEventListener('touchmove', e=>move(e.touches[0].clientX), {passive:true});
+  el.addEventListener('touchend', ()=>dragging=false);
+
+  const clockStart = Date.now();
+  (function loop(){
+    if(!el.isConnected){ renderer.dispose(); return; }
+    requestAnimationFrame(loop);
+    idle++;
+    if(!dragging && idle > 90) target += 0.0016;
+    az += (target-az)*0.06;
+    const t = (Date.now()-clockStart)/1000;
+    camera.position.set(Math.sin(az)*66, 30+Math.sin(t*0.3)*1.6, Math.cos(az)*66);
+    camera.lookAt(0, 34, 0);
+    beacon.material.color.setHex(Math.sin(t*3)>0 ? 0xC9A557 : 0x6E5A28);
+    beaconHalo.material.opacity = 0.55+0.45*Math.sin(t*3);
+    scene.traverse(o=>{ if(o.userData && o.userData.cloud){ o.position.x += o.userData.v; if(o.position.x>90) o.position.x=-90; } });
+    renderer.render(scene, camera);
+  })();
 }
 
 function liftPanel(current){
@@ -601,7 +836,7 @@ function goLobby(){
   liftPanel(0);
   twStage.innerHTML = `<div class="tw-screen">
    <div class="tw-top"><b>Ground Floor \u00b7 Lobby</b><button class="tw-back" onclick="goExterior()">Outside</button></div>
-   <svg class="tw-scene" viewBox="0 0 400 220" xmlns="http://www.w3.org/2000/svg">
+   <div class="tw-artwrap"><svg class="tw-scene" viewBox="0 0 400 220" xmlns="http://www.w3.org/2000/svg">
      <rect width="400" height="220" fill="#F4EDDC"/>
      <rect x="0" y="150" width="400" height="70" fill="#EAD6AE"/>
      <path d="M0 150 L400 150 340 220 60 220 Z" fill="#E3D2AC"/>
@@ -614,7 +849,7 @@ function goLobby(){
      <rect x="24" y="96" width="52" height="90" rx="4" fill="#2A2320"/><rect x="49" y="96" width="2" height="90" fill="#C9A557"/><text x="50" y="90" text-anchor="middle" font-size="8" fill="#8F7434" font-family="monospace">LIFT</text>
      <rect x="320" y="100" width="56" height="80" rx="4" fill="#FFFDF8" stroke="#A97F2F"/><text x="348" y="114" text-anchor="middle" font-size="7.5" fill="#A97F2F" font-family="monospace" letter-spacing="1">DIRECTORY</text>
      ${[9,5,4,3,2,1].map((f,i)=>'<text x="326" y="'+(128+i*9)+'" font-size="6.5" fill="#5B4128" font-family="monospace">'+(f===0?'G':f)+' \u00b7 '+TW.floors[f].slice(0,14)+'</text>').join('')}
-   </svg>
+   </svg><img class="tw-art" src="art/lobby.jpg" alt="" onerror="this.parentElement.replaceWith(...this.parentElement.childNodes); this.remove()"></div>
    <div class="tw-panel">
      <h3>Reception</h3>
      <p id="tw-ticker" style="font-family:'Spline Sans Mono',monospace;font-size:11px;color:var(--gold);min-height:16px;margin-bottom:6px"></p>
@@ -694,14 +929,14 @@ function goOffice(pid){
 function goBoardroom(){
   twStage.innerHTML = `<div class="tw-screen">
    <div class="tw-top"><b>Floor 9 \u00b7 The Boardroom</b><button class="tw-back" onclick="goFloor(9)">Corridor</button></div>
-   <svg class="tw-scene" viewBox="0 0 400 230" xmlns="http://www.w3.org/2000/svg">
+   <div class="tw-artwrap"><svg class="tw-scene" viewBox="0 0 400 230" xmlns="http://www.w3.org/2000/svg">
      <rect width="400" height="230" fill="#F4EDDC"/><rect y="176" width="400" height="54" fill="#EAD6AE"/>
      <rect x="24" y="30" width="150" height="76" rx="4" fill="#FFFDF8" stroke="#A97F2F" stroke-width="3"/><g transform="translate(27,33) scale(0.9,1.16)">${skyline('london')}</g>
      <rect x="230" y="34" width="140" height="80" rx="4" fill="#12161C"/><text x="300" y="66" text-anchor="middle" font-size="10" fill="#C9A557" font-family="monospace">GROWTH, QUARTER</text><text x="300" y="80" text-anchor="middle" font-size="10" fill="#C9A557" font-family="monospace">BY QUARTER</text><path d="M244 104 l22 -12 22 6 24 -18 26 4" stroke="#5FA98B" stroke-width="2.5" fill="none"/>
      <ellipse cx="200" cy="160" rx="150" ry="34" fill="#5B4128"/><ellipse cx="200" cy="154" rx="150" ry="34" fill="#8F7434"/>
      ${[60,110,160,240,290,340].map(x=>'<rect x="'+(x-10)+'" y="186" width="20" height="26" rx="6" fill="#2A2320"/>').join('')}
      <circle cx="200" cy="150" r="10" fill="#B5563F"/><text x="200" y="155" font-size="10" text-anchor="middle" fill="#E9E2D0" font-family="serif">\u2643</text>
-   </svg>
+   </svg><img class="tw-art" src="art/boardroom.jpg" alt="" onerror="this.parentElement.replaceWith(...this.parentElement.childNodes); this.remove()"></div>
    <div class="tw-panel"><h3>Where the minutes are made.</h3><p>Nineteen chairs, one seal, and a screen that has never once shown a boring slide. The boardroom convenes for clients too: strategy sessions chaired by Maren, minutes delivered same day.</p>
    <p style="margin-top:8px"><span style="font-family:'Spline Sans Mono',monospace;color:var(--gold)">The Boardroom Session · £149</span> · sixty minutes, chaired by Maren, minutes delivered same day, signed by the human.</p>
    <div class="tw-actions"><button class="tw-btn gold" onclick="payOr(PAY.boardroom, 'Hello Ninth House, I would like to book The Boardroom Session (£149).')">Book the Boardroom Session</button><button class="tw-btn" onclick="payOr('', 'Hello Ninth House, I have a question before booking the boardroom.')">Ask first</button></div>
@@ -711,14 +946,14 @@ function goBoardroom(){
 function goSuite(){
   twStage.innerHTML = `<div class="tw-screen">
    <div class="tw-top"><b>Floor 9 \u00b7 Executive Waiting Room</b><button class="tw-back" onclick="goFloor(9)">Corridor</button></div>
-   <svg class="tw-scene" viewBox="0 0 400 210" xmlns="http://www.w3.org/2000/svg">
+   <div class="tw-artwrap"><svg class="tw-scene" viewBox="0 0 400 210" xmlns="http://www.w3.org/2000/svg">
      <rect width="400" height="210" fill="#F4EDDC"/><rect y="160" width="400" height="50" fill="#EAD6AE"/>
      <rect x="30" y="112" width="120" height="34" rx="10" fill="#5B4128"/><rect x="36" y="96" width="108" height="22" rx="8" fill="#8F7434"/>
      <rect x="250" y="112" width="120" height="34" rx="10" fill="#5B4128"/><rect x="256" y="96" width="108" height="22" rx="8" fill="#8F7434"/>
      <rect x="172" y="130" width="56" height="18" rx="4" fill="#A97F2F"/><rect x="182" y="122" width="36" height="8" rx="1" fill="#FFFDF8"/><text x="200" y="128" text-anchor="middle" font-size="4.5" fill="#5B4128" font-family="serif">THE NINTH TIMES</text>
      <circle cx="200" cy="46" r="17" fill="#FFFDF8" stroke="#A97F2F" stroke-width="2"/><line x1="200" y1="46" x2="200" y2="34" stroke="#5B4128" stroke-width="2"/><line x1="200" y1="46" x2="208" y2="50" stroke="#5B4128" stroke-width="2"/>
      <rect x="308" y="26" width="70" height="120" rx="4" fill="#2A2320"/><rect x="316" y="70" width="54" height="10" rx="2" fill="#C9A557"/><text x="343" y="78" text-anchor="middle" font-size="5.5" fill="#241B07" font-family="serif" letter-spacing="1">CHIEF EXECUTIVE</text>
-   </svg>
+   </svg><img class="tw-art" src="art/waiting.jpg" alt="" onerror="this.parentElement.replaceWith(...this.parentElement.childNodes); this.remove()"></div>
    <div class="tw-panel"><h3 id="suite-msg">Please take a seat.</h3><p>The assistant will call you through. The magazines are current, the clock is honest, and the door at the end opens for very few.</p>
    <div class="tw-actions"><button class="tw-btn" onclick="goTimes()">Read The Ninth Times</button></div></div></div>`;
   setTimeout(()=>{ const m = document.getElementById('suite-msg'); if(m){ m.textContent = 'The Chief Executive will see you now.'; setTimeout(goCEO, 1400); } }, 2400);
