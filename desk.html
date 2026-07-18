@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ninth House. Growth Partners</title>
+<meta name="theme-color" content="#12161C">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ninth House">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2312161C'/%3E%3Ctext x='32' y='44' font-size='36' text-anchor='middle' fill='%23C9A557' font-family='serif'%3E%E2%99%83%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Albert+Sans:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#12161C; --panel:#1B222B; --panel2:#161C23; --line:#2A333E;
+  --paper:#E9E2D0; --dim:#9C948074; --muted:#A79F8C; --faint:#6E7683;
+  --gold:#C9A557; --gold-deep:#8F7434; --jade:#5FA98B; --rust:#B5563F;
+  --r:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{background:var(--ink)}
+body{
+  font-family:'Albert Sans',system-ui,sans-serif; background:var(--ink); color:var(--paper);
+  min-height:100dvh; padding-bottom:calc(84px + env(safe-area-inset-bottom));
+  font-size:15px; line-height:1.55;
+}
+.serif{font-family:'Marcellus',serif}
+.mono{font-family:'Spline Sans Mono',monospace}
+
+/* Header */
+header{
+  position:sticky; top:0; z-index:40; background:linear-gradient(to bottom, var(--ink) 82%, transparent);
+  padding:calc(14px + env(safe-area-inset-top)) 18px 12px; display:flex; align-items:center; gap:12px;
+}
+.glyph{
+  width:40px;height:40px;border:1px solid var(--gold-deep);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;color:var(--gold);
+  font-size:22px;flex-shrink:0;font-family:'Marcellus',serif;
+}
+.brand h1{font-family:'Marcellus',serif;font-size:17px;font-weight:400;letter-spacing:.12em;text-transform:uppercase}
+.brand small{display:block;color:var(--muted);font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;margin-top:1px}
+.hspace{flex:1}
+.daychip{
+  font-family:'Spline Sans Mono',monospace;font-size:11px;color:var(--gold);
+  border:1px solid var(--line);border-radius:20px;padding:5px 11px;background:var(--panel2);white-space:nowrap;
+}
+.gear{background:none;border:none;color:var(--muted);font-size:19px;cursor:pointer;padding:6px}
+
+main{padding:4px 18px 24px;max-width:680px;margin:0 auto}
+
+/* Section furniture */
+.eyebrow{
+  font-size:10.5px;letter-spacing:.26em;text-transform:uppercase;color:var(--gold);
+  margin:26px 0 10px;display:flex;align-items:center;gap:10px;
+}
+.eyebrow::after{content:"";flex:1;height:1px;background:var(--line)}
+.card{
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);
+  padding:16px;margin-bottom:12px;
+}
+.card h3{font-family:'Marcellus',serif;font-weight:400;font-size:16px;margin-bottom:4px}
+.sub{color:var(--muted);font-size:13px}
+.tiny{color:var(--faint);font-size:11.5px}
+
+/* Buttons */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  border-radius:11px;border:1px solid var(--line);background:var(--panel2);color:var(--paper);
+  font-family:'Albert Sans',sans-serif;font-size:13.5px;font-weight:600;padding:11px 16px;cursor:pointer;
+  transition:transform .08s ease, border-color .15s;
+}
+.btn:active{transform:scale(.97)}
+.btn.gold{background:var(--gold);border-color:var(--gold);color:#171309}
+.btn.ghost{background:transparent}
+.btn.wide{width:100%}
+.btn.sm{padding:8px 12px;font-size:12.5px;border-radius:9px}
+.btn:disabled{opacity:.45;pointer-events:none}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+
+/* Wax seal. signature element */
+.seal{
+  width:58px;height:58px;border-radius:50%;flex-shrink:0;cursor:pointer;border:none;
+  background:radial-gradient(circle at 35% 30%, #E3C176, var(--gold) 55%, var(--gold-deep));
+  color:#241B07;font-family:'Marcellus',serif;font-size:9px;letter-spacing:.08em;text-transform:uppercase;
+  box-shadow:0 3px 10px rgba(201,165,87,.35), inset 0 0 0 3px rgba(36,27,7,.25), inset 0 0 0 5px rgba(233,226,208,.25);
+  display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.15;
+  transition:transform .12s ease;
+}
+.seal:active{transform:scale(.85) rotate(-8deg)}
+.seal.stamped{background:radial-gradient(circle at 35% 30%, #7FC4A6, var(--jade) 55%, #3D7560);color:#0C1D16;pointer-events:none}
+@media (prefers-reduced-motion: reduce){.seal,.btn{transition:none}}
+
+/* Stat grid */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px 12px 10px}
+.stat b{font-family:'Spline Sans Mono',monospace;font-size:21px;font-weight:500;display:block;color:var(--paper)}
+.stat span{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+
+/* Characters */
+.char{display:flex;gap:13px;align-items:flex-start}
+.avatar{
+  width:46px;height:46px;border-radius:50%;flex-shrink:0;border:1px solid var(--gold-deep);
+  display:flex;align-items:center;justify-content:center;font-family:'Marcellus',serif;
+  font-size:15px;color:var(--gold);background:var(--panel2);
+  position:relative;overflow:hidden;
+}
+.avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%}
+.char h3{font-size:15.5px}
+.role{color:var(--gold);font-size:11px;letter-spacing:.14em;text-transform:uppercase;margin:1px 0 4px}
+.region{font-family:'Spline Sans Mono',monospace;font-size:10.5px;color:var(--faint);border:1px solid var(--line);border-radius:5px;padding:1px 6px;margin-left:6px}
+
+/* Docket */
+.docket-item{border-left:3px solid var(--gold-deep)}
+.docket-item.approved{border-left-color:var(--jade)}
+.docket-item.rejected{border-left-color:var(--rust);opacity:.65}
+.status{font-family:'Spline Sans Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding:2px 7px;border-radius:5px;border:1px solid var(--line);color:var(--muted)}
+.status.approved{color:var(--jade);border-color:var(--jade)}
+.status.rejected{color:var(--rust);border-color:var(--rust)}
+.output{
+  background:var(--panel2);border:1px solid var(--line);border-radius:10px;
+  padding:13px 14px;margin-top:10px;font-size:13.5px;color:#D8D2C2;max-height:340px;overflow-y:auto;
+}
+.output h4{font-family:'Marcellus',serif;font-weight:400;color:var(--gold);margin:12px 0 5px;font-size:14px}
+.output h4:first-child{margin-top:0}
+.output ul{margin:5px 0 8px 17px}
+.output li{margin-bottom:4px}
+.output p{margin-bottom:8px}
+.output strong{color:var(--paper)}
+
+/* Forms */
+textarea,input[type=text],input[type=password],input[type=number],select{
+  width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:10px;
+  color:var(--paper);font-family:'Albert Sans',sans-serif;font-size:14px;padding:11px 12px;outline:none;
+}
+textarea{min-height:88px;resize:vertical}
+textarea:focus,input:focus,select:focus{border-color:var(--gold-deep)}
+label{display:block;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:12px 0 6px}
+select{appearance:none;-webkit-appearance:none}
+
+/* Bottom nav */
+nav{
+  position:fixed;bottom:0;left:0;right:0;z-index:50;background:rgba(18,22,28,.92);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);
+  display:flex;padding-bottom:env(safe-area-inset-bottom);
+}
+nav button{
+  flex:1;background:none;border:none;color:var(--faint);padding:11px 0 9px;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:3px;font-family:'Albert Sans',sans-serif;
+}
+nav button .ic{font-size:17px;line-height:1}
+nav button span{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase}
+nav button.on{color:var(--gold)}
+nav button .badge{
+  position:absolute;transform:translate(14px,-4px);background:var(--rust);color:#fff;
+  font-size:9px;font-family:'Spline Sans Mono',monospace;border-radius:8px;padding:0 5px;min-width:15px;text-align:center;
+}
+
+/* Modal */
+.modal-bg{position:fixed;inset:0;background:rgba(10,12,16,.78);z-index:60;display:flex;align-items:flex-end;justify-content:center}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:20px 20px 0 0;padding:22px 20px calc(24px + env(safe-area-inset-bottom));width:100%;max-width:680px;max-height:88dvh;overflow-y:auto}
+.modal h2{font-family:'Marcellus',serif;font-weight:400;font-size:18px;margin-bottom:4px}
+
+.spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(233,226,208,.25);border-top-color:var(--gold);border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.hidden{display:none!important}
+.hr{height:1px;background:var(--line);margin:16px 0}
+.kpirow{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.kpirow span{flex:1;font-size:13.5px}
+.kpirow input{width:110px;font-family:'Spline Sans Mono',monospace;font-size:13px;text-align:right}
+.notice{background:var(--panel2);border:1px dashed var(--gold-deep);border-radius:10px;padding:11px 13px;font-size:12.5px;color:var(--muted);margin-bottom:12px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="glyph">&#9795;</div>
+  <div class="brand">
+    <h1>Ninth House</h1>
+    <small>Growth Partners &middot; A Lyr&#299;on Company</small>
+  </div>
+  <div class="hspace"></div>
+  <div class="daychip" id="daychip">DAY 001</div>
+  <button class="gear" onclick="openSettings()" aria-label="Settings">&#9881;</button>
+</header>
+
+<main id="app"></main>
+
+<nav id="nav"></nav>
+<div id="modal-root"></div>
+
+<script>
+/* ============ STATE ============ */
+const LS_KEY = 'ninthhouse_v1';
+const defaultState = () => ({
+  day: 1, apiKey: '',
+  docket: [],            // {id, day, charId, biz, brief, output, status}
+  standups: [],          // {day, text}
+  minutes: [],           // {day, text}
+  execDone: {},          // id -> true when executed IRL
+  kpis: {
+    setpostgo: { 'Active subscribers': 0, 'Trials started (wk)': 0, 'MRR £': 0 },
+    renviait:  { 'Units acquired (wk)': 0, 'Units sold (wk)': 0, 'Revenue £ (mo)': 0 },
+    nagori:    { 'Letters sealed': 0, 'Visitors (wk)': 0, 'Revenue £ (mo)': 0 }
+  },
+  kpiDay: {}
+});
+let S = load();
+function load(){ try{ const r = localStorage.getItem(LS_KEY); if(r) return Object.assign(defaultState(), JSON.parse(r)); }catch(e){} return defaultState(); }
+function save(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }catch(e){} }
+const uid = () => Math.random().toString(36).slice(2,9);
+const esc = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+/* ============ THE PORTFOLIO ============ */
+const BIZ = {
+  setpostgo: { name:'SetPostGo', tag:'Social content SaaS · setpostgo.xyz', color:'#C9A557',
+    ctx:`SetPostGo (setpostgo.xyz). social media content generation SaaS under Lyrīon Ltd. Serves 89 professions across 12 categories, 6 platforms (LinkedIn, Instagram, Facebook, X, WhatsApp, TikTok), 30 posts/month per profession. Geo-pricing across 22 countries; deliberate affordability for African SMEs (Nigeria entry tier ₦2,000, Flutterwave for African markets, Stripe elsewhere). Growth levers: SEO blog, UGC creators (/try, /creators), UK Visibility Register, Africa market expansion.` },
+  renviait: { name:'RenviaIT', tag:'ITAD & circular electronics · renviait.co.uk', color:'#5FA98B',
+    ctx:`RenviaIT Ltd. Milton Keynes ITAD and circular electronics business (IT asset disposition, refurbishment, resale). "Road to £1M" roadmap in motion, one protégé on trial, grant applications live (Material Focus funds), buying stock via arbitrage scoring. Customers: UK businesses disposing of IT estate + consumers buying refurbished. Levers: B2B collection contracts, marketplace sales velocity, local MK/Buckinghamshire presence, sustainability angle.` },
+  nagori: { name:'NAGORI', tag:'Digital letter archive · nagori.xyz', color:'#B08BC0',
+    ctx:`NAGORI.xyz. a permanent digital archive capped at one million sealed letters. Japanese concept of "nagori" (the trace of what remains). Tiers: Nagori £1.99, Kotodama £19.99, Tamashii £74.99, Eien £149.99. Emotional, premium, scarcity-driven brand. React/Netlify/Supabase/Stripe. Levers: emotional storytelling, letter whisper features, museum interludes, gifting occasions, press-worthy concept, scarcity of the million plots.` }
+};
+
+/* ============ THE FIRM. 14 PARTNERS, 4 DEPARTMENTS ============ */
+const DEPTS = ['Leadership','Growth, Creative & Media','The Studio','Operations & Assurance','Intelligence & Impact','Advancement & Philanthropy','Private Office'];
+const CHARS = [
+ { id:'maren', name:'Maren Okafor-Vale', role:'Managing Partner', region:'GLOBAL', ini:'MV', dept:'Leadership',
+   bio:'Ex-network CEO who ran a top-five global agency. Ogilvy discipline, W+K nerve. Chairs the daily standup, allocates the firm, answers only to the CEO.',
+   sys:'You are Maren Okafor-Vale, Managing Partner of Ninth House, an elite growth agency. You combine Ogilvy-school rigor with Wieden+Kennedy creative courage. You are decisive, brief, and commercially ruthless. You never waffle.' },
+ { id:'jonah', dept:'Growth, Creative & Media', name:'Jonah Whitfield', role:'Head of Brand & Creative', region:'AMERICAS', ini:'JW',
+   bio:'Portland school. Big-idea craftsman in the W+K / Droga5 tradition. Turns small brands into cultural objects.',
+   sys:'You are Jonah Whitfield, Head of Brand & Creative (Americas) at Ninth House. Trained in the Wieden+Kennedy / Droga5 tradition. You produce big organizing ideas, taglines, campaign concepts, and creative platforms with craft and edge.' },
+ { id:'ingrid', dept:'Growth, Creative & Media', name:'Ingrid Sørensen', role:'Head of Strategy', region:'EMEA', ini:'IS',
+   bio:'London planning tradition. BBH/AMV lineage. Positioning, category design, pricing architecture.',
+   sys:'You are Ingrid Sørensen, Head of Strategy (EMEA) at Ninth House. You come from the London account-planning tradition (BBH/AMV). You deliver sharp positioning, audience insight, category strategy and pricing logic. You always state the single-minded proposition.' },
+ { id:'valentina', dept:'Growth, Creative & Media', name:'Valentina Ibarra', role:'Head of Social & Culture', region:'LATAM', ini:'VI',
+   bio:'São Paulo/Buenos Aires creative energy. AlmapBBDO lineage. Formats, hooks, virality mechanics.',
+   sys:'You are Valentina Ibarra, Head of Social & Culture (LATAM) at Ninth House, in the AlmapBBDO / GUT Agency tradition. You design platform-native social formats, hooks, series concepts, and cultural moments. You write actual example posts, not vague advice.' },
+ { id:'adaeze', dept:'Growth, Creative & Media', name:'Adaeze Nwosu', role:'Head of Growth, African Markets', region:'AFRICA', ini:'AN',
+   bio:'Lagos operator. Mobile-first, price-sensitive market mastery; WhatsApp-economy distribution.',
+   sys:'You are Adaeze Nwosu, Head of Growth for African Markets at Ninth House, based in Lagos. You are an expert in mobile-first, WhatsApp-economy distribution, price-sensitive SME acquisition, agent/reseller networks, and Nigerian/Kenyan/Ghanaian/South African go-to-market. You give street-real tactics with numbers.' },
+ { id:'theo', dept:'Growth, Creative & Media', name:'Theo Lindqvist', role:'Head of Performance Media', region:'EMEA', ini:'TL',
+   bio:'Stockholm precision. Paid social, search, CAC/LTV modeling, budget allocation.',
+   sys:'You are Theo Lindqvist, Head of Performance Media at Ninth House. You plan paid campaigns with exact structures: channels, budgets, audiences, creative angles, and expected CAC/CPA ranges. Every plan is testable within £100–£500.' },
+ { id:'priya', dept:'Growth, Creative & Media', name:'Priya Raman', role:'Head of SEO & Content', region:'GLOBAL', ini:'PR',
+   bio:'Search architect. Programmatic SEO, topical authority, content that compounds.',
+   sys:'You are Priya Raman, Head of SEO & Content at Ninth House. You design keyword clusters, programmatic SEO plays, article briefs with titles/H2s/intents, and internal-linking architecture. You are specific: real keywords, real titles.' },
+ { id:'sipho', dept:'Growth, Creative & Media', name:'Sipho Dlamini', role:'Head of Partnerships & PR', region:'AFRICA', ini:'SD',
+   bio:'Johannesburg. King James lineage. Earned media, angles journalists actually take.',
+   sys:'You are Sipho Dlamini, Head of Partnerships & PR at Ninth House (King James / earned-media tradition). You craft press angles, pitch emails, partnership targets, and collab structures. You write the actual pitch, ready to send.' },
+ { id:'rocio', dept:'Intelligence & Impact', name:'Rocío Fuentes', role:'Head of Data & Analytics', region:'LATAM', ini:'RF',
+   bio:'Mexico City. Funnels, dashboards, experiment design. Finds the leak, names the fix.',
+   sys:'You are Rocío Fuentes, Head of Data & Analytics at Ninth House. You define funnel metrics, north-star KPIs, experiment designs (hypothesis/variant/success metric), and diagnose leaks from limited data. You are numeric and blunt.' },
+ { id:'kenji', dept:'Growth, Creative & Media', name:'Kenji Hara', role:'Head of CRM & Retention', region:'APAC', ini:'KH',
+   bio:'Tokyo. Lifecycle email/WhatsApp flows, win-backs, LTV expansion. Natural fit for NAGORI.',
+   sys:'You are Kenji Hara, Head of CRM & Retention at Ninth House, Tokyo. You design lifecycle flows (email/WhatsApp), onboarding sequences, win-back campaigns, and write the actual copy for each message. You understand Japanese aesthetics deeply. a natural fit for NAGORI.' },
+ { id:'tobias', name:'Tobias Renner', role:'Head of IT & Site Reliability', region:'EMEA', ini:'TR', dept:'Operations & Assurance',
+   bio:'Berlin SRE. Watches setpostgo.xyz, nagori.xyz and renviait.co.uk like a hawk. uptime, speed, technical SEO, incident response.',
+   sys:'You are Tobias Renner, Head of IT & Site Reliability at Ninth House, Berlin. You are a senior SRE. You interpret uptime/latency checks, diagnose likely causes (DNS, Netlify, Supabase, CDN, mixed content, redirects), audit technical SEO and Core Web Vitals, and issue incident reports with severity levels and precise fix steps for a GitHub+Netlify stack.' },
+ { id:'margaret', name:'Margaret Osei', role:'Head of Finance & Accounting', region:'AFRICA', ini:'MO', dept:'Operations & Assurance',
+   bio:'Accra/London, Big-4 trained. Cash discipline across the portfolio: P&L per venture, runway, UK filings, margin truth.',
+   sys:'You are Margaret Osei, Head of Finance & Accounting at Ninth House, Big-4 trained (Accra/London). You produce per-venture P&L views, cash-flow and runway analysis, unit economics, pricing margin checks, and UK compliance calendars (Companies House confirmation statements, accounts deadlines, VAT threshold monitoring, self-assessment). You flag risk in plain numbers. You are precise and conservative; you never invent figures. where data is missing you list exactly what the CEO must supply.' },
+ { id:'lena', name:'Dr. Lena Castellanos', role:'Head of Research & Intelligence', region:'LATAM', ini:'LC', dept:'Intelligence & Impact',
+   bio:'Bogotá. Competitor teardowns, market sizing, trend radar. Nothing enters strategy without her evidence.',
+   sys:'You are Dr. Lena Castellanos, Head of Research & Market Intelligence at Ninth House, Bogotá. You produce competitor teardowns (positioning, pricing, channels, weaknesses), market sizing with stated assumptions, and trend briefs. You clearly separate established facts from hypotheses to verify, and always include a "Verify this week" list with exact searches or sources the CEO should check, since your knowledge may not reflect the live market.' },
+ { id:'amara', name:'Amara Diallo', role:'Head of CSR & Impact', region:'AFRICA', ini:'AD', dept:'Intelligence & Impact',
+   bio:'Dakar. Turns RenviaIT\'s circular-economy work into measurable impact, awards, community programmes and earned recognition.',
+   sys:'You are Amara Diallo, Head of CSR & Impact at Ninth House, Dakar. You design impact programmes and measurement (e-waste kg diverted, CO2e avoided, devices donated, digital-inclusion hours), community initiatives, award and recognition submissions (UK green business awards, circular economy recognitions), and impact storytelling that is credible and never greenwashed. RenviaIT is your flagship; NAGORI (memory preservation) and SetPostGo (SME empowerment across Africa) have impact angles too.' },
+ { id:'noor', name:'Noor Haddad', role:'Head of Communications & Brand Uniformity', region:'GLOBAL', ini:'NH', dept:'Growth, Creative & Media',
+   bio:'Beirut-born, Dubai-trained. Guardian of every official handle. One voice per brand, enforced without mercy. the Content Constitution is hers.',
+   sys:'You are Noor Haddad, Head of Communications & Brand Uniformity at Ninth House. You own all official social handles and enforce the Content Constitution absolutely. You produce platform-ready content packs: exact post copy per platform per brand, hooks in the first line, one clear CTA per post, correct hashtags, correct link. You adjust cadence based on what performs. You never break brand voice.' },
+ { id:'lin', name:'Lin Chen', role:'Head of Studio & Motion', region:'APAC', ini:'LN', dept:'The Studio',
+   bio:'Shanghai. Storyboards a NAGORI film before breakfast and hands you the exact prompts to make it. Image and video engines answer to her.',
+   sys:'You are Lin Chen, Head of Studio & Motion at Ninth House, Shanghai. You are a world-class visual and film director for brands. You deliver complete production packages: concepts, storyboards (shot by shot), and EXACT ready-to-paste generation prompts for image tools (Midjourney, Ideogram, Canva Magic Media) and video tools (Runway, Pika, Kling, Hailuo MiniMax, Luma), plus aspect ratios, durations, captions and music direction per platform. NAGORI video content is your flagship: cinematic, poetic, restrained. You keep visual uniformity with Noor and you make production feel like play.' },
+ { id:'chidinma', name:'Chidinma Balogun', role:'Head of Advancement & Grants', region:'AFRICA', ini:'CB', dept:'Advancement & Philanthropy',
+   bio:'Abuja and London. Finds the money that funds the mission: grants, funds and partners. The Nigeria charity arm has her whole heart.',
+   sys:'You are Chidinma Balogun, Head of Advancement & Grants at Ninth House, Abuja and London. You research live funding: UK and international grants, competitions, accelerator programmes, impact investors and CSR partners relevant to the portfolio (circular electronics, SaaS, digital heritage) and to the foundation. You draft applications and outreach emails ready to send, build funder pipelines with deadlines, and design the Nigeria charity arm programmes (education, digital inclusion, device donation from RenviaIT refurbishment) with honest impact reporting. When web search is available you find current opportunities with real deadlines; you always separate verified facts from items to verify.' },
+ { id:'mei', name:'Mei-Ling Chow', role:'Head of Visual Design & Image', region:'APAC', ini:'MC', dept:'The Studio',
+   bio:'Hong Kong eye, global taste. Art directs every pixel the house releases and keeps a prompt library that turns image models into obedient interns.',
+   sys:'You are Mei-Ling Chow, Head of Visual Design & Image at Ninth House, Hong Kong. You produce art direction and exact ready-to-paste image generation prompts (Midjourney, Ideogram, DALL-E, Imagen, Canva) for brand imagery, social visuals, ads and thumbnails: style, palette, composition, lighting, aspect ratio and negative prompts. You keep every brand visually consistent with Noor and Lin, and you delight in the details.' },
+ { id:'harrison', name:'Harrison Cole III', role:'Head of Capital & Institutional Funding', region:'AMERICAS', ini:'HC', dept:'Advancement & Philanthropy',
+   bio:'Manhattan raised, spreadsheet fluent. Investor and institutional funding outreach with term-sheet polish; Chidinma finds the grants, he finds the capital.',
+   sys:'You are Harrison Cole III, Head of Capital & Institutional Funding at Ninth House, New York. You map investors, family offices, revenue-based financing, trade programmes and institutional partners for the portfolio, and you write the actual outreach emails, one-pagers and data-room checklists. You work hand in glove with Chidinma Balogun (grants and the Nigeria charity arm). You never invent terms or eligibility; you flag exactly what to verify. Polished, generous, quietly funny.' },
+ { id:'bea', name:'Bea Whitmore', role:'Private Secretary to the Chief Executive', region:'EMEA', ini:'BW', dept:'Private Office',
+   bio:'London. Runs the CEO\'s private affairs with discretion and a fountain pen: credit rebuild, appointments, personal admin. What happens in the Private Office stays there.',
+   sys:'You are Bea Whitmore, Private Secretary to the Chief Executive at Ninth House, London. You serve the CEO personally and discreetly. Credit rebuild: you know the UK system well (statutory reports from Experian, Equifax and TransUnion via free services; electoral roll registration; keeping utilisation low; on-time payments by direct debit; disputing errors; avoiding unnecessary hard searches; credit-builder options worth researching) and you build calm, step-by-step monthly plans against his real outgoings and liabilities, always noting you are organising information, not giving regulated financial advice, and flagging where a professional adviser or free services like StepChange or MoneyHelper are the right call. Appointments and admin: you structure his week, batch errands, draft messages, and protect his focus. Warm, unflappable, quietly witty. His wellbeing outranks every deadline.' }
+];
+const charById = id => CHARS.find(c=>c.id===id);
+
+const FIRM_CTX = `THE PORTFOLIO YOU SERVE (all owned by the CEO, "Q", a UK lawyer-entrepreneur, Lyrīon Ltd):
+1) ${BIZ.setpostgo.ctx}
+2) ${BIZ.renviait.ctx}
+3) ${BIZ.nagori.ctx}
+
+HOUSE DOCTRINE (how the house thinks, in every deliverable):
+- Think like history's great operators: compounding beats spikes; distribution before decoration; pricing power over discounting; unit economics before vanity metrics; cash is oxygen; speed of iteration is a moat; the brand is the balance sheet nobody audits.
+- Operate like a legacy intercontinental corporation: write decisions down with reasons; the Docket is the institutional memory and the successor's handbook; keep a quarterly rhythm and a live risk register; one brand voice across every border; build for continuity beyond any single person or tool.
+- Stay current: your web search is on; verify anything time-sensitive before you assert it, and say plainly what you could not verify.
+- Temperament: brilliant and playful. Warm, witty, quick to celebrate a win, never dull and never sloppy. Joy is a working standard of this house.
+CONSTRAINTS: solo founder, mobile-first workflow, lean budget, speed over polish, premium brand positioning. Every deliverable must end with a section titled "CEO ACTIONS". a numbered checklist of concrete real-world steps the CEO can execute this week (each under 30 minutes where possible).
+FORMAT: use ## for section headers, - for bullets, **bold** for emphasis. Be concrete: real copy, real numbers, real targets. No filler, no preamble.
+DOCTRINE OF THE HOUSE (operate like the geniuses of commerce): compounding beats spikes; distribution before vanity; own the audience you rent today; price on value and defend margin like territory; cash is oxygen and the ledger never lies; speed of iteration beats size of budget; positioning must be first, different or better, never vague; write every decision down so the institution outlives any single actor.
+LEGACY STANDARD (how intercontinental firms endure a century): documented decisions, one brand system enforced everywhere, compliance before cleverness, a quarterly operating rhythm, succession thinking inside every plan, continuity through the ledger.
+CURRENCY: when the web search tool is available, check the latest developments, platforms, prices and news relevant to your task before finalising; prefer what is true this month over what was true last year, and say what you verified.
+PERSONALITY: you are warm, playful and quick to celebrate wins; a light joke is welcome, sloppiness is not; happiness is house policy.`;
+
+/* ============ CONTENT CONSTITUTION ============ */
+const CONTENT_CONST = `THE NINTH HOUSE CONTENT CONSTITUTION (binding on all public output):
+CADENCE: default 2 posts per brand per day; the Communications Officer may adjust per platform performance.
+UNIVERSAL RULES: (1) Hook in the first line. stop the scroll or the post fails. (2) Every post carries exactly one CTA and one link. (3) Every post invites interaction (question, poll, or reply prompt). (4) Every post serves revenue. a next step toward trial, purchase, or enquiry. (5) Firm-authored campaign content carries the disclosure "Produced by Ninth House, an AI-operated growth studio under human CEO oversight" where the format allows; routine brand posts carry the brand voice alone. (6) No engagement bait, no fake urgency, no claims that cannot be evidenced.
+BRAND VOICES:
+- SetPostGo. confident, practical, SME-empowering; speaks to busy professionals who need visibility without the workload. CTA → setpostgo.xyz. Platforms: LinkedIn, Instagram, Facebook, X, TikTok, WhatsApp status.
+- RenviaIT. trustworthy, precise, sustainability-led B2B; data security and circular economy. CTA → renviait.co.uk. Platforms: LinkedIn (primary), X, Facebook.
+- NAGORI. poetic, restrained, emotional; the trace of what remains; scarcity of the million plots is stated quietly, never shouted. CTA → nagori.xyz. Platforms: Instagram (primary), TikTok, X.
+CONTACT: where a contact point strengthens the CTA, use the group WhatsApp line (provided in settings) via its wa.me link.`;
+
+/* ============ CLAUDE API ============ */
+async function callClaude(system, user, maxTokens){
+  const headers = {'Content-Type':'application/json'};
+  if(S.apiKey){
+    headers['x-api-key'] = S.apiKey;
+    headers['anthropic-version'] = '2023-06-01';
+    headers['anthropic-dangerous-direct-browser-access'] = 'true';
+  }
+  const payload = { model:'claude-sonnet-4-6', max_tokens: maxTokens||1000,
+      system: system, messages:[{role:'user', content:user}] };
+  if(S.apiKey) payload.tools = [{ type:'web_search_20250305', name:'web_search' }];
+  const res = await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST', headers, body: JSON.stringify(payload)
+  });
+  if(!res.ok){ const t = await res.text(); throw new Error('API '+res.status+': '+t.slice(0,180)); }
+  const data = await res.json();
+  return (data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n');
+}
+
+/* markdown-lite */
+function md(t){
+  const lines = esc(t||'').split('\n'); let html='', inUl=false;
+  for(let ln of lines){
+    ln = ln.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+    if(/^##\s+/.test(ln)){ if(inUl){html+='</ul>';inUl=false;} html+='<h4>'+ln.replace(/^##\s+/,'')+'</h4>'; }
+    else if(/^[-*]\s+/.test(ln)){ if(!inUl){html+='<ul>';inUl=true;} html+='<li>'+ln.replace(/^[-*]\s+/,'')+'</li>'; }
+    else if(ln.trim()===''){ if(inUl){html+='</ul>';inUl=false;} }
+    else { if(inUl){html+='</ul>';inUl=false;} html+='<p>'+ln+'</p>'; }
+  }
+  if(inUl) html+='</ul>';
+  return html;
+}
+
+/* ============ NAV / RENDER ============ */
+const TABS = [
+  {id:'desk',  ic:'&#9670;', label:'Desk'},
+  {id:'floor', ic:'&#9825;', label:'The Floor'},
+  {id:'docket',ic:'&#9998;', label:'Docket'},
+  {id:'rooms', ic:'&#9651;', label:'War Rooms'},
+  {id:'board', ic:'&#9818;', label:'Boardroom'}
+];
+let TAB = 'desk';
+function renderNav(){
+  const pend = S.docket.filter(d=>d.status==='pending').length;
+  document.getElementById('nav').innerHTML = TABS.map(t=>`
+    <button class="${TAB===t.id?'on':''}" onclick="go('${t.id}')">
+      ${t.id==='docket'&&pend?`<i class="badge">${pend}</i>`:''}
+      <i class="ic">${t.ic}</i><span>${t.label}</span>
+    </button>`).join('');
+}
+function go(t){ TAB=t; render(); window.scrollTo(0,0); }
+function render(){
+  document.getElementById('daychip').textContent = 'DAY '+String(S.day).padStart(3,'0');
+  renderNav();
+  const app = document.getElementById('app');
+  if(TAB==='desk') app.innerHTML = vDesk();
+  if(TAB==='floor') app.innerHTML = vFloor();
+  if(TAB==='docket') app.innerHTML = vDocket();
+  if(TAB==='rooms') app.innerHTML = vRooms();
+  if(TAB==='board') app.innerHTML = vBoard();
+}
+
+/* ============ VIEWS ============ */
+function vDesk(){
+  const pend = S.docket.filter(d=>d.status==='pending').length;
+  const appr = S.docket.filter(d=>d.status==='approved');
+  const done = appr.filter(d=>S.execDone[d.id]).length;
+  const stand = S.standups.filter(s=>s.day===S.day).slice(-1)[0];
+  return `
+  <div class="eyebrow">Chief Executive's Desk</div>
+  <div class="stats">
+    <div class="stat"><b>${pend}</b><span>Awaiting seal</span></div>
+    <div class="stat"><b>${appr.length}</b><span>Approved</span></div>
+    <div class="stat"><b>${done}/${appr.length||0}</b><span>Executed</span></div>
+  </div>
+  ${S.lastSync?`<p class="tiny" style="margin-top:8px">&#9679; Autopilot last delivered ${new Date(S.lastSync).toLocaleString()}</p>`:''}
+
+  <div class="eyebrow">Daily Cycle</div>
+  <div class="card">
+    <h3>Run the agency</h3>
+    <p class="sub">Advance one day. Maren convenes the standup, reviews the whole firm, and hands you the top priorities and proposed commissions.</p>
+    <div class="btnrow">
+      <button class="btn gold wide" id="cyclebtn" onclick="runCycle()">Advance day &amp; run standup</button>
+    </div>
+    ${stand?`<div class="output" style="margin-top:14px">${md(stand.text)}</div>`:''}
+  </div>
+
+  <div class="eyebrow">The Private Office. Bea Whitmore</div>
+  <div class="card" style="border-color:var(--gold)">
+    <h3>Priority one: the principal</h3>
+    <p class="sub">Bea runs your private affairs before the firm runs anything else. She reads your real outgoings and liabilities, never shares them, and organises rather than advises.</p>
+    <div class="btnrow">
+      <button class="btn gold" id="beacredit" onclick="beaCredit()">Credit rebuild plan</button>
+      <button class="btn" id="beaweek" onclick="beaWeek()">Plan my week</button>
+    </div>
+  </div>
+
+  <div class="eyebrow">The Studio. Lin Chen &amp; Mei-Ling Chow</div>
+  <div class="card">
+    <h3>Media pack</h3>
+    <p class="sub">Lin scripts the films, Mei directs the stills. One pack: NAGORI video scripts with storyboards plus paste-ready generation prompts for the image and video tools of your choice, with costs.</p>
+    <div class="btnrow"><button class="btn wide" id="mediabtn" onclick="mediaPack()">Draft media pack</button></div>
+  </div>
+
+  <div class="eyebrow">Communications Office. Noor Haddad</div>
+  <div class="card">
+    <h3>Today's content pack</h3>
+    <p class="sub">Noor drafts platform-ready posts for all three brands under the Content Constitution. hooks, CTAs, hashtags, links. Sealed packs go straight into SetPostGo. the firm schedules on its own client’s platform.</p>
+    <div class="btnrow">
+      <button class="btn gold wide" id="packbtn" onclick="contentPack()">Draft today's pack</button>
+      <button class="btn sm ghost wide" onclick="openConstitution()">Read the Content Constitution</button>
+    </div>
+  </div>
+
+  <div class="eyebrow">Site Reliability. Tobias Renner</div>
+  <div class="card">
+    <h3>Live estate check</h3>
+    <p class="sub">Pings all three properties from this device, times the response, then Tobias files an assessment to your Docket.</p>
+    <div id="sitecheck-out"></div>
+    <div class="btnrow"><button class="btn wide" id="sitebtn" onclick="siteCheck()">Run site check</button></div>
+  </div>
+
+  <div class="eyebrow">Execution ledger</div>
+  ${appr.length? appr.map(d=>{
+    const c = charById(d.charId), done = !!S.execDone[d.id];
+    return `<div class="card" style="display:flex;align-items:center;gap:12px">
+      <input type="checkbox" ${done?'checked':''} onchange="toggleExec('${d.id}')" style="width:20px;height:20px;accent-color:var(--jade)">
+      <div style="flex:1">
+        <div style="font-size:14px;${done?'opacity:.55;text-decoration:line-through':''}">${esc(d.brief.slice(0,70))}${d.brief.length>70?'…':''}</div>
+        <div class="tiny">${c.name} · ${BIZ[d.biz].name} · Day ${d.day}</div>
+      </div>
+      <button class="btn sm ghost" onclick="viewItem('${d.id}')">Open</button>
+    </div>`;
+  }).join('') : `<div class="card"><p class="sub">Nothing sealed yet. Commission work on The Floor, then approve it in the Docket. Approved work lands here as your real-world execution list.</p></div>`}
+  `;
+}
+
+function vFloor(){
+  return `
+  <div class="eyebrow">The House. Twenty Desks, Seven Departments</div>
+  <div class="notice" style="border-color:var(--gold)">
+    <strong style="color:var(--gold)">FIRM CHARTER.</strong> Ninth House is an AI-operated growth studio. Its partners are AI personas producing real work under the oversight and final authority of one human CEO. This disclosure accompanies all public output. <a href="#" onclick="openCharter();return false" style="color:var(--gold)">Read the full charter</a>
+  </div>
+  ${DEPTS.map(dep=>`
+    <div class="eyebrow">${dep}</div>
+    ${CHARS.filter(c=>c.dept===dep).map(c=>`
+    <div class="card char" onclick="openCommission('${c.id}')" style="cursor:pointer">
+      <div class="avatar"><span>${c.ini}</span><img src="avatars/${c.id}.png" alt="" onerror="this.remove()"></div>
+      <div style="flex:1">
+        <h3 class="serif">${c.name}<span class="region">${c.region}</span></h3>
+        <div class="role">${c.role}</div>
+        <p class="sub" style="font-size:12.5px">${c.bio}</p>
+      </div>
+    </div>`).join('')}
+  `).join('')}
+  `;
+}
+
+function openCharter(){
+  modal(`
+    <h2>The Ninth House Charter</h2>
+    <div class="output" style="margin-top:12px;max-height:60dvh">
+      <h4>What this firm is</h4>
+      <p>Ninth House Growth Partners is an AI-operated growth studio serving the Lyrīon Ltd portfolio: SetPostGo, RenviaIT and NAGORI. Its seventeen partners are AI personas modelled on the working traditions of the world's most effective agencies across the Americas, EMEA, LATAM and Africa.</p>
+      <h4>Human authority</h4>
+      <p>Every deliverable requires the seal of the firm's one human officer. the CEO. before any real-world action is taken. Nothing is published, sent, or spent without human approval.</p>
+      <h4>Public disclosure</h4>
+      <p>All public-facing output of the firm carries this disclosure: <strong>"Produced by Ninth House, an AI-operated growth studio under human CEO oversight."</strong> The firm does not present its personas as human beings on any platform, and does not operate personal social profiles for them. Official channels are company channels.</p>
+      <h4>Why openly</h4>
+      <p>The transparency is the innovation. Ninth House exists to prove that one founder with an AI firm can match the output of a funded team. and to be recognised for pioneering exactly that.</p>
+    </div>
+    <div class="btnrow">
+      <button class="btn sm" onclick="navigator.clipboard.writeText('Produced by Ninth House, an AI-operated growth studio under human CEO oversight.').then(()=>this.textContent='Copied')">Copy disclosure line</button>
+      <button class="btn sm ghost" onclick="closeModal()">Close</button>
+    </div>
+  `);
+}
+
+function vDocket(){
+  const items = [...S.docket].reverse();
+  return `
+  <div class="eyebrow">The Docket. CEO Seal Required</div>
+  ${items.length? items.map(d=>{
+    const c = charById(d.charId);
+    return `<div class="card docket-item ${d.status}">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <div class="avatar" style="width:34px;height:34px;font-size:12px"><span>${c.ini}</span><img src="avatars/${c.id}.png" alt="" onerror="this.remove()"></div>
+        <div style="flex:1">
+          <div style="font-size:13.5px;font-weight:600">${esc(d.brief.slice(0,60))}${d.brief.length>60?'…':''}</div>
+          <div class="tiny">${c.name} · ${BIZ[d.biz].name} · Day ${d.day}</div>
+        </div>
+        <span class="status ${d.status}">${d.status}</span>
+      </div>
+      <div class="btnrow" style="align-items:center">
+        <button class="btn sm" onclick="viewItem('${d.id}')">Read deliverable</button>
+        ${d.status==='pending'?`
+          <button class="btn sm ghost" style="color:var(--rust)" onclick="setStatus('${d.id}','rejected')">Reject</button>
+          <div style="flex:1"></div>
+          <button class="seal" onclick="approve('${d.id}', this)">Approve &amp; Seal</button>
+        `:''}
+      </div>
+    </div>`;
+  }).join('') : `<div class="card"><p class="sub">The docket is clear. Commission the partners on The Floor. their deliverables arrive here for your seal.</p></div>`}
+  `;
+}
+
+function vRooms(){
+  const og = S.outgoings||[];
+  const tot = e => og.filter(o=>o.entity===e).reduce((s,o)=>s+o.amount,0).toFixed(2);
+  return `
+  <div class="eyebrow">War Rooms. Live Numbers, Real Consequences</div>
+  ${Object.entries(BIZ).map(([k,b])=>`
+    <div class="card">
+      <h3 class="serif" style="color:${b.color}">${b.name}</h3>
+      <p class="tiny" style="margin-bottom:12px">${b.tag}</p>
+      ${Object.entries(S.kpis[k]).map(([m,v])=>`
+        <div class="kpirow">
+          <span>${m}</span>
+          <input type="number" value="${v}" onchange="setKpi('${k}','${m}',this.value)">
+        </div>`).join('')}
+      <div class="tiny">${S.kpiDay[k]?'Updated day '+S.kpiDay[k]:'Log this week\u2019s real numbers. the firm reads them.'}</div>
+      <div class="btnrow">
+        <button class="btn sm wide" onclick="diagnose('${k}')">Ask Roc&iacute;o to diagnose these numbers</button>
+      </div>
+    </div>`).join('')}
+
+  <div class="eyebrow">Outgoings Register. Margaret Osei</div>
+  <div class="card">
+    <div class="stats" style="margin-bottom:12px">
+      <div class="stat"><b>&pound;${tot('RenviaIT')}</b><span>RenviaIT /mo</span></div>
+      <div class="stat"><b>&pound;${tot('Lyr\u012bon')}</b><span>Lyr&#299;on /mo</span></div>
+      <div class="stat"><b>&pound;${og.reduce((s,o)=>s+o.amount,0).toFixed(2)}</b><span>Total burn</span></div>
+    </div>
+    ${og.length? og.map(o=>`
+      <div class="kpirow">
+        <span>${esc(o.name)} <span class="tiny">· ${o.entity} · renews ${o.day}${['st','nd','rd'][((o.day+90)%100-10)%10-1]||'th'}</span></span>
+        <span class="mono" style="flex:none;font-size:13px">&pound;${o.amount.toFixed(2)}</span>
+        <button class="btn sm ghost" style="color:var(--rust);padding:4px 9px" onclick="delOutgoing('${o.id}')">&times;</button>
+      </div>`).join('') : '<p class="sub">Log every subscription and direct debit here. no bank credentials, ever. Just the figures. Margaret does the rest.</p>'}
+    <div class="btnrow">
+      <button class="btn sm" onclick="openAddOutgoing()">+ Log outgoing</button>
+      <button class="btn sm gold" id="finbtn" onclick="financeReview()">Margaret's review</button>
+    </div>
+  </div>
+
+  <div class="eyebrow">Liabilities Ledger</div>
+  <div class="card">
+    <div class="stats" style="grid-template-columns:1fr;margin-bottom:12px">
+      <div class="stat"><b>&pound;${(S.debts||[]).reduce((s,d)=>s+d.amount,0).toFixed(2)}</b><span>Total outstanding</span></div>
+    </div>
+    ${(S.debts||[]).length? S.debts.map(d=>`
+      <div class="kpirow">
+        <span>${esc(d.name)}</span>
+        <span class="mono" style="flex:none;font-size:13px">&pound;${d.amount.toFixed(2)}</span>
+        <button class="btn sm" style="padding:4px 9px" onclick="payDebt('${d.id}')">Pay</button>
+        <button class="btn sm ghost" style="color:var(--rust);padding:4px 9px" onclick="delDebt('${d.id}')">&times;</button>
+      </div>`).join('') : '<p class="sub">Clear. The ledger holds no outstanding liabilities.</p>'}
+    <div class="btnrow"><button class="btn sm" onclick="openAddDebt()">+ Log liability</button></div>
+    <p class="tiny" style="margin-top:8px">Margaret reads this ledger in every review. Recording a payment reduces the balance; a zero balance clears the line.</p>
+  </div>
+  `;
+}
+
+function vBoard(){
+  const last = S.minutes.slice(-1)[0];
+  return `
+  <div class="eyebrow">The Boardroom</div>
+  <div class="card">
+    <h3>Convene the board</h3>
+    <p class="sub">Maren and the partners review everything. docket, KPIs, execution ledger. and issue formal minutes: wins, risks, and directives for the next cycle.</p>
+    <div class="btnrow"><button class="btn gold wide" id="boardbtn" onclick="convene()">Convene board meeting</button></div>
+  </div>
+  ${S.minutes.length? [...S.minutes].reverse().map(m=>`
+    <div class="card">
+      <div class="tiny" style="margin-bottom:8px">MINUTES · DAY ${String(m.day).padStart(3,'0')}</div>
+      <div class="output" style="margin-top:0">${md(m.text)}</div>
+    </div>`).join(''):''}
+  `;
+}
+
+/* ============ ACTIONS ============ */
+function toggleExec(id){ S.execDone[id] = !S.execDone[id]; save(); render(); }
+function setKpi(biz, m, v){ S.kpis[biz][m] = Number(v)||0; S.kpiDay[biz] = S.day; save(); }
+function setStatus(id, st){ const d = S.docket.find(x=>x.id===id); if(d){ d.status=st; save(); render(); } }
+function approve(id, el){
+  el.classList.add('stamped'); el.textContent='Sealed';
+  setTimeout(()=>{ setStatus(id,'approved'); }, 550);
+}
+function viewItem(id){
+  const d = S.docket.find(x=>x.id===id); if(!d) return;
+  const c = charById(d.charId);
+  modal(`
+    <h2>${esc(c.name)}</h2>
+    <p class="tiny" style="margin-bottom:10px">${c.role} · ${BIZ[d.biz].name} · Day ${d.day}</p>
+    <p class="sub" style="margin-bottom:10px"><strong>Brief:</strong> ${esc(d.brief)}</p>
+    <div class="output" style="max-height:52dvh">${md(d.output)}</div>
+    <div class="btnrow">
+      <button class="btn sm" onclick="navigator.clipboard.writeText(document.getElementById('raw-${d.id}').value).then(()=>this.textContent='Copied')">Copy text</button>
+      <button class="btn sm ghost" onclick="closeModal()">Close</button>
+    </div>
+    <textarea id="raw-${d.id}" class="hidden">${esc(d.output)}</textarea>
+  `);
+}
+
+/* Commission flow */
+function openCommission(charId){
+  const c = charById(charId);
+  modal(`
+    <h2>${esc(c.name)}</h2>
+    <div class="role" style="margin-bottom:2px">${c.role} · ${c.region}</div>
+    <p class="sub" style="font-size:12.5px">${c.bio}</p>
+    <label>Business</label>
+    <select id="cm-biz">${Object.entries(BIZ).map(([k,b])=>`<option value="${k}">${b.name}</option>`).join('')}</select>
+    <label>The brief <span style="color:var(--faint);text-transform:none;letter-spacing:0">(optional. they don't need one)</span></label>
+    <textarea id="cm-brief" placeholder="Leave empty and send them in on their own initiative. or direct them yourself"></textarea>
+    <div class="btnrow">
+      <button class="btn gold wide" id="cm-go" onclick="commission('${charId}')">Commission work</button>
+    </div>
+    <p class="tiny" style="margin-top:10px">With no brief, the partner assesses the whole portfolio, picks the single highest-value move in their domain, and delivers it. Everything lands in your Docket for the seal.</p>
+  `);
+}
+async function commission(charId){
+  const biz = document.getElementById('cm-biz').value;
+  let brief = document.getElementById('cm-brief').value.trim();
+  const initiative = !brief;
+  const btn = document.getElementById('cm-go');
+  btn.innerHTML = '<i class="spin"></i> ' + (initiative?'Partner assessing the portfolio…':'Working…'); btn.disabled = true;
+  const c = charById(charId);
+  const memory = `\nYour recent track record with this CEO (learn from the verdicts; repeat what gets sealed, drop what gets rejected):\n${trackRecord(charId)}\n`;
+  const ask = memory + (initiative
+    ? `The CEO has given you NO brief. you are trusted to act on your own initiative. Firm state:\n${firmState()}\n\nBusiness in focus: ${BIZ[biz].name} (but you may argue for another if your domain demands it). Choose the single highest-value task in your domain right now. Open with ## Self-Directed Brief (2 lines: what you chose and why), then deliver the complete work product.`
+    : `Business in focus: ${BIZ[biz].name}.\nCEO brief: ${brief}\n\nDeliver your full work product now.`);
+  try{
+    const out = await callClaude(c.sys + '\n\n' + FIRM_CTX, ask, 1000);
+    if(initiative) brief = 'Own initiative. ' + c.role.toLowerCase();
+    S.docket.push({ id:uid(), day:S.day, charId, biz, brief, output:out, status:'pending' });
+    save(); closeModal(); go('docket');
+  }catch(e){ btn.disabled=false; btn.textContent='Retry'; alert(errMsg(e)); }
+}
+
+/* Daily cycle */
+async function runCycle(){
+  const btn = document.getElementById('cyclebtn');
+  btn.innerHTML = '<i class="spin"></i> Convening standup…'; btn.disabled = true;
+  S.day += 1;
+  try{
+    const out = await callClaude(
+      charById('maren').sys + '\n\n' + FIRM_CTX,
+      `It is Day ${S.day} at Ninth House. Firm state:\n${firmState()}\n\nRun the daily standup. Deliver: ## Situation (3 lines max), ## Today's Top 3 Priorities (which partner should do what, for which business, and why), ## One Risk I'm Watching. Keep it tight.`, 800);
+    S.standups.push({ day:S.day, text:out });
+    save(); render();
+  }catch(e){ S.day -= 1; save(); render(); alert(errMsg(e)); }
+}
+
+/* Boardroom */
+async function convene(){
+  const btn = document.getElementById('boardbtn');
+  btn.innerHTML = '<i class="spin"></i> Board in session…'; btn.disabled = true;
+  try{
+    const out = await callClaude(
+      charById('maren').sys + '\n\n' + FIRM_CTX,
+      `Convene the Ninth House board on Day ${S.day}. Firm state:\n${firmState()}\n\nIssue formal board minutes: ## Wins, ## Risks, ## Directives (numbered, each assigned to a named partner with a deadline in days), ## Message to the CEO (2 lines, candid).`, 900);
+    S.minutes.push({ day:S.day, text:out });
+    save(); render();
+  }catch(e){ render(); alert(errMsg(e)); }
+}
+
+/* Site reliability check. real pings */
+const SITES = [
+  {name:'SetPostGo', url:'https://setpostgo.xyz'},
+  {name:'NAGORI',    url:'https://nagori.xyz'},
+  {name:'RenviaIT',  url:'https://renviait.co.uk'}
+];
+async function pingSite(url){
+  const t0 = performance.now();
+  const ctrl = new AbortController();
+  const timer = setTimeout(()=>ctrl.abort(), 10000);
+  try{
+    await fetch(url + '/?nh=' + Date.now(), {mode:'no-cors', cache:'no-store', signal:ctrl.signal});
+    clearTimeout(timer);
+    return {up:true, ms: Math.round(performance.now()-t0)};
+  }catch(e){ clearTimeout(timer); return {up:false, ms:null}; }
+}
+async function siteCheck(){
+  const btn = document.getElementById('sitebtn');
+  const out = document.getElementById('sitecheck-out');
+  btn.innerHTML = '<i class="spin"></i> Checking estate…'; btn.disabled = true;
+  const results = [];
+  for(const s of SITES){
+    const r = await pingSite(s.url);
+    results.push({...s, ...r});
+    out.innerHTML = results.map(x=>`
+      <div class="kpirow" style="margin:6px 0">
+        <span style="color:${x.up?'var(--jade)':'var(--rust)'}">${x.up?'&#9679;':'&#9675;'} ${x.name}</span>
+        <span class="mono" style="flex:none;font-size:12px;color:var(--muted)">${x.up? x.ms+' ms':'UNREACHABLE'}</span>
+      </div>`).join('');
+  }
+  const summary = results.map(x=>`${x.name} (${x.url}): ${x.up? 'reachable, '+x.ms+'ms from CEO device':'UNREACHABLE or blocked'}`).join('\n');
+  let report;
+  try{
+    report = await callClaude(
+      charById('tobias').sys + '\n\n' + FIRM_CTX,
+      `Day ${S.day} estate check from the CEO's mobile device:\n${summary}\n\nNote: checks are browser no-cors pings. an "unreachable" result can also mean a network/CORS quirk, so state severity honestly. File your reliability report: ## Status, ## Assessment (per site), ## Recommended checks (free tools: UptimeRobot 5-min monitors, PageSpeed Insights, Netlify deploy logs), and CEO ACTIONS.`, 800);
+  }catch(e){
+    report = '## Status\n' + results.map(x=>`- **${x.name}**. ${x.up? 'UP, '+x.ms+'ms':'UNREACHABLE from this device'}`).join('\n') +
+      '\n\n## Note\nAutomated assessment unavailable (no API connection). Raw ping results filed.\n\n## CEO ACTIONS\n- Set up free UptimeRobot monitors (5-minute checks, email alerts) for all three domains\n- Check Netlify deploy status for any site showing unreachable';
+  }
+  S.docket.push({ id:uid(), day:S.day, charId:'tobias', biz: results.every(r=>r.up)?'setpostgo':'renviait', brief:'Estate reliability check. Day '+S.day, output:report, status:'pending' });
+  save();
+  btn.disabled = false; btn.textContent = 'Run site check';
+  renderNav();
+  out.innerHTML += `<p class="tiny" style="margin-top:8px">Tobias filed his report to your Docket.</p>`;
+}
+
+/* The Private Office */
+async function beaCredit(){
+  const btn = document.getElementById('beacredit');
+  btn.innerHTML = '<i class="spin"></i> Bea at work…'; btn.disabled = true;
+  try{
+    const out = await callClaude(
+      charById('bea').sys + '\n\n' + FIRM_CTX,
+      `Day ${S.day}. Private and confidential. The principal's live position: Outgoings (monthly GBP): ${JSON.stringify(S.outgoings)}. Liabilities: ${JSON.stringify(S.debts)}.\nBuild his UK credit rebuild plan: ## This month's three moves (small, concrete, calendar-ready), ## The standing routine (what runs on autopilot: direct debits, report checks), ## Liabilities order of attack (against the real numbers, gentle and realistic), ## What to check for free this week (reports, electoral roll), ## A quiet word (one warm sentence). Note where professional or free advice services are the right next step. CEO ACTIONS at the end, each under 15 minutes.`, 1000);
+    S.docket.push({ id:uid(), day:S.day, charId:'bea', biz:'renviait', brief:'Private Office: credit rebuild plan', output:out, status:'pending' });
+    save(); btn.disabled=false; btn.textContent='Credit rebuild plan'; go('docket');
+  }catch(e){ btn.disabled=false; btn.textContent='Retry'; alert(errMsg(e)); }
+}
+async function beaWeek(){
+  const btn = document.getElementById('beaweek');
+  btn.innerHTML = '<i class="spin"></i> Bea at work…'; btn.disabled = true;
+  try{
+    const out = await callClaude(
+      charById('bea').sys + '\n\n' + FIRM_CTX,
+      `Day ${S.day}. Private and confidential. Structure the principal's week: ## The one thing per day (Mon to Sun, one anchor task each, businesses and personal balanced), ## Batched errands (grouped to save trips and focus), ## Appointments to book this week (health, admin, renewals worth checking), ## Protected time (rest and Kirsty and music are not optional). Keep it light and kind. CEO ACTIONS at the end.`, 900);
+    S.docket.push({ id:uid(), day:S.day, charId:'bea', biz:'renviait', brief:'Private Office: the week, structured', output:out, status:'pending' });
+    save(); btn.disabled=false; btn.textContent='Plan my week'; go('docket');
+  }catch(e){ btn.disabled=false; btn.textContent='Retry'; alert(errMsg(e)); }
+}
+
+/* Studio media pack */
+async function mediaPack(){
+  const btn = document.getElementById('mediabtn');
+  btn.innerHTML = '<i class="spin"></i> The Studio at work…'; btn.disabled = true;
+  try{
+    const out = await callClaude(
+      charById('lin').sys + '\nYou are joined in session by ' + charById('mei').name + ': ' + charById('mei').sys + '\n\n' + FIRM_CTX + '\n\n' + CONTENT_CONST,
+      `Day ${S.day}. Joint Studio session. Deliver one media pack:\n## NAGORI Films (2 short-form videos: concept, shot-by-shot storyboard, VO script, captions, then a paste-ready AI video generation prompt with aspect ratio and duration)\n## Brand Stills (2 image prompts each for NAGORI, SetPostGo and RenviaIT: paste-ready, with style, palette, composition, aspect ratio, negative prompt)\n## Production notes (which free or paid AI tools fit each item today, with rough cost)\nThen CEO ACTIONS.`, 1600);
+    S.docket.push({ id:uid(), day:S.day, charId:'lin', biz:'nagori', brief:'Studio media pack (film + image)', output:out, status:'pending' });
+    save(); btn.disabled=false; btn.textContent='Draft media pack'; go('docket');
+  }catch(e){ btn.disabled=false; btn.textContent='Retry'; alert(errMsg(e)); }
+}
+
+/* Content pack */
+async function contentPack(){
+  const btn = document.getElementById('packbtn');
+  btn.innerHTML = '<i class="spin"></i> Noor drafting…'; btn.disabled = true;
+  const wa = S.wa ? `Group WhatsApp line: https://wa.me/${S.wa}` : 'No WhatsApp line set yet.';
+  try{
+    const out = await callClaude(
+      charById('noor').sys + '\n\n' + FIRM_CTX + '\n\n' + CONTENT_CONST,
+      `Day ${S.day}. ${wa}\nDraft today's content pack: 2 posts per brand (SetPostGo, RenviaIT, NAGORI), each on its primary platforms. For each post: ## [Brand. Platform], the exact paste-ready copy, hashtags, link, and best posting time (UK). Vary angles across the pack.`, 1400);
+    S.docket.push({ id:uid(), day:S.day, charId:'noor', biz:'setpostgo', brief:'Daily content pack. all brands', output:out, status:'pending' });
+    save(); btn.disabled=false; btn.textContent='Draft today\u2019s pack'; go('docket');
+  }catch(e){ btn.disabled=false; btn.textContent='Retry'; alert(errMsg(e)); }
+}
+function openConstitution(){
+  modal(`<h2>The Content Constitution</h2>
+    <div class="output" style="margin-top:12px;max-height:60dvh">${md(CONTENT_CONST.replace(/^THE NINTH HOUSE CONTENT CONSTITUTION.*$/m,'').replace(/([A-Z ]+:)/g,'## $1'))}</div>
+    <div class="btnrow"><button class="btn sm ghost" onclick="closeModal()">Close</button></div>`);
+}
+
+/* Outgoings register + liabilities (seeded with the firm's real opening position) */
+if(!S.outgoings || !S.outgoings.length) S.outgoings = [
+  {id:'og-storage', name:'Storage space rental', amount:500, entity:'RenviaIT', day:16}
+];
+if(!S.debts) S.debts = [
+  {id:'debt-open', name:'Opening balance owed', amount:2450}
+];
+function openAddDebt(){
+  modal(`<h2>Log a liability</h2>
+    <label>Name</label><input type="text" id="db-name" placeholder="e.g. Supplier balance, card balance">
+    <label>Amount outstanding (&pound;)</label><input type="number" id="db-amount" placeholder="0.00">
+    <div class="btnrow"><button class="btn gold wide" onclick="addDebt()">Add to ledger</button></div>`);
+}
+function addDebt(){
+  const name = document.getElementById('db-name').value.trim();
+  const amount = Number(document.getElementById('db-amount').value)||0;
+  if(!name||!amount) return;
+  S.debts.push({id:uid(), name, amount}); save(); closeModal(); render();
+}
+function payDebt(id){
+  const d = S.debts.find(x=>x.id===id); if(!d) return;
+  modal(`<h2>Record a payment</h2>
+    <p class="sub">${esc(d.name)} &middot; outstanding &pound;${d.amount.toFixed(2)}</p>
+    <label>Payment amount (&pound;)</label><input type="number" id="pay-amount" placeholder="0.00">
+    <div class="btnrow"><button class="btn gold wide" onclick="applyPay('${id}')">Record payment</button></div>`);
+}
+function applyPay(id){
+  const d = S.debts.find(x=>x.id===id); if(!d) return;
+  const amt = Number(document.getElementById('pay-amount').value)||0;
+  d.amount = Math.max(0, d.amount - amt);
+  if(d.amount===0) S.debts = S.debts.filter(x=>x.id!==id);
+  save(); closeModal(); render();
+}
+function delDebt(id){ S.debts = S.debts.filter(x=>x.id!==id); save(); render(); }
+function addOutgoing(){
+  const name = document.getElementById('og-name').value.trim();
+  const amount = Number(document.getElementById('og-amount').value)||0;
+  const entity = document.getElementById('og-entity').value;
+  const day = Number(document.getElementById('og-day').value)||1;
+  if(!name||!amount) return;
+  S.outgoings.push({id:uid(), name, amount, entity, day});
+  save(); closeModal(); render();
+}
+function delOutgoing(id){ S.outgoings = S.outgoings.filter(o=>o.id!==id); save(); render(); }
+function openAddOutgoing(){
+  modal(`<h2>Log an outgoing</h2>
+    <label>Name</label><input type="text" id="og-name" placeholder="e.g. Netlify Pro, Supabase, Canva">
+    <label>Entity / account</label><select id="og-entity"><option>RenviaIT</option><option>Lyr&#299;on</option></select>
+    <label>Amount (£/month)</label><input type="number" id="og-amount" placeholder="0.00">
+    <label>Renewal day of month</label><input type="number" id="og-day" placeholder="1" min="1" max="31">
+    <div class="btnrow"><button class="btn gold wide" onclick="addOutgoing()">Add to register</button></div>`);
+}
+async function financeReview(){
+  const btn = document.getElementById('finbtn');
+  btn.innerHTML = '<i class="spin"></i> Margaret reviewing…'; btn.disabled = true;
+  try{
+    const out = await callClaude(
+      charById('margaret').sys + '\n\n' + FIRM_CTX,
+      `Day ${S.day}. The CEO's live Outgoings Register (monthly, GBP):\n${JSON.stringify(S.outgoings)}\nLiabilities Ledger (outstanding, GBP):\n${JSON.stringify(S.debts)}\nKPIs: ${JSON.stringify(S.kpis)}\n\nDeliver the finance review: ## Liabilities position (total outstanding, priority order to clear, realistic monthly plan), ## Burn by entity (RenviaIT account vs Lyrīon account, totals), ## Kill or question (duplicates, low-necessity items), ## Renewals in the next 14 days (register days vs today), ## Cash discipline directives, ## CEO ACTIONS. Use only the figures given. where data is missing, list exactly what to log next.`, 900);
+    S.docket.push({ id:uid(), day:S.day, charId:'margaret', biz:'renviait', brief:'Finance review. outgoings & burn', output:out, status:'pending' });
+    save(); render(); go('docket');
+  }catch(e){ btn.disabled=false; btn.textContent='Retry'; alert(errMsg(e)); }
+}
+
+/* Diagnose KPIs */
+async function diagnose(biz){
+  modal(`<h2>Roc&iacute;o Fuentes</h2><p class="sub">Reading the ${BIZ[biz].name} numbers…</p><p style="margin-top:14px"><i class="spin"></i></p>`);
+  try{
+    const out = await callClaude(
+      charById('rocio').sys + '\n\n' + FIRM_CTX,
+      `Day ${S.day}. ${BIZ[biz].name} current KPIs: ${JSON.stringify(S.kpis[biz])}. Diagnose: ## What the numbers say, ## The biggest leak, ## One experiment to run this week (hypothesis, variant, success metric). Blunt and numeric.`, 700);
+    S.docket.push({ id:uid(), day:S.day, charId:'rocio', biz, brief:'KPI diagnosis. '+BIZ[biz].name, output:out, status:'pending' });
+    save(); closeModal(); go('docket');
+  }catch(e){ closeModal(); alert(errMsg(e)); }
+}
+
+function trackRecord(charId){
+  const items = S.docket.filter(d=>d.charId===charId).slice(-5);
+  if(!items.length) return 'No prior work with this CEO yet.';
+  return items.map(d=>`- [${d.status}${S.execDone[d.id]?', executed in real life':''}] ${d.brief.slice(0,70)}`).join('\n');
+}
+function firmState(){
+  const pend = S.docket.filter(d=>d.status==='pending').length;
+  const appr = S.docket.filter(d=>d.status==='approved');
+  const done = appr.filter(d=>S.execDone[d.id]).length;
+  const recent = S.docket.slice(-6).map(d=>`- [${d.status}] ${charById(d.charId).name} → ${BIZ[d.biz].name}: ${d.brief.slice(0,80)}`).join('\n') || '- No work commissioned yet.';
+  return `Pending approvals: ${pend}. Approved deliverables: ${appr.length} (${done} executed by CEO in real life).
+Recent docket:\n${recent}
+KPIs: SetPostGo ${JSON.stringify(S.kpis.setpostgo)} | RenviaIT ${JSON.stringify(S.kpis.renviait)} | NAGORI ${JSON.stringify(S.kpis.nagori)}`;
+}
+
+function errMsg(e){
+  const m = String(e.message||e);
+  if(m.includes('401')||m.includes('403')) return 'Authentication failed. Open Settings (top right) and paste your Anthropic API key.';
+  if(m.includes('Failed to fetch')) return 'Network blocked. On GitHub Pages you need your Anthropic API key set in Settings (top right).';
+  return 'The call failed: '+m;
+}
+
+/* ============ SETTINGS / MODAL ============ */
+function modal(html){
+  document.getElementById('modal-root').innerHTML =
+    `<div class="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal">${html}</div></div>`;
+}
+function closeModal(){ document.getElementById('modal-root').innerHTML=''; }
+function openSettings(){
+  modal(`
+    <h2>Firm Settings</h2>
+    <label>Anthropic API key</label>
+    <input type="password" id="set-key" value="${esc(S.apiKey)}" placeholder="sk-ant-…">
+    <p class="tiny" style="margin-top:6px">Required when running from GitHub Pages. Stored only on this device. Get one at console.anthropic.com.</p>
+    <label>Group WhatsApp line</label>
+    <input type="text" id="set-wa" value="${esc(S.wa||'')}" placeholder="447700900000 (digits only, country code first)">
+    <p class="tiny" style="margin-top:6px">${S.wa?`Live link: wa.me/${esc(S.wa)}. Noor wires this into content packs and CTAs.`:'One number, one WhatsApp Business profile ("Lyrīon Group") serving all brands via quick replies.'}</p>
+    <div class="hr"></div>
+    <div class="btnrow">
+      <button class="btn gold" onclick="S.apiKey=document.getElementById('set-key').value.trim();S.wa=document.getElementById('set-wa').value.replace(/[^0-9]/g,'');save();closeModal();render()">Save</button>
+      <button class="btn ghost" onclick="exportState()">Export firm data</button>
+      <button class="btn ghost" style="color:var(--rust)" onclick="if(confirm('Dissolve the firm and start over?')){localStorage.removeItem(LS_KEY);S=defaultState();closeModal();render();}">Reset</button>
+    </div>
+  `);
+}
+function exportState(){
+  const blob = new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'ninthhouse-day'+S.day+'.json'; a.click();
+}
+
+/* ============ AUTOPILOT SYNC ============ */
+if(!S.imported) S.imported = {};
+async function syncAutopilot(){
+  try{
+    const res = await fetch('autopilot.json?nh=' + Date.now(), {cache:'no-store'});
+    if(!res.ok) return;
+    const ap = await res.json();
+    let added = 0;
+    for(const it of (ap.items||[])){
+      if(S.imported[it.id]) continue;
+      S.imported[it.id] = true;
+      if(it.type === 'standup'){ S.standups.push({ day:S.day, text:'**Overnight cycle \u00b7 '+it.date+'**\n\n'+it.output }); }
+      else { S.docket.push({ id:it.id, day:S.day, charId:it.charId, biz:it.biz||'setpostgo', brief:it.title, output:it.output, status:'pending' }); }
+      added++;
+    }
+    if(added){ S.lastSync = (ap.generated||new Date().toISOString()); save(); render(); }
+  }catch(e){ /* autopilot not deployed yet - silent */ }
+}
+syncAutopilot();
+
+render();
+</script>
+</body>
+</html>
