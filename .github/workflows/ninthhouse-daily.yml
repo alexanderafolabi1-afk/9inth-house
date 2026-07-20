@@ -1,7 +1,10 @@
-names: Ninth House Daily Cycle
+name: Ninth House Daily Cycle
 on:
   schedule:
-    - cron: '30 5 * * *'   # 05:30 UTC daily (06:30 UK summer) — work ready before you wake
+    - cron: '30 5 * * *'    # 05:30 UTC — Dawn shift (work ready before you wake; Night Press publishes here)
+    - cron: '30 11 * * *'   # 11:30 UTC — Midday shift
+    - cron: '30 17 * * *'   # 17:30 UTC — Evening shift
+    - cron: '30 23 * * *'   # 23:30 UTC — Night shift
   workflow_dispatch: {}     # manual "Run workflow" button for testing
 
 permissions:
@@ -24,5 +27,5 @@ jobs:
           git config user.name "Ninth House Autopilot"
           git config user.email "autopilot@users.noreply.github.com"
           git add autopilot.json sitemap.xml press/ || git add autopilot.json sitemap.xml
-          git diff --cached --quiet || git commit -m "Overnight cycle $(date -u +%F)"
+          git diff --cached --quiet || git commit -m "Shift cycle $(date -u +'%F %H:%M') UTC"
           git push

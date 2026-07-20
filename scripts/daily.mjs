@@ -1,14 +1,21 @@
-// Ninth House — Overnight Autopilot
-// Pings the estate, runs Maren's standup, commissions two partners on their own
-// initiative (weekday rotation), and writes everything to autopilot.json.
-// The PWA imports new items into the CEO's Docket on next open. Human seal still required.
+// Ninth House — Around-the-Clock Autopilot
+// Runs four shifts a day (Dawn, Midday, Evening, Night): pings the estate, runs
+// Maren's standup, commissions partners on their own initiative (weekday rotation),
+// and writes everything to autopilot.json. The Night Press publishes on the dawn
+// shift only. The PWA imports new items into the CEO's Docket on next open.
+// Human seal still required.
 
 import fs from 'node:fs';
 
 const KEY = process.env.ANTHROPIC_API_KEY;
 if (!KEY) { console.error('Missing ANTHROPIC_API_KEY secret'); process.exit(1); }
 
-const today = new Date().toISOString().slice(0, 10);
+const now = new Date();
+const today = now.toISOString().slice(0, 10);
+const hourUTC = now.getUTCHours();
+// unique per run: multiple shifts on the same day never collide
+const runId = `${today}-${String(hourUTC).padStart(2, '0')}`;
+const SHIFT = hourUTC < 9 ? 'Dawn' : hourUTC < 15 ? 'Midday' : hourUTC < 21 ? 'Evening' : 'Night';
 const OUT = 'autopilot.json';
 
 /* ---------- Portfolio & firm context ---------- */
@@ -109,33 +116,33 @@ const duty = ROTA[dow] || ['ingrid', 'theo'];
 // 1) If anything is down, Tobias files an incident FIRST
 if (sites.some(s => !s.up)) {
   const out = await claude(CHARS.tobias.sys + '\n\n' + FIRM_CTX,
-    `URGENT overnight check, ${today}. Server-side estate results (real HTTP checks):\n${siteReport}\n\nFile an incident report: ## Severity, ## Likely cause per affected site (Netlify/DNS/Supabase/cert), ## Immediate fixes in order, ## CEO ACTIONS.`, 800);
-  items.push({ id: `ap-${today}-incident`, date: today, type: 'work', charId: 'tobias', biz: 'renviait', title: `⚠ INCIDENT — site(s) unreachable overnight`, output: out });
+    `URGENT ${SHIFT.toLowerCase()} shift check, ${today}. Server-side estate results (real HTTP checks):\n${siteReport}\n\nFile an incident report: ## Severity, ## Likely cause per affected site (Netlify/DNS/Supabase/cert), ## Immediate fixes in order, ## CEO ACTIONS.`, 800);
+  items.push({ id: `ap-${runId}-incident`, date: today, type: 'work', charId: 'tobias', biz: 'renviait', title: `⚠ INCIDENT — site(s) unreachable (${SHIFT} shift)`, output: out });
 }
 
 // 2) Maren's standup
 const standup = await claude(CHARS.maren.sys + '\n\n' + FIRM_CTX,
-  `Overnight cycle, ${today}. Estate check (real HTTP):\n${siteReport}\n\nRecent overnight work:\n${history}\n\nOn duty today: ${duty.map(d => CHARS[d].name).join(' and ')}.\nRun the standup: ## Situation (3 lines), ## Today's Focus (what the on-duty partners will deliver and why it matters now), ## One Risk I'm Watching. Tight.`, 700);
-items.push({ id: `ap-${today}-standup`, date: today, type: 'standup', charId: 'maren', title: 'Overnight standup', output: standup });
+  `${SHIFT} shift, ${today}. Estate check (real HTTP):\n${siteReport}\n\nRecent firm work:\n${history}\n\nOn duty today: ${duty.map(d => CHARS[d].name).join(' and ')}.\nRun the standup: ## Situation (3 lines), ## This Shift's Focus (what the on-duty partners will deliver and why it matters now), ## One Risk I'm Watching. Tight.`, 700);
+items.push({ id: `ap-${runId}-standup`, date: today, type: 'standup', charId: 'maren', title: `${SHIFT} standup`, output: standup });
 
 // 3) On-duty partners work on their own initiative
 for (const id of duty) {
   const c = CHARS[id];
   const out = await claude(c.sys + '\n\n' + FIRM_CTX,
-    `Overnight cycle, ${today}. No brief from the CEO — you act on your own initiative.\nEstate check:\n${siteReport}\nRecent firm output (do NOT repeat these):\n${history}\n\nChoose the single highest-value task in your domain today. Open with ## Self-Directed Brief (2 lines: what you chose and why), then deliver the complete work product.`, 1000);
-  items.push({ id: `ap-${today}-${id}`, date: today, type: 'work', charId: id, biz: c.biz, title: `Own initiative — ${c.name.split(' ')[0]}'s overnight delivery`, output: out });
+    `${SHIFT} shift, ${today}. No brief from the CEO — you act on your own initiative.\nEstate check:\n${siteReport}\nRecent firm output (do NOT repeat these):\n${history}\n\nChoose the single highest-value task in your domain this shift. Open with ## Self-Directed Brief (2 lines: what you chose and why), then deliver the complete work product.`, 1000);
+  items.push({ id: `ap-${runId}-${id}`, date: today, type: 'work', charId: id, biz: c.biz, title: `Own initiative — ${c.name.split(' ')[0]}'s ${SHIFT.toLowerCase()} shift delivery`, output: out });
 }
 
-// 4) Noor's daily content pack — every day, all brands
+// 4) Noor's content pack — every shift, all brands
 const pack = await claude(CHARS.noor.sys + '\n\n' + FIRM_CTX,
-  `Overnight cycle, ${today}. Recent packs (do NOT repeat angles):\n${history}\n\nDraft today's content pack: 2 posts per brand (SetPostGo, RenviaIT, NAGORI) on their primary platforms. For each post: ## [Brand — Platform], exact paste-ready copy, hashtags, link, best UK posting time. Fresh angles today. End with ## CEO ACTIONS (schedule the pack through SetPostGo; note any platform SetPostGo does not yet cover).`, 1400);
-items.push({ id: `ap-${today}-noor`, date: today, type: 'work', charId: 'noor', biz: 'setpostgo', title: 'Daily content pack — all brands', output: pack });
+  `${SHIFT} shift, ${today}. Recent packs (do NOT repeat angles):\n${history}\n\nDraft this shift's content pack: 2 posts per brand (SetPostGo, RenviaIT, NAGORI) on their primary platforms. For each post: ## [Brand — Platform], exact paste-ready copy, hashtags, link, best UK posting time. Fresh angles this shift. End with ## CEO ACTIONS (schedule the pack through SetPostGo; note any platform SetPostGo does not yet cover).`, 1400);
+items.push({ id: `ap-${runId}-noor`, date: today, type: 'work', charId: 'noor', biz: 'setpostgo', title: `Content pack — all brands (${SHIFT} shift)`, output: pack });
 
-// 5) Friday: Margaret's finance & compliance review
-if (dow === 5) {
+// 5) Friday dawn shift: Margaret's finance & compliance review (once a week)
+if (dow === 5 && SHIFT === 'Dawn') {
   const fin = await claude(CHARS.margaret.sys + '\n\n' + FIRM_CTX,
     `Friday finance review, ${today}. You do not have live bank data — the CEO logs outgoings in the app's register. Deliver: ## This week's finance discipline (what to reconcile across the RenviaIT and Lyrīon accounts), ## UK compliance radar (Companies House, VAT threshold, self-assessment timing for a UK Ltd portfolio — generic calendar, flag what to verify on gov.uk), ## Questions for the CEO (exact figures to log in the register), ## CEO ACTIONS.`, 900);
-  items.push({ id: `ap-${today}-margaret-fin`, date: today, type: 'work', charId: 'margaret', biz: 'renviait', title: 'Friday finance & compliance review', output: fin });
+  items.push({ id: `ap-${runId}-margaret-fin`, date: today, type: 'work', charId: 'margaret', biz: 'renviait', title: 'Friday finance & compliance review', output: fin });
 }
 
 
@@ -193,6 +200,9 @@ ${a.body}
 </html>`;
 
 async function nightPress() {
+  const idxPath = 'press/index.json';
+  const idx = fs.existsSync(idxPath) ? JSON.parse(fs.readFileSync(idxPath, 'utf8')) : [];
+  if (idx.some(x => x.date === today)) { console.log('Night Press: already published today, the presses rest.'); return; }
   const beat = PRESS_BEATS[Math.floor(Date.now() / 864e5) % PRESS_BEATS.length];
   const topic = beat.topics[Math.floor(Math.random() * beat.topics.length)];
   const raw = await claude(CHARS.priya.sys + '\n\n' + FIRM_CTX,
@@ -219,8 +229,6 @@ BODY:
   fs.writeFileSync(`press/${slug}.html`, PRESS_TPL(art));
 
   // archive index
-  const idxPath = 'press/index.json';
-  const idx = fs.existsSync(idxPath) ? JSON.parse(fs.readFileSync(idxPath, 'utf8')) : [];
   idx.unshift({ slug, title, meta, date: today });
   fs.writeFileSync(idxPath, JSON.stringify(idx, null, 1));
   const list = idx.map(x => `<div style="margin-bottom:22px"><a href="${x.slug}.html" style="font-family:'Marcellus',serif;font-size:19px;color:#1C2128;text-decoration:none">${x.title}</a><div style="font-size:11px;letter-spacing:.16em;color:#A97F2F;text-transform:uppercase;margin:3px 0">${x.date}</div><div style="color:#6E6858;font-size:14px">${x.meta}</div></div>`).join('\n');
@@ -235,9 +243,14 @@ BODY:
     fs.writeFileSync('sitemap.xml', sm);
   }
   console.log('Night Press published: ' + slug);
-  items.push({ id: `ap-${today}-press`, date: today, type: 'work', charId: 'priya', biz: beat.target === 'ninthhouse' ? 'setpostgo' : beat.target, title: 'Night Press published: ' + title, output: '## Published overnight\n**' + title + '**\n' + meta + '\n\nLive at: ' + BASE + 'press/' + slug + '.html\n\n## CEO ACTIONS\n- Read it over coffee; if anything displeases you, edit or delete the file in the repo\n- Share it once on the matching brand channel' });
+  items.push({ id: `ap-${runId}-press`, date: today, type: 'work', charId: 'priya', biz: beat.target === 'ninthhouse' ? 'setpostgo' : beat.target, title: 'Night Press published: ' + title, output: '## Published overnight\n**' + title + '**\n' + meta + '\n\nLive at: ' + BASE + 'press/' + slug + '.html\n\n## CEO ACTIONS\n- Read it over coffee; if anything displeases you, edit or delete the file in the repo\n- Share it once on the matching brand channel' });
 }
-try { await nightPress(); } catch (e) { console.log('Night Press failed tonight, the presses rest: ' + String(e).slice(0, 160)); }
+// The Night Press publishes on the dawn shift only, once per day
+if (SHIFT === 'Dawn') {
+  try { await nightPress(); } catch (e) { console.log('Night Press failed tonight, the presses rest: ' + String(e).slice(0, 160)); }
+} else {
+  console.log(`Night Press: presses run on the dawn shift only (this is the ${SHIFT} shift).`);
+}
 
 /* ---------- Write (keep last 30 days of items) ---------- */
 const merged = [...(prev.items || []), ...items];

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Ninth House. Growth Partners</title>
+<title>Ninth House | Growth Partners</title>
 <meta name="theme-color" content="#12161C">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -923,7 +923,7 @@ async function syncAutopilot(){
     for(const it of (ap.items||[])){
       if(S.imported[it.id]) continue;
       S.imported[it.id] = true;
-      if(it.type === 'standup'){ S.standups.push({ day:S.day, text:'**Overnight cycle \u00b7 '+it.date+'**\n\n'+it.output }); }
+      if(it.type === 'standup'){ S.standups.push({ day:S.day, text:'**'+(it.title||'Standup')+' \u00b7 '+it.date+'**\n\n'+it.output }); }
       else { S.docket.push({ id:it.id, day:S.day, charId:it.charId, biz:it.biz||'setpostgo', brief:it.title, output:it.output, status:'pending' }); }
       added++;
     }
