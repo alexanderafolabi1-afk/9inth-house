@@ -409,6 +409,7 @@ document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
 
 <script>
 function fdAvatarFallback(img){
+  if(img.classList.contains('fd-photo-error')) return;
   img.classList.add('fd-photo-error');
   const fallback = img.parentNode.querySelector('.fd-fallback');
   if(fallback) fallback.classList.add('fd-show');
