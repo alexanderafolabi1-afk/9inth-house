@@ -1504,10 +1504,10 @@ if(nhChallenge) goLounge();
       }, 350);
     }
 
-    ov.addEventListener('click', arrive, { once: true });
-
     setTimeout(function(){
       if (done) return;
+      /* Allow tap-to-skip once doors are closed */
+      ov.addEventListener('click', arrive, { once: true });
       /* Show cabin info */
       var arrow   = document.getElementById('lift-arrow');
       var counter = document.getElementById('lift-counter');
@@ -1538,7 +1538,8 @@ if(nhChallenge) goLounge();
     }, 350);
   };
 
-  /* Keep currentFloor updated when navigating without the lift buttons */
+  /* Keep currentFloor updated when goLobby() is called directly (e.g. back buttons).
+     goLobby is always defined by the tower engine script above; the && guard is belt-and-suspenders. */
   var _goLobby = window.goLobby;
   window.goLobby = function(){ currentFloor = 0; _goLobby && _goLobby(); };
 })();
