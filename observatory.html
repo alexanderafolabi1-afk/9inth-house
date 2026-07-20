@@ -116,6 +116,70 @@ footer .fine{text-align:center}
 .reveal.in{opacity:1;transform:none}
 @media (prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none}}
 
+/* Living Weather Glass */
+.inst.wx{position:relative;overflow:hidden}
+.inst.wx > *:not(.wx-scene){position:relative;z-index:1}
+.wx-scene{position:absolute;inset:0;border-radius:14px;z-index:0;pointer-events:none;overflow:hidden;transition:background .8s ease}
+.wx-clear-day{background:radial-gradient(circle at 72% 22%,rgba(201,165,87,.30),transparent 62%),linear-gradient(160deg,#FFFDF8,#F4EDDC)}
+.wx-cloud{background:linear-gradient(160deg,rgba(224,220,208,.75),rgba(198,194,182,.65))}
+.wx-night{background:linear-gradient(160deg,#1B2432,#10151D)}
+.wx-rain{background:linear-gradient(160deg,#20303f,#141d28)}
+.wx-rain::after{content:"";position:absolute;inset:-20% 0;background-image:repeating-linear-gradient(114deg,transparent 0 9px,rgba(201,165,87,.4) 9px 10px);background-size:auto 22px;animation:wxrain .55s linear infinite}
+.wx-snow::after{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(255,253,248,.9) 1.3px,transparent 2px),radial-gradient(rgba(255,253,248,.6) 1px,transparent 2px);background-size:30px 30px,20px 20px;animation:wxsnow 4.2s linear infinite}
+.wx-stars{position:absolute;top:16px;left:22px;width:2px;height:2px;border-radius:50%;background:#E9E2D0;box-shadow:24px 10px 0 #E9E2D0,58px 4px 0 rgba(233,226,208,.7),92px 16px 0 rgba(233,226,208,.85),140px 8px 0 rgba(233,226,208,.6),188px 20px 0 #E9E2D0,210px 6px 0 rgba(233,226,208,.7),40px 30px 0 rgba(233,226,208,.5);animation:wxtwinkle 3.4s ease-in-out infinite}
+@keyframes wxrain{to{background-position:0 22px}}
+@keyframes wxsnow{to{background-position:0 30px,0 20px}}
+@keyframes wxtwinkle{0%,100%{opacity:.3}50%{opacity:.95}}
+.inst.wx.night h3,.inst.wx.night .wx-cond,.inst.wx.night .row .k,.inst.wx.night .row .v{color:#E9E2D0}
+.inst.wx.night .sub{color:#B9B2A0}
+.inst.wx.night .row{border-color:rgba(201,165,87,.22)}
+.inst.wx.night .bigtemp{color:var(--gold-bright)}
+@media (prefers-reduced-motion:reduce){.wx-rain::after,.wx-snow::after,.wx-stars{animation:none}}
+
+/* Scoreboard plate */
+.scoreboard{background:linear-gradient(#141A22,#0C1017);border:1px solid var(--gold-deep);border-radius:12px;padding:14px 16px;box-shadow:inset 0 0 0 3px #141A22,inset 0 0 0 4px rgba(201,165,87,.38)}
+.sb-league{display:flex;align-items:center;gap:9px;margin:14px 0 7px}
+.sb-league:first-child{margin-top:2px}
+.sb-pennant{background:var(--gold);color:#12161C;font-family:'Spline Sans Mono',monospace;font-size:9px;font-weight:600;letter-spacing:.12em;padding:2px 9px;clip-path:polygon(0 0,100% 0,86% 50%,100% 100%,0 100%);text-transform:uppercase}
+.sb-row{display:flex;justify-content:space-between;gap:10px;font-family:'Spline Sans Mono',monospace;font-size:12.5px;color:#E3C176;padding:5px 0;border-bottom:1px dashed rgba(201,165,87,.16);line-height:1.3}
+.sb-row:last-child{border-bottom:none}
+.sb-row .sc{color:#FBF7EE;white-space:nowrap}
+.sb-row small{display:block;color:#8F8564;font-size:10px}
+.sb-note{font-family:'Spline Sans Mono',monospace;font-size:11px;color:#8F8564;font-style:italic;padding:5px 0}
+
+/* The Green Room */
+.greenroom{display:grid;grid-template-columns:1fr 1px 1fr;gap:14px;margin-top:2px}
+.gr-col h5{font-family:'Marcellus',serif;font-weight:400;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin-bottom:7px}
+.gr-rule{background:linear-gradient(var(--gold-bright),rgba(201,165,87,0));width:1px}
+.gr-item{font-size:12.5px;color:var(--ink);padding:5px 0;border-bottom:1px dashed var(--line);line-height:1.35}
+.gr-item:last-child{border-bottom:none}
+.gr-item small{display:block;color:var(--faint);font-size:10.5px;font-family:'Spline Sans Mono',monospace}
+@media(max-width:520px){.greenroom{grid-template-columns:1fr}.gr-rule{display:none}}
+
+/* The Clock Wall */
+.clockwall{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:24px 14px;margin-top:32px}
+.clock{text-align:center}
+.clock svg{width:100%;max-width:116px;height:auto;display:block;margin:0 auto}
+.clock .face-bg{fill:#FFFDF8;stroke:var(--gold-deep);stroke-width:1.5}
+.clock.night .face-bg{fill:#12161C;stroke:var(--gold-bright)}
+.clock .ring{fill:none;stroke:rgba(169,127,47,.28);stroke-width:1}
+.clock .num{fill:var(--ink);font-family:'Spline Sans Mono',monospace;font-size:8px;text-anchor:middle;dominant-baseline:middle}
+.clock.night .num{fill:#E3C176}
+.clock .h-hand{stroke:var(--gold-deep);stroke-width:3;stroke-linecap:round}
+.clock .m-hand{stroke:var(--gold-deep);stroke-width:2;stroke-linecap:round}
+.clock.night .h-hand,.clock.night .m-hand{stroke:var(--gold-bright)}
+.clock .s-hand{stroke:var(--gold-bright);stroke-width:1}
+.clock .pin{fill:var(--gold)}
+.clock-city{display:block;font-family:'Marcellus',serif;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-top:9px}
+.clock-time{display:block;font-family:'Spline Sans Mono',monospace;font-size:9.5px;color:var(--faint);margin-top:2px;letter-spacing:.08em}
+
+/* Compact brass lift back to the Tower */
+#obs-lift{position:fixed;bottom:18px;left:18px;z-index:60;background:linear-gradient(158deg,#E9CE8C,#C9A557 42%,#A97F2F);border:1px solid #8F7434;border-radius:14px;padding:9px 7px;display:flex;flex-direction:column;gap:5px;box-shadow:0 10px 28px rgba(28,33,40,.3),inset 0 1px 0 rgba(255,253,248,.55)}
+#obs-lift b{font-family:'Spline Sans Mono',monospace;font-size:8px;letter-spacing:.2em;color:#241B07;text-align:center}
+#obs-lift a{width:40px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:8px;background:linear-gradient(#FBF7EE,#EDE4D0);border:1px solid #8F7434;color:#3E2E1E;font-family:'Spline Sans Mono',monospace;font-size:11px;font-weight:600;text-decoration:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.6)}
+#obs-lift a:hover{background:linear-gradient(#241B07,#3E2E1E);color:#E9CE8C}
+@media(max-width:720px){#obs-lift{flex-direction:row;flex-wrap:wrap;max-width:150px;bottom:12px;left:12px}#obs-lift b{width:100%}}
+
 /* Ticker */
 .ticker{background:var(--dark);border-top:1px solid var(--gold);border-bottom:1px solid var(--gold);overflow:hidden}
 .ticker .item{color:var(--gold-bright);font-family:'Spline Sans Mono',monospace;font-size:13px;letter-spacing:.06em;padding:0 20px}
@@ -154,6 +218,7 @@ footer .fine{text-align:center}
     <div class="obs-hero-title">The Observatory</div>
   </div>
 </div>
+<div id="obs-lift" aria-label="Lift to the Tower floors"><b>LIFT</b></div>
 
 <div class="ticker" aria-label="Live house ticker"><div class="ticker-track" id="tick-track"></div></div>
 
@@ -169,7 +234,8 @@ footer .fine{text-align:center}
   <div class="wrap">
     <div class="instruments">
 
-      <div class="inst reveal">
+      <div class="inst reveal wx" id="wx-card">
+        <div class="wx-scene" id="wx-scene"></div>
         <div class="inst-head"><h3>The Weather Glass</h3><div class="sub" id="wx-place">Reading your sky</div></div>
         <div id="wx-body"><p class="recal">Instrument recalibrating. Values return shortly.</p></div>
       </div>
@@ -190,19 +256,25 @@ footer .fine{text-align:center}
       </div>
 
       <div class="inst reveal">
-        <div class="inst-head"><h3>The Scores</h3><div class="sub">Premier League, latest results</div></div>
+        <div class="inst-head"><h3>The Scores</h3><div class="sub">Football, courts and circuits</div></div>
         <div id="ft-body"><p class="recal">Instrument recalibrating. Values return shortly.</p></div>
       </div>
 
-      <div class="inst reveal" style="background:var(--band)">
-        <div class="inst-head"><h3>House Time</h3><div class="sub">The firm never closes</div></div>
-        <div class="row"><span class="k">London</span><span class="v" id="clock-ldn">&hellip;</span></div>
-        <div class="row"><span class="k">New York</span><span class="v" id="clock-ny">&hellip;</span></div>
-        <div class="row"><span class="k">Lagos</span><span class="v" id="clock-lag">&hellip;</span></div>
-        <div class="row"><span class="k">Tokyo</span><span class="v" id="clock-tyo">&hellip;</span></div>
+      <div class="inst reveal">
+        <div class="inst-head"><h3>The Green Room</h3><div class="sub">Cinema, Music, The Season</div></div>
+        <div id="gr-body"><p class="recal">Instrument recalibrating. Values return shortly.</p></div>
       </div>
 
     </div>
+  </div>
+</section>
+
+<section style="padding-top:10px;padding-bottom:40px">
+  <div class="wrap">
+    <div class="sec-eyebrow">The Clock Wall</div>
+    <h2>Every hour the house keeps.</h2>
+    <p class="lead">Fifteen faces along the concourse wall, ticking in real time. The lit dials keep the working day; the dark dials keep the night watch.</p>
+    <div class="clockwall" id="clockwall"></div>
   </div>
 </section>
 
@@ -296,14 +368,30 @@ function locate(){
       { timeout:4000, maximumAge:600000 });
   });
 }
+function wxScene(code, isDay){
+  // rain / drizzle / showers / thunder
+  if((code>=51 && code<=67) || (code>=80 && code<=82) || code>=95) return { cls:'wx-rain', night:true };
+  // snow
+  if((code>=71 && code<=77) || code===85 || code===86) return { cls:'wx-snow', night:!isDay };
+  // cloud / fog / overcast
+  if(code===2 || code===3 || code===45 || code===48) return { cls: isDay ? 'wx-cloud' : 'wx-night', night:!isDay, stars:!isDay };
+  // clear / mainly clear
+  return isDay ? { cls:'wx-clear-day', night:false } : { cls:'wx-night', night:true, stars:true };
+}
 (async () => {
   try{
     const loc = await locate();
     el('wx-place').textContent = loc.label;
-    const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,relative_humidity_2m&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1`);
+    const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current=temperature_2m,apparent_temperature,weather_code,is_day,wind_speed_10m,relative_humidity_2m&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1`);
     if(!r.ok) throw 0;
     const d = await r.json(); const c = d.current;
     const cond = WXCODE[c.weather_code] || 'Skies undecided';
+    const isDay = c.is_day === undefined ? true : !!c.is_day;
+    const scene = wxScene(c.weather_code, isDay);
+    const sc = el('wx-scene');
+    sc.className = 'wx-scene ' + scene.cls;
+    sc.innerHTML = scene.stars ? '<span class="wx-stars"></span>' : '';
+    el('wx-card').classList.toggle('night', !!scene.night);
     el('wx-body').innerHTML = `
       <div style="display:flex;align-items:flex-end;gap:14px;margin-bottom:10px">
         <span class="bigtemp">${Math.round(c.temperature_2m)}&deg;</span>
@@ -376,30 +464,134 @@ loadCurrency();
   }catch(e){ el('hn-body').innerHTML = recalMsg; }
 })();
 
-/* ============ THE SCORES (TheSportsDB, EPL) ============ */
+/* ============ THE SCORES (TheSportsDB, scoreboard plate) ============ */
 (async () => {
+  const SPORTS_KEY = '3';
+  const leagues = [
+    { pennant:'EPL',     id:'4328', label:'Premier League' },
+    { pennant:'NBA',     id:'4387', label:'NBA' },
+    { pennant:'F1',      id:'4370', label:'Formula 1' }
+  ];
+  const esc = s => String(s == null ? '' : s).replace(/</g,'&lt;');
+  async function leagueEvents(id){
+    try{
+      const r = await fetch(`https://www.thesportsdb.com/api/v1/json/${SPORTS_KEY}/eventspastleague.php?id=${id}`, { signal: AbortSignal.timeout(7000) });
+      if(!r.ok) return null;
+      const d = await r.json();
+      return (d.events && d.events.length) ? d.events : null;
+    }catch(e){ return null; }
+  }
   try{
-    const r = await fetch('https://www.thesportsdb.com/api/v1/json/123/eventspastleague.php?id=4328');
-    if(!r.ok) throw 0;
-    const d = await r.json();
-    const ev = (d.events || []).slice(0, 6);
-    if(!ev.length) throw 0;
-    el('ft-body').innerHTML = ev.map(e =>
-      `<div class="row"><span class="k">${e.strHomeTeam} v ${e.strAwayTeam}<span style="display:block;font-size:11px;color:var(--faint)">${e.dateEvent || ''}</span></span><span class="v">${e.intHomeScore ?? '?'} : ${e.intAwayScore ?? '?'}</span></div>`).join('');
-    const f = ev[0];
-    tick(`EPL <b>${f.strHomeTeam} ${f.intHomeScore ?? ''} : ${f.intAwayScore ?? ''} ${f.strAwayTeam}</b>`);
+    const results = await Promise.all(leagues.map(l => leagueEvents(l.id)));
+    if(results.every(r => !r)) throw 0;
+    let firstTick = '';
+    const blocks = leagues.map((l, i) => {
+      const ev = results[i];
+      let rows;
+      if(!ev){
+        rows = `<div class="sb-note">${l.label} recalibrating.</div>`;
+      } else if(l.pennant === 'F1'){
+        const e = ev[0];
+        const winner = e.strResult ? e.strResult.split(/\r?\n/)[0].replace(/^1(st|\.)?\s*/i,'').trim() : '';
+        rows = `<div class="sb-row"><span>${esc(e.strEvent || 'Latest Grand Prix')}<small>${esc(e.dateEvent || '')}</small></span><span class="sc">${esc(winner || 'Result posted')}</span></div>`;
+        if(!firstTick) firstTick = 'F1 ' + (e.strEvent || '');
+      } else {
+        rows = ev.slice(0, 4).map(e =>
+          `<div class="sb-row"><span>${esc(e.strHomeTeam)} v ${esc(e.strAwayTeam)}<small>${esc(e.dateEvent || '')}</small></span><span class="sc">${e.intHomeScore ?? '-'} : ${e.intAwayScore ?? '-'}</span></div>`).join('');
+        if(!firstTick){ const f = ev[0]; firstTick = `${l.pennant} ${f.strHomeTeam} ${f.intHomeScore ?? ''}:${f.intAwayScore ?? ''} ${f.strAwayTeam}`; }
+      }
+      return `<div class="sb-league"><span class="sb-pennant">${l.pennant}</span></div>${rows}`;
+    }).join('');
+    el('ft-body').innerHTML = `<div class="scoreboard">${blocks}</div>`;
+    if(firstTick) tick(`<b>${esc(firstTick).slice(0,54)}</b>`);
   }catch(e){ el('ft-body').innerHTML = recalMsg; }
 })();
 
-/* ============ HOUSE TIME ============ */
-function clocks(){
-  const fmt = tz => new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', timeZone:tz });
-  el('clock-ldn').textContent = fmt('Europe/London');
-  el('clock-ny').textContent  = fmt('America/New_York');
-  el('clock-lag').textContent = fmt('Africa/Lagos');
-  el('clock-tyo').textContent = fmt('Asia/Tokyo');
+/* ============ THE GREEN ROOM (iTunes RSS) ============ */
+(async () => {
+  const esc = s => String(s == null ? '' : s).replace(/</g,'&lt;');
+  async function feed(kind){
+    try{
+      const r = await fetch(`https://itunes.apple.com/gb/rss/${kind}/limit=5/json`, { signal: AbortSignal.timeout(7000) });
+      if(!r.ok) return null;
+      const d = await r.json();
+      const list = d.feed && d.feed.entry ? d.feed.entry : null;
+      if(!list || !list.length) return null;
+      return list.map(x => ({
+        title: (x['im:name'] && x['im:name'].label) || (x.title && x.title.label) || '',
+        by: (x['im:artist'] && x['im:artist'].label) || ''
+      }));
+    }catch(e){ return null; }
+  }
+  try{
+    const [movies, songs] = await Promise.all([feed('topmovies'), feed('topsongs')]);
+    if(!movies && !songs) throw 0;
+    const col = (title, list) => `<div class="gr-col"><h5>${title}</h5>${
+      list ? list.map(x => `<div class="gr-item">${esc(x.title)}${x.by ? `<small>${esc(x.by)}</small>` : ''}</div>`).join('')
+           : '<div class="gr-item" style="color:var(--faint);font-style:italic">Recalibrating.</div>'}</div>`;
+    el('gr-body').innerHTML = `<div class="greenroom">${col('In Cinemas', movies)}<div class="gr-rule"></div>${col('On the Charts', songs)}</div>`;
+    if(movies && movies[0]) tick(`Cinema <b>${esc(movies[0].title).slice(0,40)}</b>`);
+    if(songs && songs[0]) tick(`Chart <b>${esc(songs[0].title).slice(0,40)}</b>`);
+  }catch(e){ el('gr-body').innerHTML = recalMsg; }
+})();
+
+/* ============ THE CLOCK WALL ============ */
+const CITIES = [
+  ['London','Europe/London'], ['New York','America/New_York'], ['Tokyo','Asia/Tokyo'],
+  ['Dubai','Asia/Dubai'], ['Singapore','Asia/Singapore'], ['Sydney','Australia/Sydney'],
+  ['Paris','Europe/Paris'], ['Frankfurt','Europe/Berlin'], ['Zurich','Europe/Zurich'],
+  ['Hong Kong','Asia/Hong_Kong'], ['Toronto','America/Toronto'], ['Los Angeles','America/Los_Angeles'],
+  ['Mumbai','Asia/Kolkata'], ['São Paulo','America/Sao_Paulo'], ['Johannesburg','Africa/Johannesburg']
+];
+function zoneParts(tz){
+  const p = new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' }).formatToParts(new Date());
+  const g = t => parseInt((p.find(x => x.type === t) || {}).value, 10) || 0;
+  return { h: g('hour'), m: g('minute'), s: g('second') };
 }
-clocks(); setInterval(clocks, 30000);
+function clockSVG(){
+  let nums = '';
+  for(let n = 1; n <= 12; n++){
+    const a = n * 30 * Math.PI / 180;
+    const x = (50 + 38 * Math.sin(a)).toFixed(1);
+    const y = (50 - 38 * Math.cos(a)).toFixed(1);
+    nums += `<text class="num" x="${x}" y="${y}">${n}</text>`;
+  }
+  return `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <circle class="face-bg" cx="50" cy="50" r="46"/><circle class="ring" cx="50" cy="50" r="41"/>
+    ${nums}
+    <line class="h-hand" x1="50" y1="50" x2="50" y2="30"/>
+    <line class="m-hand" x1="50" y1="50" x2="50" y2="20"/>
+    <line class="s-hand" x1="50" y1="54" x2="50" y2="17"/>
+    <circle class="pin" cx="50" cy="50" r="2.4"/>
+  </svg>`;
+}
+const clockWall = document.getElementById('clockwall');
+if(clockWall){
+  clockWall.innerHTML = CITIES.map(([city, tz]) =>
+    `<div class="clock" data-tz="${tz}">${clockSVG()}<span class="clock-city">${city}</span><span class="clock-time"></span></div>`).join('');
+}
+function tickClocks(){
+  document.querySelectorAll('#clockwall .clock').forEach(cl => {
+    const { h, m, s } = zoneParts(cl.dataset.tz);
+    const hAng = (h % 12) * 30 + m * 0.5;
+    const mAng = m * 6 + s * 0.1;
+    const sAng = s * 6;
+    const set = (sel, ang) => { const e = cl.querySelector(sel); if(e) e.setAttribute('transform', `rotate(${ang} 50 50)`); };
+    set('.h-hand', hAng); set('.m-hand', mAng); set('.s-hand', sAng);
+    cl.classList.toggle('night', !(h >= 6 && h < 18));
+    const tEl = cl.querySelector('.clock-time');
+    if(tEl) tEl.textContent = String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0');
+  });
+}
+tickClocks(); setInterval(tickClocks, 1000);
+
+/* ============ COMPACT LIFT TO THE TOWER ============ */
+const obsLift = document.getElementById('obs-lift');
+if(obsLift){
+  const FLOORS = [['9','Executive Suite'],['8','The Observatory'],['5','The Partners'],['4','The Studio'],['3','Intelligence'],['2','Operations'],['1','The Lounge'],['G','Lobby']];
+  obsLift.innerHTML = '<b>LIFT</b>' + FLOORS.map(([f, name]) =>
+    `<a href="index.html?floor=${f === 'G' ? '0' : f}" title="${name}">${f}</a>`).join('');
+}
 
 /* ============ WIRE BRIEF (wire.json) ============ */
 function mdLite(t){
