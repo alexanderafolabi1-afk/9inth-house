@@ -249,9 +249,9 @@ const CHARS = [
  { id:'sipho', dept:'Growth, Creative & Media', name:'Sipho Dlamini', role:'Head of Partnerships & PR', region:'AFRICA', ini:'SD',
    bio:'Johannesburg. King James lineage. Earned media, angles journalists actually take.',
    sys:'You are Sipho Dlamini, Head of Partnerships & PR at Ninth House (King James / earned-media tradition). You craft press angles, pitch emails, partnership targets, and collab structures. You write the actual pitch, ready to send.' },
- { id:'rocio', dept:'Intelligence & Impact', name:'Rocío Fuentes', role:'Head of Data & Analytics', region:'LATAM', ini:'RF',
+ { id:'rocio', dept:'Intelligence & Impact', name:'Rocco Fuentes', role:'Head of Data & Analytics', region:'LATAM', ini:'RF',
    bio:'Mexico City. Funnels, dashboards, experiment design. Finds the leak, names the fix.',
-   sys:'You are Rocío Fuentes, Head of Data & Analytics at Ninth House. You define funnel metrics, north-star KPIs, experiment designs (hypothesis/variant/success metric), and diagnose leaks from limited data. You are numeric and blunt.' },
+   sys:'You are Rocco Fuentes, Head of Data & Analytics at Ninth House. You define funnel metrics, north-star KPIs, experiment designs (hypothesis/variant/success metric), and diagnose leaks from limited data. You are numeric and blunt.' },
  { id:'kenji', dept:'Growth, Creative & Media', name:'Kenji Hara', role:'Head of CRM & Retention', region:'APAC', ini:'KH',
    bio:'Tokyo. Lifecycle email/WhatsApp flows, win-backs, LTV expansion. Natural fit for NAGORI.',
    sys:'You are Kenji Hara, Head of CRM & Retention at Ninth House, Tokyo. You design lifecycle flows (email/WhatsApp), onboarding sequences, win-back campaigns, and write the actual copy for each message. You understand Japanese aesthetics deeply. a natural fit for NAGORI.' },
@@ -462,7 +462,7 @@ function vFloor(){
     <div class="eyebrow">${dep}</div>
     ${CHARS.filter(c=>c.dept===dep).map(c=>`
     <div class="card char" onclick="openCommission('${c.id}')" style="cursor:pointer">
-      <div class="avatar"><span>${c.ini}</span><img src="avatars/${c.id}.png" alt="" onerror="this.remove()"></div>
+      <div class="avatar"><span>${c.ini}</span><img src="avatars/${c.id}.jpg" alt="" onerror="this.remove()"></div>
       <div style="flex:1">
         <h3 class="serif">${c.name}<span class="region">${c.region}</span></h3>
         <div class="role">${c.role}</div>
@@ -501,7 +501,7 @@ function vDocket(){
     const c = charById(d.charId);
     return `<div class="card docket-item ${d.status}">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
-        <div class="avatar" style="width:34px;height:34px;font-size:12px"><span>${c.ini}</span><img src="avatars/${c.id}.png" alt="" onerror="this.remove()"></div>
+        <div class="avatar" style="width:34px;height:34px;font-size:12px"><span>${c.ini}</span><img src="avatars/${c.id}.jpg" alt="" onerror="this.remove()"></div>
         <div style="flex:1">
           <div style="font-size:13.5px;font-weight:600">${esc(d.brief.slice(0,60))}${d.brief.length>60?'…':''}</div>
           <div class="tiny">${c.name} · ${BIZ[d.biz].name} · Day ${d.day}</div>
@@ -851,7 +851,7 @@ async function financeReview(){
 
 /* Diagnose KPIs */
 async function diagnose(biz){
-  modal(`<h2>Roc&iacute;o Fuentes</h2><p class="sub">Reading the ${BIZ[biz].name} numbers…</p><p style="margin-top:14px"><i class="spin"></i></p>`);
+  modal(`<h2>Rocco Fuentes</h2><p class="sub">Reading the ${BIZ[biz].name} numbers…</p><p style="margin-top:14px"><i class="spin"></i></p>`);
   try{
     const out = await callClaude(
       charById('rocio').sys + '\n\n' + FIRM_CTX,
