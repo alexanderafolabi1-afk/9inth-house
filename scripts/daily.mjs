@@ -187,6 +187,7 @@ const PRESS_TPL = (a) => `<!DOCTYPE html>
 <meta name="description" content="${a.meta}">
 <link rel="canonical" href="${BASE}press/${a.slug}.html">
 <meta name="theme-color" content="#FBF7EE">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
 <link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Albert+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script type="application/ld+json">${JSON.stringify({'@context':'https://schema.org','@type':'Article','headline':a.title,'description':a.meta,'datePublished':a.date,'author':{'@type':'Organization','name':'Ninth House Growth Partners'},'publisher':{'@type':'Organization','name':'Ninth House Growth Partners'}})}</script>
 <style>
