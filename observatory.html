@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Observatory | Ninth House Growth Partners</title>
+<meta name="description" content="The house intelligence deck: live weather, the currency board, the crypto tape, the technology wire, the scores and the Wire Brief, read by instruments the firm polishes every shift.">
+<meta property="og:title" content="The Observatory | Ninth House Growth Partners">
+<meta property="og:description" content="The house intelligence deck: weather, markets, the crypto tape, the technology wire, the scores and the Wire Brief.">
+<meta name="theme-color" content="#FBF7EE">
+<link rel="canonical" href="https://YOUR-USERNAME.github.io/ninth-house/observatory.html">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23FBF7EE'/%3E%3Ctext x='32' y='44' font-size='36' text-anchor='middle' fill='%23A97F2F' font-family='serif'%3E%E2%99%83%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Albert+Sans:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#FBF7EE; --card:#FFFDF8; --band:#F4EDDC;
+  --ink:#1C2128; --body:#3A4048; --muted:#6E6858; --faint:#98917E;
+  --line:#E4DCC6; --gold:#A97F2F; --gold-bright:#C9A557; --gold-deep:#8F7434;
+  --dark:#161B22;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;background:var(--bg)}
+body{font-family:'Albert Sans',system-ui,sans-serif;background:var(--bg);color:var(--body);line-height:1.65;font-size:16px}
+.serif{font-family:'Marcellus',serif;font-weight:400}
+a{color:var(--gold);text-decoration:none}
+.wrap{max-width:1080px;margin:0 auto;padding:0 22px}
+.mono{font-family:'Spline Sans Mono',monospace}
+
+nav{position:sticky;top:0;z-index:50;background:rgba(251,247,238,.92);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+nav .wrap{display:flex;align-items:center;gap:12px;padding:14px 22px}
+.glyph{width:38px;height:38px;border:1px solid var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--gold);font-size:20px;font-family:'Marcellus',serif;flex-shrink:0;background:var(--card)}
+nav b{font-family:'Marcellus',serif;font-weight:400;letter-spacing:.14em;text-transform:uppercase;font-size:15px;color:var(--ink)}
+nav .links{margin-left:auto;display:flex;gap:22px;font-size:13px;align-items:center}
+nav .links a{color:var(--muted);font-weight:500}
+nav .links a:hover{color:var(--gold)}
+@media(max-width:640px){nav .links a:not(.cta){display:none}}
+.cta-btn{background:var(--gold);color:#FFFDF8!important;font-weight:700;padding:9px 18px;border-radius:10px;font-size:13px}
+
+/* Ticker */
+.ticker{background:var(--dark);border-bottom:1px solid var(--gold-deep);overflow:hidden}
+.ticker-track{display:inline-flex;align-items:center;white-space:nowrap;padding:9px 0;animation:tick 46s linear infinite;will-change:transform}
+.ticker:hover .ticker-track{animation-play-state:paused}
+.ticker .item{color:#E9E2D0;font-family:'Spline Sans Mono',monospace;font-size:12px;letter-spacing:.05em;padding:0 16px}
+.ticker .item b{color:var(--gold-bright);font-weight:500}
+.ticker .sep{color:var(--gold-deep);font-size:11px}
+@keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@media (prefers-reduced-motion:reduce){.ticker-track{animation:none}}
+
+/* Sections */
+section{padding:64px 0}
+.sec-eyebrow{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);display:flex;align-items:center;gap:14px;margin-bottom:16px;font-weight:600}
+.sec-eyebrow::after{content:"";flex:1;height:1px;background:var(--line)}
+h1{font-family:'Marcellus',serif;font-weight:400;font-size:clamp(30px,5vw,46px);line-height:1.15;color:var(--ink);margin-bottom:14px}
+h2{font-family:'Marcellus',serif;font-weight:400;font-size:clamp(24px,3.6vw,34px);line-height:1.2;margin-bottom:16px;color:var(--ink)}
+.lead{color:var(--muted);font-size:16.5px;max-width:680px}
+
+/* Instruments */
+.instruments{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-top:30px}
+.inst{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:0 1px 3px rgba(28,33,40,.04);position:relative;overflow:hidden}
+.inst::after{content:"";position:absolute;top:-46px;right:-46px;width:120px;height:120px;border-radius:50%;border:1px dashed var(--gold-bright);opacity:.28;pointer-events:none}
+.inst-head{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.dial{width:36px;height:36px;border:1px solid var(--gold-bright);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--gold);background:var(--band);font-size:16px;flex-shrink:0}
+.inst h3{font-family:'Marcellus',serif;font-weight:400;font-size:18px;color:var(--ink)}
+.inst .sub{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);font-weight:600}
+.row{display:flex;justify-content:space-between;align-items:baseline;gap:10px;border-bottom:1px dashed var(--line);padding:7px 0;font-size:14px}
+.row:last-child{border-bottom:none}
+.row .k{color:var(--body)}
+.row .v{font-family:'Spline Sans Mono',monospace;font-size:13.5px;color:var(--ink);text-align:right}
+.up{color:#5FA98B}.dn{color:#B5563F}
+.recal{color:var(--faint);font-style:italic;font-size:13.5px;padding:8px 0}
+.bigtemp{font-family:'Spline Sans Mono',monospace;font-size:44px;color:var(--gold);line-height:1}
+.wx-cond{font-family:'Marcellus',serif;font-size:17px;color:var(--ink);margin-top:6px}
+.wirelist a{display:block;padding:8px 0;border-bottom:1px dashed var(--line);color:var(--ink);font-size:14px;line-height:1.45}
+.wirelist a:last-child{border-bottom:none}
+.wirelist a:hover{color:var(--gold)}
+.wirelist small{display:block;font-family:'Spline Sans Mono',monospace;font-size:11px;color:var(--faint);margin-top:2px}
+
+/* Wire Brief */
+.brief{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;margin-bottom:14px;box-shadow:0 1px 3px rgba(28,33,40,.04)}
+.brief-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.shift-chip{border:1px solid var(--gold-bright);color:var(--gold);background:var(--band);border-radius:20px;padding:2px 12px;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;font-weight:700}
+.brief-date{font-family:'Spline Sans Mono',monospace;font-size:11.5px;color:var(--faint);letter-spacing:.1em}
+.brief h4{font-family:'Marcellus',serif;font-weight:400;font-size:15px;color:var(--gold);letter-spacing:.12em;text-transform:uppercase;margin:14px 0 6px}
+.brief p{font-size:14px;color:var(--body);margin:4px 0}
+.brief p.wl{padding-left:20px;position:relative}
+.brief p.wl::before{content:"\2643";position:absolute;left:0;color:var(--gold-bright);font-size:12px}
+
+/* Estate plaques */
+.estate-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(195px,1fr));gap:14px;margin-top:30px}
+.plaque{display:block;background:linear-gradient(160deg,#E3C176,#C9A557 45%,#A97F2F);border-radius:10px;padding:4px;box-shadow:0 5px 16px rgba(169,127,47,.28),inset 0 1px 0 rgba(255,253,248,.5);transition:transform .15s}
+.plaque:hover{transform:translateY(-3px)}
+.plaque .face{border:1px solid rgba(36,27,7,.4);border-radius:7px;padding:18px 14px 16px;text-align:center;background:linear-gradient(#E9CE8C,#C9A557)}
+.plaque b{display:block;font-family:'Marcellus',serif;font-weight:400;color:#241B07;font-size:15.5px;letter-spacing:.1em;text-transform:uppercase;text-shadow:0 1px 0 rgba(255,253,248,.4)}
+.plaque i{display:block;width:26px;height:1px;background:rgba(36,27,7,.4);margin:8px auto}
+.plaque span{display:block;color:#3E2E1E;font-size:11.5px;line-height:1.5}
+.plaque small{display:block;font-family:'Spline Sans Mono',monospace;font-size:9px;letter-spacing:.14em;color:rgba(36,27,7,.55);margin-top:9px;text-transform:uppercase}
+
+/* Revenue cards */
+.offers{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:30px}
+.offer{background:var(--card);border:1px solid var(--gold-bright);border-radius:16px;padding:24px;box-shadow:0 4px 16px rgba(169,127,47,.1)}
+.offer .pill{display:inline-block;border:1px solid var(--gold-bright);color:var(--gold);border-radius:20px;padding:3px 12px;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;margin-bottom:12px;font-weight:600;background:var(--band)}
+.offer h3{font-family:'Marcellus',serif;font-weight:400;font-size:20px;color:var(--ink);margin-bottom:8px}
+.offer p{color:var(--muted);font-size:14px;margin-bottom:16px}
+.btn{display:inline-flex;align-items:center;gap:8px;border-radius:12px;padding:12px 22px;font-weight:700;font-size:14px;border:1px solid var(--line);color:var(--ink);background:var(--card)}
+.btn.gold{background:var(--gold);border-color:var(--gold);color:#FFFDF8}
+
+footer{border-top:1px solid var(--line);padding:36px 0 46px;color:var(--faint);font-size:12.5px;background:var(--band)}
+footer .disc{max-width:760px;margin:0 auto 14px;text-align:center;color:var(--muted)}
+footer .fine{text-align:center}
+.estate-fine{text-align:center;font-size:12.5px;margin:0 auto 14px}
+.estate-fine .g{color:var(--faint);padding:0 7px;font-size:11px}
+
+.reveal{opacity:0;transform:translateY(18px);transition:opacity .6s ease,transform .6s ease}
+.reveal.in{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none}}
+</style>
+</head>
+<body>
+<nav>
+  <div class="wrap">
+    <a href="index.html" style="display:flex;align-items:center;gap:12px"><div class="glyph">&#9795;</div><b>Ninth House</b></a>
+    <div class="links">
+      <a href="firm.html">The Firm</a>
+      <a href="clientele.html">Clientele</a>
+      <a href="press/index.html">Journal</a>
+      <a href="observatory.html" style="color:var(--gold)">Observatory</a>
+      <a href="charter.html">The Charter</a>
+      <a class="cta-btn cta" href="index.html#engage">Engage Us</a>
+    </div>
+  </div>
+</nav>
+
+<div class="ticker" aria-label="Live house ticker"><div class="ticker-track" id="tick-track"></div></div>
+
+<section style="padding-bottom:30px">
+  <div class="wrap">
+    <div class="sec-eyebrow">Floor 8 &middot; The Intelligence Deck</div>
+    <h1>The Observatory</h1>
+    <p class="lead">A dome of brass and glass at the top of the west stair. The instruments below read the world live from your own browser: the sky, the money, the tape, the wire and the scores. When an instrument pauses, it is recalibrating, not sulking.</p>
+  </div>
+</section>
+
+<section style="padding-top:0">
+  <div class="wrap">
+    <div class="instruments">
+
+      <div class="inst reveal">
+        <div class="inst-head"><div class="dial">&#9789;</div><div><h3>The Weather Glass</h3><div class="sub" id="wx-place">Reading your sky</div></div></div>
+        <div id="wx-body"><p class="recal">Instrument recalibrating. Values return shortly.</p></div>
+      </div>
+
+      <div class="inst reveal">
+        <div class="inst-head"><div class="dial">&#163;</div><div><h3>The Currency Board</h3><div class="sub">Sterling, against the world</div></div></div>
+        <div id="fx-body"><p class="recal">Instrument recalibrating. Values return shortly.</p></div>
+      </div>
+
+      <div class="inst reveal">
+        <div class="inst-head"><div class="dial">&#9679;</div><div><h3>The Crypto Tape</h3><div class="sub">Digital assets, sterling terms</div></div></div>
+        <div id="cg-body"><p class="recal">Instrument recalibrating. Values return shortly.</p></div>
+      </div>
+
+      <div class="inst reveal">
+        <div class="inst-head"><div class="dial">&#9881;</div><div><h3>The Tech Wire</h3><div class="sub">What the engineers are reading</div></div></div>
+        <div id="hn-body" class="wirelist"><p class="recal">Instrument recalibrating. Values return shortly.</p></div>
+      </div>
+
+      <div class="inst reveal">
+        <div class="inst-head"><div class="dial">&#9917;</div><div><h3>The Scores</h3><div class="sub">Premier League, latest results</div></div></div>
+        <div id="ft-body"><p class="recal">Instrument recalibrating. Values return shortly.</p></div>
+      </div>
+
+      <div class="inst reveal" style="background:var(--band)">
+        <div class="inst-head"><div class="dial">&#9795;</div><div><h3>House Time</h3><div class="sub">The firm never closes</div></div></div>
+        <div class="row"><span class="k">London</span><span class="v" id="clock-ldn">&hellip;</span></div>
+        <div class="row"><span class="k">New York</span><span class="v" id="clock-ny">&hellip;</span></div>
+        <div class="row"><span class="k">Lagos</span><span class="v" id="clock-lag">&hellip;</span></div>
+        <div class="row"><span class="k">Tokyo</span><span class="v" id="clock-tyo">&hellip;</span></div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<section style="padding-top:20px">
+  <div class="wrap">
+    <div class="sec-eyebrow">The Wire Brief</div>
+    <h2>Filed by the Observatory Desk, every shift.</h2>
+    <p class="lead" style="margin-bottom:26px">World, markets, technology and sport in five lines apiece. Read with UK eyes, written for the whole map.</p>
+    <div id="wire-body"><p class="recal">The wire is warming up. The first brief lands with the next shift.</p></div>
+  </div>
+</section>
+
+<section style="padding-top:10px">
+  <div class="wrap">
+    <div class="sec-eyebrow">The House Estate</div>
+    <h2>Properties the firm operates.</h2>
+    <p class="lead">Each plaque opens the front door of a working venture in the Lyr&#299;on portfolio.</p>
+    <div class="estate-grid" id="estate-grid"></div>
+  </div>
+</section>
+
+<section style="padding-top:10px">
+  <div class="wrap">
+    <div class="sec-eyebrow">While You Are Here</div>
+    <div class="offers">
+      <div class="offer reveal">
+        <span class="pill">From &pound;99</span>
+        <h3>The Ninth House Audit</h3>
+        <p>Ten sharp questions, nineteen partners convened, and a sealed growth docket on your desk within two working days. Strategy, quick wins, and exactly where the money is leaking.</p>
+        <a class="btn gold" href="https://wa.me/WANUMBER?text=Hello%20Ninth%20House%2C%20I%20would%20like%20to%20commission%20The%20Ninth%20House%20Audit%20(from%20%C2%A399).%20My%20business%3A%20" rel="noopener">Commission the Audit</a>
+      </div>
+      <div class="offer reveal">
+        <span class="pill">The House Engine</span>
+        <h3>SetPostGo</h3>
+        <p>A month of social content, pre-generated for 89 professions across six platforms. The same engine that keeps this firm's brands publishing while you sleep.</p>
+        <a class="btn" href="https://setpostgo.xyz" target="_blank" rel="noopener">Visit SetPostGo</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p class="estate-fine" id="estate-fine"></p>
+    <p class="disc"><strong>Openly built:</strong> Ninth House&rsquo;s partners are personas of the house, not human beings; their portraits are engravings, not photographs. Every piece of work is produced under the oversight and final authority of one human Chief Executive. The full governance is in <a href="charter.html">the Charter</a>. Live figures on this page are fetched in your browser from public sources and may be delayed; they are for reading, not for trading.</p>
+    <p class="fine">&#9795; Ninth House Growth Partners &middot; A Lyr&#299;on Ltd venture &middot; United Kingdom &middot; &copy; 2026</p>
+  </div>
+</footer>
+
+<script>
+/* ============ THE HOUSE ESTATE ============ */
+const ESTATE = [
+  { name:'SetPostGo',      line:'Social content, pre-generated for 89 professions', url:'https://setpostgo.xyz' },
+  { name:'NAGORI',         line:'One million sealed letters, then never again',      url:'https://nagori.xyz' },
+  { name:'RenviaIT',       line:'Retired technology, returned to the world',         url:'https://renviait.co.uk' },
+  { name:'Lyrion Atelier', line:'Clothing written in the stars',                     url:'https://lyrion.co.uk' },
+  { name:'iwriteyouread',  line:'Words by the principal',                            url:'https://iwriteyouread.org' }
+];
+document.getElementById('estate-grid').innerHTML = ESTATE.map(e =>
+  `<a class="plaque reveal" href="${e.url}" target="_blank" rel="noopener">
+     <span class="face"><b>${e.name}</b><i></i><span>${e.line}</span><small>Est. of the house</small></span>
+   </a>`).join('');
+document.getElementById('estate-fine').innerHTML = 'Properties of the house: ' +
+  ESTATE.map(e => `<a href="${e.url}" target="_blank" rel="noopener">${e.name}</a>`).join('<span class="g">&#9795;</span>');
+
+/* ============ TICKER ============ */
+const tickerBits = [];
+function renderTicker(){
+  const track = document.getElementById('tick-track');
+  const base = tickerBits.length ? tickerBits : ['THE OBSERVATORY <b>NINTH HOUSE</b>', 'Instruments warming up'];
+  const half = base.map(t => `<span class="item">${t}</span><span class="sep">&#9795;</span>`).join('');
+  track.innerHTML = half + half;
+}
+function tick(t){ tickerBits.push(t); renderTicker(); }
+renderTicker();
+
+const recalMsg = '<p class="recal">Instrument recalibrating. Values return shortly.</p>';
+const el = id => document.getElementById(id);
+const num = (n, d=2) => Number(n).toLocaleString('en-GB', { maximumFractionDigits: d, minimumFractionDigits: d>0?Math.min(d,2):0 });
+
+/* ============ WEATHER (Open-Meteo) ============ */
+const WXCODE = {0:'Clear skies',1:'Mainly clear',2:'Partly cloudy',3:'Overcast',45:'Fog',48:'Freezing fog',51:'Light drizzle',53:'Drizzle',55:'Heavy drizzle',56:'Freezing drizzle',57:'Freezing drizzle',61:'Light rain',63:'Rain',65:'Heavy rain',66:'Freezing rain',67:'Freezing rain',71:'Light snow',73:'Snow',75:'Heavy snow',77:'Snow grains',80:'Light showers',81:'Showers',82:'Violent showers',85:'Snow showers',86:'Heavy snow showers',95:'Thunderstorm',96:'Thunder with hail',99:'Thunder with hail'};
+function locate(){
+  return new Promise(resolve => {
+    const london = { lat:51.5072, lon:-0.1276, label:'London, by default' };
+    if(!navigator.geolocation) return resolve(london);
+    const t = setTimeout(() => resolve(london), 4500);
+    navigator.geolocation.getCurrentPosition(
+      p => { clearTimeout(t); resolve({ lat:p.coords.latitude, lon:p.coords.longitude, label:'Your sky' }); },
+      () => { clearTimeout(t); resolve(london); },
+      { timeout:4000, maximumAge:600000 });
+  });
+}
+(async () => {
+  try{
+    const loc = await locate();
+    el('wx-place').textContent = loc.label;
+    const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,relative_humidity_2m&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1`);
+    if(!r.ok) throw 0;
+    const d = await r.json(); const c = d.current;
+    const cond = WXCODE[c.weather_code] || 'Skies undecided';
+    el('wx-body').innerHTML = `
+      <div style="display:flex;align-items:flex-end;gap:14px;margin-bottom:10px">
+        <span class="bigtemp">${Math.round(c.temperature_2m)}&deg;</span>
+        <div><div class="wx-cond">${cond}</div><div style="font-size:12px;color:var(--faint)">Feels like ${Math.round(c.apparent_temperature)}&deg;</div></div>
+      </div>
+      <div class="row"><span class="k">Wind</span><span class="v">${num(c.wind_speed_10m,0)} km/h</span></div>
+      <div class="row"><span class="k">Humidity</span><span class="v">${c.relative_humidity_2m}%</span></div>
+      <div class="row"><span class="k">Today's range</span><span class="v">${Math.round(d.daily.temperature_2m_min[0])}&deg; to ${Math.round(d.daily.temperature_2m_max[0])}&deg;</span></div>`;
+    tick(`${loc.label === 'Your sky' ? 'Local' : 'London'} <b>${Math.round(c.temperature_2m)}&deg;C</b> ${cond}`);
+  }catch(e){ el('wx-body').innerHTML = recalMsg; }
+})();
+
+/* ============ CURRENCY BOARD (Frankfurter) ============ */
+(async () => {
+  const want = ['USD','EUR','NGN','JPY'];
+  try{
+    let rates = null;
+    try{
+      const r = await fetch('https://api.frankfurter.app/latest?from=GBP&to=' + want.join(','));
+      if(r.ok) rates = (await r.json()).rates || {};
+    }catch(e){}
+    if(!rates){
+      const r = await fetch('https://api.frankfurter.app/latest?from=GBP&to=USD,EUR,JPY');
+      if(!r.ok) throw 0;
+      rates = (await r.json()).rates || {};
+    }
+    el('fx-body').innerHTML = want.map(cur => rates[cur] !== undefined
+      ? `<div class="row"><span class="k">GBP / ${cur}</span><span class="v">${num(rates[cur], cur==='NGN'||cur==='JPY'?0:4)}</span></div>`
+      : `<div class="row"><span class="k">GBP / ${cur}</span><span class="v" style="color:var(--faint);font-style:italic">recalibrating</span></div>`).join('');
+    if(rates.USD) tick(`GBP/USD <b>${num(rates.USD,4)}</b>`);
+    if(rates.EUR) tick(`GBP/EUR <b>${num(rates.EUR,4)}</b>`);
+    if(rates.NGN) tick(`GBP/NGN <b>${num(rates.NGN,0)}</b>`);
+    if(rates.JPY) tick(`GBP/JPY <b>${num(rates.JPY,0)}</b>`);
+  }catch(e){ el('fx-body').innerHTML = recalMsg; }
+})();
+
+/* ============ CRYPTO TAPE (CoinGecko) ============ */
+(async () => {
+  try{
+    const r = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana&vs_currencies=gbp&include_24hr_change=true');
+    if(!r.ok) throw 0;
+    const d = await r.json();
+    const coins = [['bitcoin','BTC'],['ethereum','ETH'],['solana','SOL']];
+    el('cg-body').innerHTML = coins.map(([id, sym]) => {
+      const c = d[id]; if(!c) return `<div class="row"><span class="k">${sym}</span><span class="v" style="color:var(--faint);font-style:italic">recalibrating</span></div>`;
+      const ch = c.gbp_24h_change;
+      const chHtml = (ch === undefined || ch === null) ? '' : ` <span class="${ch >= 0 ? 'up':'dn'}">${ch >= 0 ? '▴':'▾'}${num(Math.abs(ch),1)}%</span>`;
+      return `<div class="row"><span class="k">${sym}</span><span class="v">&pound;${num(c.gbp, c.gbp > 100 ? 0 : 2)}${chHtml}</span></div>`;
+    }).join('');
+    if(d.bitcoin) tick(`BTC <b>&pound;${num(d.bitcoin.gbp,0)}</b>`);
+    if(d.ethereum) tick(`ETH <b>&pound;${num(d.ethereum.gbp,0)}</b>`);
+    if(d.solana) tick(`SOL <b>&pound;${num(d.solana.gbp,2)}</b>`);
+  }catch(e){ el('cg-body').innerHTML = recalMsg; }
+})();
+
+/* ============ TECH WIRE (Hacker News) ============ */
+(async () => {
+  try{
+    const r = await fetch('https://hacker-news.firebaseio.com/v0/topstories.json');
+    if(!r.ok) throw 0;
+    const ids = (await r.json()).slice(0, 6);
+    const items = await Promise.all(ids.map(id => fetch(`https://hacker-news.firebaseio.com/v0/item/${id}.json`).then(x => x.ok ? x.json() : null).catch(() => null)));
+    const good = items.filter(i => i && i.title);
+    if(!good.length) throw 0;
+    el('hn-body').innerHTML = good.map(i =>
+      `<a href="${i.url || 'https://news.ycombinator.com/item?id=' + i.id}" target="_blank" rel="noopener">${i.title.replace(/</g,'&lt;')}<small>${i.score || 0} points &middot; ${i.descendants || 0} comments</small></a>`).join('');
+    tick(`Tech wire <b>${good[0].title.replace(/</g,'&lt;').slice(0, 60)}</b>`);
+  }catch(e){ el('hn-body').innerHTML = recalMsg; }
+})();
+
+/* ============ THE SCORES (TheSportsDB, EPL) ============ */
+(async () => {
+  try{
+    const r = await fetch('https://www.thesportsdb.com/api/v1/json/123/eventspastleague.php?id=4328');
+    if(!r.ok) throw 0;
+    const d = await r.json();
+    const ev = (d.events || []).slice(0, 6);
+    if(!ev.length) throw 0;
+    el('ft-body').innerHTML = ev.map(e =>
+      `<div class="row"><span class="k">${e.strHomeTeam} v ${e.strAwayTeam}<span style="display:block;font-size:11px;color:var(--faint)">${e.dateEvent || ''}</span></span><span class="v">${e.intHomeScore ?? '?'} : ${e.intAwayScore ?? '?'}</span></div>`).join('');
+    const f = ev[0];
+    tick(`EPL <b>${f.strHomeTeam} ${f.intHomeScore ?? ''} : ${f.intAwayScore ?? ''} ${f.strAwayTeam}</b>`);
+  }catch(e){ el('ft-body').innerHTML = recalMsg; }
+})();
+
+/* ============ HOUSE TIME ============ */
+function clocks(){
+  const fmt = tz => new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', timeZone:tz });
+  el('clock-ldn').textContent = fmt('Europe/London');
+  el('clock-ny').textContent  = fmt('America/New_York');
+  el('clock-lag').textContent = fmt('Africa/Lagos');
+  el('clock-tyo').textContent = fmt('Asia/Tokyo');
+}
+clocks(); setInterval(clocks, 30000);
+
+/* ============ WIRE BRIEF (wire.json) ============ */
+function mdLite(t){
+  return String(t).split('\n').map(l => {
+    l = l.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+    l = l.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');
+    if(/^##\s/.test(l)) return '<h4>' + l.replace(/^##\s*/,'') + '</h4>';
+    if(/^-\s/.test(l))  return '<p class="wl">' + l.replace(/^-\s*/,'') + '</p>';
+    if(!l.trim()) return '';
+    return '<p>' + l + '</p>';
+  }).join('');
+}
+(async () => {
+  try{
+    const r = await fetch('wire.json?nh=' + Date.now(), { cache:'no-store' });
+    if(!r.ok) throw 0;
+    const d = await r.json();
+    const entries = (d.entries || []).slice().sort((a, b) => (b.id || '').localeCompare(a.id || ''));
+    if(!entries.length) throw 0;
+    el('wire-body').innerHTML = entries.map(e => `
+      <div class="brief reveal">
+        <div class="brief-head"><span class="shift-chip">${(e.shift || 'Shift')}</span><span class="brief-date">${e.date || ''}</span></div>
+        ${mdLite(e.output || '')}
+      </div>`).join('');
+    observeReveals();
+  }catch(e){ el('wire-body').innerHTML = '<p class="recal">The wire is warming up. The first brief lands with the next shift.</p>'; }
+})();
+
+/* ============ REVEALS ============ */
+const io = new IntersectionObserver(es => es.forEach(e => { if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } }), { threshold:.12 });
+function observeReveals(){ document.querySelectorAll('.reveal:not(.in)').forEach(x => io.observe(x)); }
+observeReveals();
+</script>
+</body>
+</html>

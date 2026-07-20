@@ -146,6 +146,22 @@ if (dow === 5 && SHIFT === 'Dawn') {
 }
 
 
+/* ============ THE WIRE BRIEF (The Observatory Desk) ============ */
+/* Every shift: a tight world brief for the Observatory page, kept in wire.json. */
+const WIRE = 'wire.json';
+try {
+  const brief = await claude(
+    'You are The Observatory Desk of Ninth House, the firm\'s intelligence room on Floor 8. World Service gravitas with one raised eyebrow. You verify before you assert, you never invent a fact, and you write for a busy UK founder who wants the whole map in ninety seconds. House style: no em dashes in copy; short declarative lines; wit is welcome, snark is not.',
+    `${SHIFT} shift wire brief, ${today}. Use your web search tool to check what is actually happening right now, then file the brief.\nOutput EXACTLY four sections, in this order: ## World, ## Markets & Economy, ## Technology, ## Sport.\nEach section: at most five lines, every line a "- " bullet, one sentence each. UK lens, global reach. If sport has nothing new, say so with grace. If you could not verify something, leave it out.`, 1100);
+  const wire = fs.existsSync(WIRE) ? JSON.parse(fs.readFileSync(WIRE, 'utf8')) : { entries: [] };
+  wire.entries = wire.entries || [];
+  wire.entries.unshift({ id: `wire-${runId}`, date: today, shift: SHIFT, output: brief });
+  wire.entries = wire.entries.slice(0, 12);
+  wire.updated = new Date().toISOString();
+  fs.writeFileSync(WIRE, JSON.stringify(wire, null, 1));
+  console.log(`Wire Brief filed for the ${SHIFT} shift.`);
+} catch (e) { console.log('Wire Brief failed this shift, the dials rest: ' + String(e).slice(0, 160)); }
+
 /* ============ THE NIGHT PRESS ============ */
 /* Every night: one full SEO article, published as a live page, sitemap updated. Compounds forever. */
 const REPO = process.env.GITHUB_REPOSITORY || '';

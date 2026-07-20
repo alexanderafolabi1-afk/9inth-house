@@ -221,6 +221,7 @@ footer .fine{text-align:center}
       <a href="firm.html">The Firm</a>
       <a href="clientele.html">Clientele</a>
       <a href="press/index.html">Journal</a>
+      <a href="observatory.html">Observatory</a>
       <a href="charter.html">The Charter</a>
       <a class="cta-btn cta" href="#engage">Engage Us</a>
     </div>
@@ -278,6 +279,7 @@ footer .fine{text-align:center}
   </div>
 </section><footer>
   <div class="wrap">
+    <p style="text-align:center;font-size:12.5px;margin:0 auto 14px">Properties of the house: <a href="https://setpostgo.xyz" target="_blank" rel="noopener">SetPostGo</a><span style="color:var(--faint);padding:0 7px;font-size:11px">&#9795;</span><a href="https://nagori.xyz" target="_blank" rel="noopener">NAGORI</a><span style="color:var(--faint);padding:0 7px;font-size:11px">&#9795;</span><a href="https://renviait.co.uk" target="_blank" rel="noopener">RenviaIT</a><span style="color:var(--faint);padding:0 7px;font-size:11px">&#9795;</span><a href="https://lyrion.co.uk" target="_blank" rel="noopener">Lyrion Atelier</a><span style="color:var(--faint);padding:0 7px;font-size:11px">&#9795;</span><a href="https://iwriteyouread.org" target="_blank" rel="noopener">iwriteyouread</a></p>
     <p class="disc"><strong>Openly built:</strong> Ninth House’s partners are personas of the house, not human beings; their portraits are engravings, not photographs. Every piece of work is produced under the oversight and final authority of one human Chief Executive. The full governance is in <a href="charter.html">the Charter</a>.</p>
     <p class="fine">&#9795; Ninth House Growth Partners &middot; A Lyr&#299;on Ltd venture &middot; United Kingdom &middot; &copy; 2026</p>
   </div>
@@ -345,6 +347,7 @@ let opened = false, started = false;
 
 const STATUS = [
   'Barnaby Sterling, Front of House',
+  'The Observatory: open at last. Barnaby polished the telescope himself',
   'Maren: in the boardroom (do not knock)',
   'Lin: on set. Again.',
   'Margaret: auditing the biscuit budget',
@@ -522,7 +525,7 @@ const TW = {
   {id:'chidinma', n:'Chidinma Balogun', r:'Head of Advancement & Grants', f:2, sky:'lagos', props:'ops', bio:'She finds the money that funds the mission. The Nigeria charity arm has her whole heart.'},
   {id:'harrison', n:'Harrison Cole III', r:'Head of Capital & Funding', f:2, sky:'ny', props:'lead', bio:'Manhattan raised, spreadsheet fluent. Chidinma finds the grants; he finds the capital.'}
  ],
- floors: {9:'Executive Suite',5:'Growth, Creative & Media',4:'The Studio',3:'Intelligence & Impact',2:'Operations & Advancement',1:'The Lounge',0:'Lobby'}
+ floors: {9:'Executive Suite',8:'The Observatory',5:'Growth, Creative & Media',4:'The Studio',3:'Intelligence & Impact',2:'Operations & Advancement',1:'The Lounge',0:'Lobby'}
 };
 const twStage = document.getElementById('tw-stage');
 const WA9 = 'https://wa.me/WANUMBER';
@@ -869,8 +872,8 @@ function goLobby(){
      <rect x="150" y="140" width="100" height="8" rx="2" fill="#C9A557"/>
      <foreignObject x="174" y="76" width="52" height="52"><div xmlns="http://www.w3.org/1999/xhtml" style="position:relative;width:52px;height:52px;border-radius:50%;overflow:hidden;border:2px solid #C9A557">${FACES.barnaby||''}</div></foreignObject>
      <rect x="24" y="96" width="52" height="90" rx="4" fill="#2A2320"/><rect x="49" y="96" width="2" height="90" fill="#C9A557"/><text x="50" y="90" text-anchor="middle" font-size="8" fill="#8F7434" font-family="monospace">LIFT</text>
-     <rect x="320" y="100" width="56" height="80" rx="4" fill="#FFFDF8" stroke="#A97F2F"/><text x="348" y="114" text-anchor="middle" font-size="7.5" fill="#A97F2F" font-family="monospace" letter-spacing="1">DIRECTORY</text>
-     ${[9,5,4,3,2,1].map((f,i)=>'<text x="326" y="'+(128+i*9)+'" font-size="6.5" fill="#5B4128" font-family="monospace">'+(f===0?'G':f)+' \u00b7 '+TW.floors[f].slice(0,14)+'</text>').join('')}
+     <rect x="320" y="100" width="56" height="88" rx="4" fill="#FFFDF8" stroke="#A97F2F"/><text x="348" y="114" text-anchor="middle" font-size="7.5" fill="#A97F2F" font-family="monospace" letter-spacing="1">DIRECTORY</text>
+     ${[9,8,5,4,3,2,1].map((f,i)=>'<text x="326" y="'+(128+i*9)+'" font-size="6.5" fill="#5B4128" font-family="monospace">'+(f===0?'G':f)+' \u00b7 '+TW.floors[f].slice(0,14)+'</text>').join('')}
    </svg><img class="tw-art" src="art/lobby.jpg" alt="" onerror="this.parentElement.replaceWith(...this.parentElement.childNodes); this.remove()"></div>
    <div class="tw-panel">
      <h3>Reception</h3>
@@ -880,6 +883,7 @@ function goLobby(){
      <div class="tw-actions">
        <button class="tw-btn gold" onclick="fdOpen()">Speak to the front desk</button>
        <button class="tw-btn" onclick="goFloor(9)">Executive Suite (9)</button>
+       <button class="tw-btn" onclick="goFloor(8)">The Observatory (8)</button>
        <button class="tw-btn" onclick="goFloor(5)">The Partners (5)</button>
        <button class="tw-btn" onclick="goFloor(1)">The Lounge (1)</button>
        <button class="tw-btn" onclick="payOr(PAY.audit, 'Hello Ninth House, I would like to commission The Ninth House Audit (from £99). My business: ')">The Audit · from £99</button>
@@ -899,10 +903,29 @@ function doorHTML(p){
 
 function goFloor(f){
   if(f===8){
-    const ov = document.getElementById('tw-avail'); const txt = document.getElementById('tw-avail-txt');
-    ov.classList.add('on');
-    txt.textContent = 'Floor 8 is under refurbishment. Do not ask Barnaby. He is sensitive about it.';
-    setTimeout(()=>ov.classList.remove('on'), 2600);
+    liftPanel(8);
+    twStage.innerHTML = `<div class="tw-screen">
+     <div class="tw-top"><b>Floor 8 · The Observatory</b><button class="tw-back" onclick="goLobby()">Lobby</button></div>
+     <div class="tw-artwrap"><svg class="tw-scene" viewBox="0 0 400 210" xmlns="http://www.w3.org/2000/svg">
+       <rect width="400" height="210" fill="${NIGHT?'#1B2432':'#F4EDDC'}"/>
+       ${NIGHT?Array.from({length:26},()=>'<circle cx="'+(Math.random()*400).toFixed(0)+'" cy="'+(Math.random()*120).toFixed(0)+'" r="'+(Math.random()>.8?1.3:0.8)+'" fill="#E9E2D0" opacity="'+(0.3+Math.random()*0.6).toFixed(2)+'"/>').join(''):'<circle cx="330" cy="42" r="18" fill="#C9A557" opacity=".8"/><circle cx="330" cy="42" r="27" fill="#C9A557" opacity=".14"/>'}
+       <path d="M60 150 A140 140 0 0 1 340 150 Z" fill="${NIGHT?'#10151D':'#EAD6AE'}" stroke="#C9A557" stroke-width="2"/>
+       <path d="M186 12 L214 12 L212 150 L188 150 Z" fill="${NIGHT?'#232E3C':'#FFFDF8'}" stroke="#C9A557" stroke-width="1.4"/>
+       <g transform="rotate(-38 200 132)"><rect x="192" y="70" width="16" height="66" rx="6" fill="#5B4128"/><rect x="190" y="62" width="20" height="12" rx="4" fill="#C9A557"/><rect x="195" y="136" width="10" height="18" fill="#3E2E1E"/></g>
+       <rect x="90" y="118" width="58" height="34" rx="3" fill="#2A2320"/><rect x="94" y="122" width="50" height="8" fill="#C9A557" opacity=".7"/><rect x="94" y="134" width="34" height="6" fill="#C9A557" opacity=".4"/><rect x="94" y="142" width="42" height="6" fill="#C9A557" opacity=".4"/>
+       <rect x="262" y="112" width="46" height="40" rx="4" fill="#FFFDF8" stroke="#8F7434"/><path d="M266 144 l10 -12 8 7 12 -16 6 8" stroke="#5FA98B" stroke-width="2.4" fill="none"/>
+       <rect x="0" y="150" width="400" height="60" fill="${NIGHT?'#171E28':'#E3D2AC'}"/>
+       <rect x="120" y="158" width="160" height="10" rx="3" fill="#5B4128"/><rect x="130" y="168" width="10" height="24" fill="#3E2E1E"/><rect x="260" y="168" width="10" height="24" fill="#3E2E1E"/>
+       <text x="200" y="204" text-anchor="middle" font-family="Marcellus, serif" font-size="11" fill="#A97F2F" letter-spacing="4">THE OBSERVATORY</text>
+     </svg></div>
+     <div class="tw-panel">
+       <h3>The refurbishment is complete.</h3>
+       <p>A dome of brass and glass above the whole city: the weather glass, the currency board, the crypto tape, the technology wire and the scores, with the Wire Brief filed every shift. Barnaby would like it noted that the works finished early, came in under budget, and that he polished the telescope himself.</p>
+       <div class="tw-actions">
+         <button class="tw-btn gold" onclick="window.location.href='observatory.html'">Enter the Observatory</button>
+       </div>
+     </div>
+    </div>`;
     return;
   }
   liftPanel(f);

@@ -26,6 +26,6 @@ jobs:
         run: |
           git config user.name "Ninth House Autopilot"
           git config user.email "autopilot@users.noreply.github.com"
-          git add autopilot.json sitemap.xml press/ || git add autopilot.json sitemap.xml
+          git add autopilot.json sitemap.xml wire.json press/ || git add autopilot.json sitemap.xml wire.json
           git diff --cached --quiet || git commit -m "Shift cycle $(date -u +'%F %H:%M') UTC"
           git push
