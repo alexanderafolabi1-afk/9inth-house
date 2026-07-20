@@ -364,7 +364,7 @@ document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
 
 <button id="fd-launch" aria-label="Open front desk" onclick="fdOpen()">
   <span class="ring"></span>
-  <img class="fd-photo" src="avatars/barnaby.jpg" alt="Barnaby Sterling" onerror="this.style.display='none';this.parentNode.querySelector('.fd-fallback').style.display='block'">
+  <img class="fd-photo" src="avatars/barnaby.jpg" alt="Barnaby Sterling" onerror="fdAvatarFallback(this)">
   <svg class="fd-fallback" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
     <circle cx="60" cy="60" r="60" fill="#F4EDDC"/>
     <path d="M26 118 Q30 86 60 84 Q90 86 94 118 Z" fill="#A97F2F"/>
@@ -382,7 +382,7 @@ document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
 <div id="fd" role="dialog" aria-label="Ninth House Front Desk">
   <div id="fd-head">
     <div class="fdav">
-      <img class="fd-photo" src="avatars/barnaby.jpg" alt="Barnaby Sterling" onerror="this.style.display='none';this.parentNode.querySelector('.fd-fallback').style.display='block'">
+      <img class="fd-photo" src="avatars/barnaby.jpg" alt="Barnaby Sterling" onerror="fdAvatarFallback(this)">
       <svg class="fd-fallback" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
         <circle cx="60" cy="60" r="60" fill="#F4EDDC"/>
         <path d="M26 118 Q30 86 60 84 Q90 86 94 118 Z" fill="#A97F2F"/>
@@ -406,6 +406,12 @@ document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
 </div>
 
 <script>
+function fdAvatarFallback(img){
+  img.style.display='none';
+  const fallback = img.parentNode.querySelector('.fd-fallback');
+  if(fallback) fallback.style.display='block';
+}
+
 (function(){
 const WA = 'https://wa.me/WANUMBER';
 const msgs = document.getElementById('fd-msgs');
