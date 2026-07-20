@@ -261,7 +261,7 @@ footer .fine{text-align:center}
 <div id="brochure"></div>
 <div class="strip">
   <div class="wrap">
-    <div><b>17</b><span>Partners on the floor</span></div>
+    <div><b>19</b><span>Partners on the floor</span></div>
     <div><b>4</b><span>Continents of craft</span></div>
     <div><b>365</b><span>Cycles a year, no holidays</span></div>
     <div><b>1</b><span>Human seal on everything</span></div>
@@ -941,7 +941,7 @@ function goFloor(f){
        <rect x="0" y="150" width="400" height="60" fill="${NIGHT?'#171E28':'#E3D2AC'}"/>
        <rect x="120" y="158" width="160" height="10" rx="3" fill="#5B4128"/><rect x="130" y="168" width="10" height="24" fill="#3E2E1E"/><rect x="260" y="168" width="10" height="24" fill="#3E2E1E"/>
        <text x="200" y="204" text-anchor="middle" font-family="Marcellus, serif" font-size="11" fill="#A97F2F" letter-spacing="4">THE OBSERVATORY</text>
-     </svg></div>
+     </svg><img class="tw-art" src="art/observatory.jpg" alt="Observatory dome with brass telescope and glass ceiling" onerror="this.parentElement.replaceWith(...this.parentElement.childNodes); this.remove()"></div>
      <div class="tw-panel">
        <h3>The refurbishment is complete.</h3>
        <p>A dome of brass and glass above the whole city: the weather glass, the currency board, the crypto tape, the technology wire and the scores, with the Wire Brief filed every shift. Barnaby would like it noted that the works finished early, came in under budget, and that he polished the telescope himself.</p>
@@ -1063,6 +1063,15 @@ function goLounge(){
   const streak = examStreakInfo();
   twStage.innerHTML = `<div class="tw-screen">
    <div class="tw-top"><b>Floor 1 \u00b7 The Lounge</b><button class="tw-back" onclick="goLobby()">Lobby</button></div>
+   <div class="tw-artwrap"><svg class="tw-scene" viewBox="0 0 400 190" xmlns="http://www.w3.org/2000/svg">
+     <rect width="400" height="190" fill="#F4EDDC"/><rect y="140" width="400" height="50" fill="#EAD6AE"/>
+     <rect x="20" y="100" width="130" height="46" rx="10" fill="#5B4128"/><rect x="28" y="86" width="114" height="24" rx="8" fill="#8F7434"/>
+     <rect x="250" y="104" width="130" height="42" rx="10" fill="#5B4128"/><rect x="258" y="90" width="114" height="24" rx="8" fill="#8F7434"/>
+     <rect x="158" y="116" width="84" height="32" rx="8" fill="#3E2E1E"/><rect x="164" y="128" width="72" height="4" rx="2" fill="#C9A557" opacity=".5"/>
+     <circle cx="90" cy="56" r="22" fill="#FFFDF8" stroke="#A97F2F" stroke-width="2"/><text x="90" y="62" font-size="18" text-anchor="middle" fill="#A97F2F" font-family="serif">&#9795;</text>
+     <rect x="310" y="30" width="70" height="100" rx="4" fill="#2A2320"/><rect x="318" y="68" width="54" height="8" rx="2" fill="#C9A557"/><text x="345" y="76" text-anchor="middle" font-size="5" fill="#241B07" font-family="serif" letter-spacing="1">THE LOUNGE</text>
+     <rect x="0" y="140" width="400" height="50" fill="#EAD6AE"/>
+   </svg><img class="tw-art" src="art/lounge.jpg" alt="The Lounge interior with warm seating" onerror="this.parentElement.replaceWith(...this.parentElement.childNodes); this.remove()"></div>
    ${nhChallenge ? `<div class="tw-panel" style="border-color:var(--gold-bright)"><p style="font-size:14px"><strong style="color:var(--gold);font-family:'Marcellus',serif;font-weight:400">A challenge stands.</strong> ${escTxt(nhChallenge.name)} scored ${nhChallenge.score}${nhChallenge.type === 'quiz' ? ' in the Examination Room' : ' at Stamp Rush'}. Beat it.</p></div>` : ''}
    <div class="tw-panel">
      <h3>Stamp Rush</h3>
