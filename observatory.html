@@ -43,12 +43,8 @@ nav .links a:hover{color:var(--gold)}
 .cta-btn{background:var(--gold);color:#FFFDF8!important;font-weight:700;padding:9px 18px;border-radius:10px;font-size:13px}
 
 /* Ticker */
-.ticker{background:var(--dark);border-top:2px solid var(--gold-deep);border-bottom:2px solid var(--gold-deep);overflow:hidden}
 .ticker-track{display:inline-flex;align-items:center;white-space:nowrap;padding:11px 0;animation:tick 46s linear infinite;will-change:transform}
 .ticker:hover .ticker-track{animation-play-state:paused}
-.ticker .item{color:#E9E2D0;font-family:'Spline Sans Mono',monospace;font-size:13px;letter-spacing:.06em;padding:0 20px}
-.ticker .item b{color:var(--gold-bright);font-weight:600}
-.ticker .sep{color:var(--gold);font-size:12px}
 @keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 @media (prefers-reduced-motion:reduce){.ticker-track{animation:none}}
 
@@ -62,18 +58,17 @@ h2{font-family:'Marcellus',serif;font-weight:400;font-size:clamp(24px,3.6vw,34px
 
 /* Instruments */
 .instruments{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-top:30px}
-.inst{background:var(--card);border:1px solid var(--gold-bright);border-radius:16px;padding:20px;box-shadow:0 2px 8px rgba(169,127,47,.1),inset 0 1px 0 rgba(255,253,248,.7);position:relative;overflow:hidden;transition:transform .18s,box-shadow .18s}
-.inst:hover{transform:translateY(-3px);box-shadow:0 8px 22px rgba(169,127,47,.2),inset 0 1px 0 rgba(255,253,248,.7)}
-.inst::after{content:"";position:absolute;top:-46px;right:-46px;width:120px;height:120px;border-radius:50%;border:1px solid var(--gold-bright);opacity:.35;pointer-events:none}
-.inst-head{display:flex;align-items:center;gap:12px;margin-bottom:14px}
-.dial{width:40px;height:40px;border:2px solid var(--gold-bright);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--gold);background:linear-gradient(135deg,#E9CE8C,#C9A557 60%,#A97F2F);box-shadow:0 0 0 3px rgba(169,127,47,.18),inset 0 1px 0 rgba(255,253,248,.5);font-size:17px;flex-shrink:0}
-.inst h3{font-family:'Marcellus',serif;font-weight:400;font-size:18px;color:var(--ink)}
-.inst .sub{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);font-weight:600}
+.inst{background:#FFFDF8;border:1px solid var(--gold);border-radius:14px;padding:28px 26px;box-shadow:inset 0 0 0 3px #FFFDF8,inset 0 0 0 4px rgba(169,127,47,.45);position:relative;transition:transform .18s,box-shadow .18s}
+.inst:hover{transform:translateY(-2px);box-shadow:inset 0 0 0 3px #FFFDF8,inset 0 0 0 4px rgba(169,127,47,.45),0 6px 20px rgba(169,127,47,.18)}
+.inst-head{margin-bottom:16px}
+.inst h3{font-family:'Marcellus',serif;font-variant:small-caps;font-weight:400;font-size:16px;letter-spacing:.1em;color:var(--ink)}
+.inst h3::after{content:'';display:block;width:30px;height:1px;background:var(--gold);margin-top:7px}
+.inst .sub{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);font-weight:600;margin-top:8px}
 .row{display:flex;justify-content:space-between;align-items:baseline;gap:10px;border-bottom:1px solid rgba(169,127,47,.18);padding:7px 0;font-size:14px}
 .row:last-child{border-bottom:none}
-.row .k{color:var(--body)}
+.row .k{color:var(--body);font-variant:small-caps;letter-spacing:.06em;font-size:13px}
 .row .v{font-family:'Spline Sans Mono',monospace;font-size:13.5px;color:var(--ink);text-align:right}
-.up{color:#5FA98B}.dn{color:#B5563F}
+.up{color:var(--gold-deep)}.dn{color:#7D3040}
 .recal{color:var(--faint);font-style:italic;font-size:13.5px;padding:8px 0}
 .bigtemp{font-family:'Spline Sans Mono',monospace;font-size:44px;color:var(--gold);line-height:1}
 .wx-cond{font-family:'Marcellus',serif;font-size:17px;color:var(--ink);margin-top:6px}
@@ -121,11 +116,19 @@ footer .fine{text-align:center}
 .reveal.in{opacity:1;transform:none}
 @media (prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none}}
 
+/* Ticker */
+.ticker{background:var(--dark);border-top:1px solid var(--gold);border-bottom:1px solid var(--gold);overflow:hidden}
+.ticker .item{color:var(--gold-bright);font-family:'Spline Sans Mono',monospace;font-size:13px;letter-spacing:.06em;padding:0 20px}
+.ticker .item b{color:var(--gold-bright);font-weight:600}
+.ticker .sep{color:var(--gold);font-size:12px}
+
 /* Observatory hero */
-.obs-hero{position:relative;width:100%;height:clamp(260px,36vw,500px);overflow:hidden;background:linear-gradient(to bottom,#1B2432,#2A3447)}
-.obs-hero-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 35%}
-.obs-hero-svg{position:absolute;inset:0;width:100%;height:100%}
-.obs-hero-veil{position:absolute;left:0;right:0;bottom:0;height:55%;background:linear-gradient(to top,rgba(22,27,34,.65),rgba(22,27,34,0));pointer-events:none}
+.obs-hero{position:relative;width:100%;background:#161B22;overflow:hidden;line-height:0}
+.obs-hero img{display:block;width:100%;height:52vh;object-fit:cover;object-position:center}
+.obs-hero-veil{position:absolute;left:0;right:0;bottom:0;height:65%;background:linear-gradient(to top,rgba(22,27,34,.88),transparent);pointer-events:none}
+.obs-hero-label{position:absolute;bottom:0;left:0;padding:28px 32px;z-index:2;line-height:1.3}
+.obs-hero-eyebrow{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:8px}
+.obs-hero-title{font-family:'Marcellus',serif;font-weight:400;font-size:clamp(28px,5vw,48px);color:#F5EDD8;line-height:1.1}
 </style>
 </head>
 <body>
@@ -144,41 +147,12 @@ footer .fine{text-align:center}
 </nav>
 
 <div class="obs-hero" aria-hidden="true">
-  <img class="obs-hero-img" src="art/observatory.jpg" alt="The Observatory dome at Ninth House, brass instruments under glass" onerror="this.remove()">
-  <svg class="obs-hero-svg" viewBox="0 0 1200 420" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
-    <rect width="1200" height="420" fill="#1B2432"/>
-    <!-- starfield -->
-    <circle cx="80" cy="60" r="1.2" fill="#E9E2D0" opacity=".8"/>
-    <circle cx="210" cy="30" r="0.9" fill="#E9E2D0" opacity=".6"/>
-    <circle cx="390" cy="80" r="1.4" fill="#E9E2D0" opacity=".7"/>
-    <circle cx="540" cy="20" r="0.8" fill="#E9E2D0" opacity=".5"/>
-    <circle cx="700" cy="55" r="1.1" fill="#C9A557" opacity=".9"/>
-    <circle cx="850" cy="35" r="0.9" fill="#E9E2D0" opacity=".6"/>
-    <circle cx="960" cy="70" r="1.3" fill="#E9E2D0" opacity=".7"/>
-    <circle cx="1100" cy="25" r="1.0" fill="#E9E2D0" opacity=".5"/>
-    <circle cx="155" cy="110" r="0.8" fill="#E9E2D0" opacity=".4"/>
-    <circle cx="460" cy="130" r="1.0" fill="#E9E2D0" opacity=".5"/>
-    <circle cx="760" cy="100" r="0.7" fill="#E9E2D0" opacity=".4"/>
-    <circle cx="1050" cy="115" r="1.1" fill="#E9E2D0" opacity=".6"/>
-    <!-- dome silhouette -->
-    <path d="M350 420 L350 310 A250 250 0 0 1 850 310 L850 420 Z" fill="#161B22"/>
-    <path d="M350 310 A250 250 0 0 1 850 310" fill="none" stroke="#A97F2F" stroke-width="3"/>
-    <!-- telescope shaft -->
-    <rect x="582" y="160" width="36" height="152" rx="8" fill="#232E3C"/>
-    <rect x="578" y="148" width="44" height="18" rx="5" fill="#8F7434"/>
-    <rect x="590" y="136" width="20" height="18" rx="4" fill="#C9A557"/>
-    <!-- eyepiece -->
-    <ellipse cx="600" cy="158" rx="16" ry="8" fill="#A97F2F"/>
-    <!-- horizon glow -->
-    <rect x="0" y="370" width="1200" height="50" fill="url(#hglow)"/>
-    <defs>
-      <linearGradient id="hglow" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#C9A557" stop-opacity=".18"/>
-        <stop offset="100%" stop-color="#1B2432" stop-opacity="0"/>
-      </linearGradient>
-    </defs>
-  </svg>
+  <img src="art/observatory.jpg" alt="">
   <div class="obs-hero-veil"></div>
+  <div class="obs-hero-label">
+    <div class="obs-hero-eyebrow">Floor 8 &middot; The Intelligence Deck</div>
+    <div class="obs-hero-title">The Observatory</div>
+  </div>
 </div>
 
 <div class="ticker" aria-label="Live house ticker"><div class="ticker-track" id="tick-track"></div></div>
@@ -196,32 +170,32 @@ footer .fine{text-align:center}
     <div class="instruments">
 
       <div class="inst reveal">
-        <div class="inst-head"><div class="dial">&#9789;</div><div><h3>The Weather Glass</h3><div class="sub" id="wx-place">Reading your sky</div></div></div>
+        <div class="inst-head"><h3>The Weather Glass</h3><div class="sub" id="wx-place">Reading your sky</div></div>
         <div id="wx-body"><p class="recal">Instrument recalibrating. Values return shortly.</p></div>
       </div>
 
       <div class="inst reveal">
-        <div class="inst-head"><div class="dial">&#163;</div><div><h3>The Currency Board</h3><div class="sub">Sterling, against the world</div></div></div>
+        <div class="inst-head"><h3>The Currency Board</h3><div class="sub">Sterling, against the world</div></div>
         <div id="fx-body"><p class="recal">Instrument recalibrating. Values return shortly.</p></div>
       </div>
 
       <div class="inst reveal">
-        <div class="inst-head"><div class="dial">&#9679;</div><div><h3>The Crypto Tape</h3><div class="sub">Digital assets, sterling terms</div></div></div>
+        <div class="inst-head"><h3>The Crypto Tape</h3><div class="sub">Digital assets, sterling terms</div></div>
         <div id="cg-body"><p class="recal">Instrument recalibrating. Values return shortly.</p></div>
       </div>
 
       <div class="inst reveal">
-        <div class="inst-head"><div class="dial">&#9881;</div><div><h3>The Tech Wire</h3><div class="sub">What the engineers are reading</div></div></div>
+        <div class="inst-head"><h3>The Tech Wire</h3><div class="sub">What the engineers are reading</div></div>
         <div id="hn-body" class="wirelist"><p class="recal">Instrument recalibrating. Values return shortly.</p></div>
       </div>
 
       <div class="inst reveal">
-        <div class="inst-head"><div class="dial">&#9917;</div><div><h3>The Scores</h3><div class="sub">Premier League, latest results</div></div></div>
+        <div class="inst-head"><h3>The Scores</h3><div class="sub">Premier League, latest results</div></div>
         <div id="ft-body"><p class="recal">Instrument recalibrating. Values return shortly.</p></div>
       </div>
 
       <div class="inst reveal" style="background:var(--band)">
-        <div class="inst-head"><div class="dial">&#9795;</div><div><h3>House Time</h3><div class="sub">The firm never closes</div></div></div>
+        <div class="inst-head"><h3>House Time</h3><div class="sub">The firm never closes</div></div>
         <div class="row"><span class="k">London</span><span class="v" id="clock-ldn">&hellip;</span></div>
         <div class="row"><span class="k">New York</span><span class="v" id="clock-ny">&hellip;</span></div>
         <div class="row"><span class="k">Lagos</span><span class="v" id="clock-lag">&hellip;</span></div>
@@ -342,29 +316,31 @@ function locate(){
   }catch(e){ el('wx-body').innerHTML = recalMsg; }
 })();
 
-/* ============ CURRENCY BOARD (Frankfurter) ============ */
-(async () => {
-  const want = ['USD','EUR','NGN','JPY'];
-  try{
+/* ============ CURRENCY BOARD (open.er-api primary, Frankfurter fallback) ============ */
+async function loadCurrency(){
+  const want = ['USD','EUR','JPY','CHF'];
+  const sig4 = n => +Number(n).toPrecision(4);
+  try {
     let rates = null;
-    try{
-      const r = await fetch('https://api.frankfurter.app/latest?from=GBP&to=' + want.join(','));
-      if(r.ok) rates = (await r.json()).rates || {};
-    }catch(e){}
+    try {
+      const r = await fetch('https://open.er-api.com/v6/latest/GBP');
+      if(r.ok){ const d = await r.json(); rates = d.rates || null; }
+    } catch(e){}
     if(!rates){
-      const r = await fetch('https://api.frankfurter.app/latest?from=GBP&to=USD,EUR,JPY');
+      const r = await fetch('https://api.frankfurter.app/latest?from=GBP&to=USD,EUR,JPY,CHF');
       if(!r.ok) throw 0;
       rates = (await r.json()).rates || {};
     }
     el('fx-body').innerHTML = want.map(cur => rates[cur] !== undefined
-      ? `<div class="row"><span class="k">GBP / ${cur}</span><span class="v">${num(rates[cur], cur==='NGN'||cur==='JPY'?0:4)}</span></div>`
-      : `<div class="row"><span class="k">GBP / ${cur}</span><span class="v" style="color:var(--faint);font-style:italic">recalibrating</span></div>`).join('');
-    if(rates.USD) tick(`GBP/USD <b>${num(rates.USD,4)}</b>`);
-    if(rates.EUR) tick(`GBP/EUR <b>${num(rates.EUR,4)}</b>`);
-    if(rates.NGN) tick(`GBP/NGN <b>${num(rates.NGN,0)}</b>`);
-    if(rates.JPY) tick(`GBP/JPY <b>${num(rates.JPY,0)}</b>`);
-  }catch(e){ el('fx-body').innerHTML = recalMsg; }
-})();
+      ? `<div class="row"><span class="k">${cur}</span><span class="v">${sig4(rates[cur])}</span></div>`
+      : `<div class="row"><span class="k">${cur}</span><span class="v recal">recalibrating</span></div>`).join('');
+    if(rates.USD) tick(`GBP/USD <b>${sig4(rates.USD)}</b>`);
+    if(rates.EUR) tick(`GBP/EUR <b>${sig4(rates.EUR)}</b>`);
+    if(rates.JPY) tick(`GBP/JPY <b>${sig4(rates.JPY)}</b>`);
+    if(rates.CHF) tick(`GBP/CHF <b>${sig4(rates.CHF)}</b>`);
+  } catch(e){ el('fx-body').innerHTML = '<p class="recal">Instrument recalibrating.</p>'; }
+}
+loadCurrency();
 
 /* ============ CRYPTO TAPE (CoinGecko) ============ */
 (async () => {
