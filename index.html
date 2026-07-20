@@ -173,11 +173,12 @@ footer .fine{text-align:center}
 .tw-artwrap{position:relative}
 .tw-art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:0}
 /* Corridor & doors */
-.tw-corridor{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;padding:6px 18px 18px}
+.tw-corridor{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;padding:6px 18px 18px}
 .tw-door{position:relative;background:linear-gradient(#2A2320,#1C1712);border:2px solid #3E2E1E;border-bottom-width:8px;border-radius:8px 8px 2px 2px;aspect-ratio:3/4.6;cursor:pointer;overflow:hidden;transition:transform .15s;box-shadow:0 4px 12px rgba(28,33,40,.18)}
 .tw-door:hover{transform:translateY(-3px)}
-.tw-door .glasspane{position:absolute;top:10%;left:14%;right:14%;height:34%;background:rgba(244,237,220,.16);border:1.5px solid #C9A557;border-radius:3px;overflow:hidden}
-.tw-door .glasspane svg{opacity:.5;filter:blur(1px)}
+.tw-door .glasspane{position:absolute;top:8%;left:8%;right:8%;height:42%;background:rgba(244,237,220,.16);border:1.5px solid #C9A557;border-radius:3px;overflow:hidden}
+.tw-door .glasspane svg{opacity:.5;filter:blur(1px);position:absolute;inset:0;width:100%;height:100%}
+.tw-door .glasspane img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:3px}
 .tw-door .plate{position:absolute;top:49%;left:10%;right:10%;background:linear-gradient(#E3C176,#A97F2F);border-radius:3px;padding:5px 4px;text-align:center;color:#241B07}
 .tw-door .plate b{display:block;font-family:'Marcellus',serif;font-weight:400;font-size:11px;line-height:1.15}
 .tw-door .plate span{font-size:8px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;opacity:.85}
@@ -224,6 +225,23 @@ footer .fine{text-align:center}
 .tw-sponsor{text-align:center;font-size:12.5px;color:var(--faint);margin:16px 18px 0}
 .tw-sponsor a{color:var(--gold)}
 @media(max-width:520px){.tw-corridor{grid-template-columns:repeat(2,1fr)}}
+
+/* Lift ride overlay */
+#lift-doors-overlay{position:absolute;inset:0;z-index:15;display:flex;pointer-events:none;overflow:hidden}
+#lift-door-l,#lift-door-r{width:50%;height:100%;will-change:transform;position:relative}
+#lift-door-l{background:linear-gradient(to right,#3E2A0E 0%,#8F7434 18%,#C9A557 35%,#E3C176 50%,#C9A557 65%,#8F7434 82%,#3E2A0E 100%);transform:translateX(-100%)}
+#lift-door-r{background:linear-gradient(to left,#3E2A0E 0%,#8F7434 18%,#C9A557 35%,#E3C176 50%,#C9A557 65%,#8F7434 82%,#3E2A0E 100%);transform:translateX(100%)}
+#lift-door-l::before{content:'';position:absolute;top:12%;left:16%;right:10%;bottom:12%;border:1.5px solid rgba(233,226,208,.22);border-radius:3px}
+#lift-door-r::before{content:'';position:absolute;top:12%;left:10%;right:16%;bottom:12%;border:1.5px solid rgba(233,226,208,.22);border-radius:3px}
+#lift-door-l::after{content:'';position:absolute;top:0;right:0;bottom:0;width:4px;background:linear-gradient(to bottom,#2A1A06,#8F7434 30%,#A97F2F 50%,#8F7434 70%,#2A1A06)}
+#lift-door-r::after{content:'';position:absolute;top:0;left:0;bottom:0;width:4px;background:linear-gradient(to bottom,#2A1A06,#8F7434 30%,#A97F2F 50%,#8F7434 70%,#2A1A06)}
+#lift-cabin{position:absolute;inset:0;z-index:16;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .12s}
+.lift-cabin-box{background:rgba(18,22,28,.94);border:1px solid #C9A557;border-radius:14px;padding:20px 28px;text-align:center;min-width:200px;cursor:pointer;box-shadow:0 8px 28px rgba(0,0,0,.55)}
+.lift-glyph{font-family:'Marcellus',serif;font-size:24px;color:#C9A557;margin-bottom:2px}
+#lift-arrow{font-size:20px;color:#C9A557;margin:2px 0}
+#lift-counter{font-family:'Marcellus',serif;font-size:52px;color:#E9E2D0;line-height:1;margin:4px 0 10px}
+#lift-barnaby{font-size:12px;color:#A79F8C;max-width:190px;margin:0 auto;line-height:1.45;font-style:italic}
+.lift-skip{font-size:9.5px;color:#6E7683;letter-spacing:.18em;text-transform:uppercase;margin-top:12px}
 
 </style>
 <script type="application/ld+json">
@@ -918,7 +936,7 @@ function goLobby(){
 function doorHTML(p){
   return `<div class="tw-door" data-pid="${p.id}" onclick="knock('${p.id}')">
     <span class="lamp ${twBusyMap[p.id]?'busy':'free'}"></span>
-    <div class="glasspane">${FACES[p.id]||''}</div>
+    <div class="glasspane">${FACES[p.id]||''}<img src="avatars/${p.id}.jpg" alt="" onerror="this.remove()"></div>
     <div class="plate"><b>${p.n}</b><span>${p.r}</span></div>
     <span class="knob"></span>
     <span class="roomtag">${p.f}0${(TW.partners.filter(x=>x.f===p.f).indexOf(p)+1)}</span>
@@ -983,13 +1001,21 @@ function goOffice(pid){
    <div class="tw-top"><b>Office ${p.f}0${(TW.partners.filter(x=>x.f===p.f).indexOf(p)+1)} \u00b7 ${p.n}</b><button class="tw-back" onclick="goFloor(${p.f})">Corridor</button></div>
    ${officeScene(p)}
    <div class="tw-panel">
-     <h3>${p.n}</h3>
-     <p style="color:var(--gold);font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;margin-bottom:6px">${p.r}</p>
-     <p>${p.bio}</p>
-     ${PACKS[p.id]?`<p style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line)"><span style="color:var(--gold);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;font-weight:700">House product</span><br>${PACKS[p.id][0]} · <span style="font-family:'Spline Sans Mono',monospace">${PACKS[p.id][1]}</span></p>`:''}
+     <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:12px">
+       <div style="width:120px;height:120px;border-radius:10px;overflow:hidden;border:1.5px solid #C9A557;flex-shrink:0;position:relative;background:#F4EDDC">
+         ${FACES[p.id]||''}
+         <img src="avatars/${p.id}.jpg" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:9px" onerror="this.remove()">
+       </div>
+       <div style="flex:1;min-width:0">
+         <h3>${p.n}</h3>
+         <p style="color:var(--gold);font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;margin:4px 0 8px">${p.r}</p>
+         <p>${p.bio}</p>
+       </div>
+     </div>
+     ${PACKS[p.id]?`<p style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line)"><span style="color:var(--gold);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;font-weight:700">House product</span><br>${PACKS[p.id][0]} &middot; <span style="font-family:'Spline Sans Mono',monospace">${PACKS[p.id][1]}</span></p>`:''}
      <div class="tw-actions">
        ${PACKS[p.id]?`<button class="tw-btn gold" onclick="payOr(PAY.packs['${p.id}'], 'Hello Ninth House, I would like to commission the ${PACKS[p.id][0]} (${PACKS[p.id][1]}) from ${p.n.replace(/'/g,'')}.')">Commission this pack</button>`:''}
-       <button class="tw-btn" onclick="window.open('${WA9}?text='+encodeURIComponent('Hello Ninth House, I visited ${p.n.replace(/'/g,'')}\\'s office in the Tower and would like a meeting.'),'_blank')">Request a meeting</button>
+       <button class="tw-btn" onclick="window.open('${WA9}?text='+encodeURIComponent('Hello Ninth House, I visited ${p.n.replace(/'/g,'')}\'s office in the Tower and would like a meeting.'),'_blank')">Request a meeting</button>
        <button class="tw-btn" onclick="window.location.href='mailto:${p.id}@lyrion.co.uk?subject='+encodeURIComponent('Meeting request via the Tower')">Email ${p.n.split(' ')[0]}</button>
      </div>
    </div></div>`;
@@ -1034,11 +1060,19 @@ function goCEO(){
    <div class="tw-top"><b>Floor 9 \u00b7 Office of the Chief Executive</b><button class="tw-back" onclick="goFloor(9)">Corridor</button></div>
    ${officeScene(ceo, true)}
    <div class="tw-panel">
-     <h3>Alexander "Q" Afolabi</h3>
-     <p style="color:var(--gold);font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;margin-bottom:6px">Chief Executive \u00b7 Keeper of the Seal</p>
-     <p>A UK qualified lawyer out of the engine rooms of British regulation, a serial founder, a published author, and the one human every partner in this building answers to. Clients do not get an account manager here. They get the principal.</p>
+     <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:12px">
+       <div style="width:120px;height:120px;border-radius:10px;overflow:hidden;border:1.5px solid #C9A557;flex-shrink:0;position:relative;background:#F4EDDC">
+         ${FACES.ceo||''}
+         <img src="avatars/ceo.jpg" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:9px" onerror="this.remove()">
+       </div>
+       <div style="flex:1;min-width:0">
+         <h3>Alexander "Q" Afolabi</h3>
+         <p style="color:var(--gold);font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;margin:4px 0 8px">Chief Executive \u00b7 Keeper of the Seal</p>
+         <p>A UK qualified lawyer out of the engine rooms of British regulation, a serial founder, a published author, and the one human every partner in this building answers to. Clients do not get an account manager here. They get the principal.</p>
+       </div>
+     </div>
      <div class="tw-actions">
-       <button class="tw-btn gold" onclick="window.open('${WA9}?text='+encodeURIComponent('Hello, I visited the Chief Executive\\'s office in the Ninth House Tower and would like to speak about an engagement.'),'_blank')">Engage the principal</button>
+       <button class="tw-btn gold" onclick="window.open('${WA9}?text='+encodeURIComponent('Hello, I visited the Chief Executive\'s office in the Ninth House Tower and would like to speak about an engagement.'),'_blank')">Engage the principal</button>
        <button class="tw-btn" onclick="window.location.href='firm.html'">Read his full profile</button>
      </div>
    </div></div>`;
@@ -1320,5 +1354,196 @@ goExterior();
 if(nhChallenge) goLounge();
 
 </script>
+
+<script>
+/* ===== LIFT RIDE ENGINE ===== */
+(function(){
+  /* Create overlay DOM */
+  const ov = document.createElement('div');
+  ov.id = 'lift-doors-overlay';
+  ov.innerHTML =
+    '<div id="lift-door-l"></div>' +
+    '<div id="lift-door-r"></div>' +
+    '<div id="lift-cabin">' +
+      '<div class="lift-cabin-box">' +
+        '<div class="lift-glyph">&#9795;</div>' +
+        '<div id="lift-arrow">&#9650;</div>' +
+        '<div id="lift-counter">G</div>' +
+        '<div id="lift-barnaby"></div>' +
+        '<div class="lift-skip">tap to skip</div>' +
+      '</div>' +
+    '</div>';
+  document.getElementById('tower').appendChild(ov);
+
+  const doorL = document.getElementById('lift-door-l');
+  const doorR = document.getElementById('lift-door-r');
+  const cabin = document.getElementById('lift-cabin');
+
+  let busy = false;
+  let currentFloor = 0;
+  let audioCtx = null;
+  let hadGesture = false;
+  let humNodes = null;
+  let barnabyIdx = 0;
+
+  const LINES = [
+    'Mind the gap. And the hubris.',
+    'Going up. Metaphorically and literally.',
+    'This lift runs faster than a committee.',
+    'Floor change in progress. Hold your ambitions.',
+    'Barnaby oiled these cables personally. You are welcome.',
+    'The ninth floor carpet is quieter. You will see why.'
+  ];
+
+  document.addEventListener('pointerdown', function(){ hadGesture = true; }, { once: true });
+
+  function getCtx(){
+    if (!hadGesture) return null;
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      return audioCtx;
+    } catch(e){ return null; }
+  }
+
+  function playDing(){
+    var ctx = getCtx(); if(!ctx) return;
+    try {
+      var t = ctx.currentTime;
+      var o = ctx.createOscillator(), g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = 880; o.type = 'sine';
+      g.gain.setValueAtTime(0.22, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.75);
+      o.start(t); o.stop(t + 0.75);
+    } catch(e){}
+  }
+
+  function humStart(){
+    var ctx = getCtx(); if(!ctx) return;
+    try {
+      var o = ctx.createOscillator(), g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = 55; o.type = 'sine';
+      g.gain.setValueAtTime(0.04, ctx.currentTime);
+      o.start();
+      humNodes = {o:o, g:g};
+    } catch(e){}
+  }
+
+  function humStop(){
+    var ctx = getCtx();
+    if (!humNodes) return;
+    try {
+      if (ctx) {
+        var t = ctx.currentTime;
+        humNodes.g.gain.setValueAtTime(humNodes.g.gain.value, t);
+        humNodes.g.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+        humNodes.o.stop(t + 0.25);
+      } else {
+        humNodes.o.stop();
+      }
+    } catch(e){}
+    humNodes = null;
+  }
+
+  /* Store reference to original goFloor */
+  var _orig = window.goFloor;
+
+  window.goFloor = function(f){
+    /* Honour prefers-reduced-motion */
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      currentFloor = f;
+      _orig(f);
+      return;
+    }
+    /* Same floor (e.g. back from office to corridor) - no ride */
+    if (f === currentFloor && currentFloor !== 0) {
+      _orig(f);
+      return;
+    }
+    if (busy) return;
+    busy = true;
+
+    var from = currentFloor;
+    currentFloor = f;
+    var up = f >= from;
+
+    /* Disable lift buttons */
+    document.querySelectorAll('.tw-fbtn').forEach(function(b){ b.disabled = true; });
+
+    ov.style.pointerEvents = 'all';
+    humStart();
+
+    /* Close doors */
+    var ease = 'cubic-bezier(0.4,0,0.6,1)';
+    doorL.style.transition = 'transform 0.35s ' + ease;
+    doorR.style.transition = 'transform 0.35s ' + ease;
+    doorL.style.transform = 'translateX(0)';
+    doorR.style.transform = 'translateX(0)';
+
+    var cabinTimer = null, tickTimer = null, done = false;
+
+    function arrive(){
+      if (done) return;
+      done = true;
+      clearTimeout(cabinTimer);
+      clearInterval(tickTimer);
+      cabin.style.opacity = '0';
+      /* Open doors */
+      doorL.style.transition = 'transform 0.35s ' + ease;
+      doorR.style.transition = 'transform 0.35s ' + ease;
+      doorL.style.transform = 'translateX(-100%)';
+      doorR.style.transform = 'translateX(100%)';
+      humStop();
+      playDing();
+      setTimeout(function(){
+        ov.style.pointerEvents = 'none';
+        busy = false;
+        _orig(f);
+      }, 350);
+    }
+
+    setTimeout(function(){
+      if (done) return;
+      /* Allow tap-to-skip once doors are closed */
+      ov.addEventListener('click', arrive, { once: true });
+      /* Show cabin info */
+      var arrow   = document.getElementById('lift-arrow');
+      var counter = document.getElementById('lift-counter');
+      var barnaby = document.getElementById('lift-barnaby');
+      arrow.textContent   = up ? '\u25b2' : '\u25bc';
+      barnaby.textContent = LINES[barnabyIdx++ % LINES.length];
+      counter.textContent = from === 0 ? 'G' : String(from);
+      cabin.style.opacity = '1';
+
+      /* Build floor steps for counter */
+      var steps = [];
+      if (f > from)      { for (var i = from + 1; i <= f; i++) steps.push(i); }
+      else if (f < from) { for (var i = from - 1; i >= f; i--) steps.push(i); }
+      else               { steps.push(f); }
+
+      var si = 0;
+      var interval = Math.max(50, Math.min(Math.floor(820 / steps.length), 250));
+      tickTimer = setInterval(function(){
+        if (si < steps.length){
+          counter.textContent = steps[si] === 0 ? 'G' : String(steps[si]);
+          si++;
+        } else {
+          clearInterval(tickTimer);
+        }
+      }, interval);
+
+      cabinTimer = setTimeout(arrive, 900);
+    }, 350);
+  };
+
+  /* Keep currentFloor updated when goLobby() is called directly (e.g. back buttons).
+     goLobby is always defined by the tower engine script above; the && guard is belt-and-suspenders. */
+  var _goLobby = window.goLobby;
+  window.goLobby = function(){ currentFloor = 0; _goLobby && _goLobby(); };
+})();
+</script>
+
 </body>
 </html>

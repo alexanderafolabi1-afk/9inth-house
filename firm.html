@@ -81,9 +81,10 @@ h2{font-family:'Marcellus',serif;font-weight:400;font-size:clamp(26px,4vw,38px);
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
 .partner{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;transition:box-shadow .2s,border-color .2s;box-shadow:0 1px 3px rgba(28,33,40,.04)}
 .partner:hover{border-color:var(--gold-bright);box-shadow:0 4px 16px rgba(169,127,47,.12)}
-.phead{display:flex;gap:14px;align-items:center;margin-bottom:10px}
-.avatar{width:56px;height:56px;border-radius:50%;border:1px solid var(--gold-bright);display:flex;align-items:center;justify-content:center;font-family:'Marcellus',serif;font-size:17px;color:var(--gold);background:var(--band);flex-shrink:0;position:relative;overflow:hidden}
-.avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%}
+.phead{display:flex;gap:14px;align-items:flex-start;margin-bottom:10px;flex-direction:column}
+.avatar{width:160px;height:160px;border-radius:12px;border:1.5px solid var(--gold-bright);display:flex;align-items:center;justify-content:center;font-family:'Marcellus',serif;font-size:17px;color:var(--gold);background:var(--band);flex-shrink:0;position:relative;overflow:hidden}
+.avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:10px}
+@media(min-width:768px){.grid .avatar{width:200px;height:200px;}}
 .partner h3{font-family:'Marcellus',serif;font-weight:400;font-size:17px;color:var(--ink)}
 .role{color:var(--gold);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;margin-top:2px;font-weight:600}
 .region{font-family:'Spline Sans Mono',monospace;font-size:10px;color:var(--faint);border:1px solid var(--line);border-radius:5px;padding:1px 6px;margin-left:8px;vertical-align:2px}
@@ -132,7 +133,8 @@ footer .fine{text-align:center}
 /* Principal (CEO) */
 .principal{background:var(--card);border:1px solid var(--gold-bright);border-radius:20px;padding:30px;display:flex;gap:26px;align-items:flex-start;box-shadow:0 6px 24px rgba(169,127,47,.12);margin-top:34px}
 @media(max-width:640px){.principal{flex-direction:column;align-items:center;text-align:center}}
-.principal .avatar{width:120px;height:120px;font-size:34px;border-width:2px}
+.principal .avatar{width:160px;height:160px;font-size:34px;border-width:2px;border-radius:12px}
+@media(min-width:768px){.principal .avatar{width:220px;height:220px;}}
 .principal h3{font-family:'Marcellus',serif;font-weight:400;font-size:24px;color:var(--ink)}
 .principal .role{font-size:11.5px;margin:4px 0 12px}
 .principal p{color:var(--body);font-size:15px;margin-bottom:10px}
