@@ -43,12 +43,12 @@ nav .links a:hover{color:var(--gold)}
 .cta-btn{background:var(--gold);color:#FFFDF8!important;font-weight:700;padding:9px 18px;border-radius:10px;font-size:13px}
 
 /* Ticker */
-.ticker{background:var(--dark);border-bottom:1px solid var(--gold-deep);overflow:hidden}
-.ticker-track{display:inline-flex;align-items:center;white-space:nowrap;padding:9px 0;animation:tick 46s linear infinite;will-change:transform}
+.ticker{background:var(--dark);border-top:2px solid var(--gold-deep);border-bottom:2px solid var(--gold-deep);overflow:hidden}
+.ticker-track{display:inline-flex;align-items:center;white-space:nowrap;padding:11px 0;animation:tick 46s linear infinite;will-change:transform}
 .ticker:hover .ticker-track{animation-play-state:paused}
-.ticker .item{color:#E9E2D0;font-family:'Spline Sans Mono',monospace;font-size:12px;letter-spacing:.05em;padding:0 16px}
-.ticker .item b{color:var(--gold-bright);font-weight:500}
-.ticker .sep{color:var(--gold-deep);font-size:11px}
+.ticker .item{color:#E9E2D0;font-family:'Spline Sans Mono',monospace;font-size:13px;letter-spacing:.06em;padding:0 20px}
+.ticker .item b{color:var(--gold-bright);font-weight:600}
+.ticker .sep{color:var(--gold);font-size:12px}
 @keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 @media (prefers-reduced-motion:reduce){.ticker-track{animation:none}}
 
@@ -62,13 +62,14 @@ h2{font-family:'Marcellus',serif;font-weight:400;font-size:clamp(24px,3.6vw,34px
 
 /* Instruments */
 .instruments{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-top:30px}
-.inst{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:0 1px 3px rgba(28,33,40,.04);position:relative;overflow:hidden}
-.inst::after{content:"";position:absolute;top:-46px;right:-46px;width:120px;height:120px;border-radius:50%;border:1px dashed var(--gold-bright);opacity:.28;pointer-events:none}
+.inst{background:var(--card);border:1px solid var(--gold-bright);border-radius:16px;padding:20px;box-shadow:0 2px 8px rgba(169,127,47,.1),inset 0 1px 0 rgba(255,253,248,.7);position:relative;overflow:hidden;transition:transform .18s,box-shadow .18s}
+.inst:hover{transform:translateY(-3px);box-shadow:0 8px 22px rgba(169,127,47,.2),inset 0 1px 0 rgba(255,253,248,.7)}
+.inst::after{content:"";position:absolute;top:-46px;right:-46px;width:120px;height:120px;border-radius:50%;border:1px solid var(--gold-bright);opacity:.35;pointer-events:none}
 .inst-head{display:flex;align-items:center;gap:12px;margin-bottom:14px}
-.dial{width:36px;height:36px;border:1px solid var(--gold-bright);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--gold);background:var(--band);font-size:16px;flex-shrink:0}
+.dial{width:40px;height:40px;border:2px solid var(--gold-bright);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--gold);background:linear-gradient(135deg,#E9CE8C,#C9A557 60%,#A97F2F);box-shadow:0 0 0 3px rgba(169,127,47,.18),inset 0 1px 0 rgba(255,253,248,.5);font-size:17px;flex-shrink:0}
 .inst h3{font-family:'Marcellus',serif;font-weight:400;font-size:18px;color:var(--ink)}
 .inst .sub{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);font-weight:600}
-.row{display:flex;justify-content:space-between;align-items:baseline;gap:10px;border-bottom:1px dashed var(--line);padding:7px 0;font-size:14px}
+.row{display:flex;justify-content:space-between;align-items:baseline;gap:10px;border-bottom:1px solid rgba(169,127,47,.18);padding:7px 0;font-size:14px}
 .row:last-child{border-bottom:none}
 .row .k{color:var(--body)}
 .row .v{font-family:'Spline Sans Mono',monospace;font-size:13.5px;color:var(--ink);text-align:right}
@@ -76,7 +77,7 @@ h2{font-family:'Marcellus',serif;font-weight:400;font-size:clamp(24px,3.6vw,34px
 .recal{color:var(--faint);font-style:italic;font-size:13.5px;padding:8px 0}
 .bigtemp{font-family:'Spline Sans Mono',monospace;font-size:44px;color:var(--gold);line-height:1}
 .wx-cond{font-family:'Marcellus',serif;font-size:17px;color:var(--ink);margin-top:6px}
-.wirelist a{display:block;padding:8px 0;border-bottom:1px dashed var(--line);color:var(--ink);font-size:14px;line-height:1.45}
+.wirelist a{display:block;padding:8px 0;border-bottom:1px solid rgba(169,127,47,.18);color:var(--ink);font-size:14px;line-height:1.45}
 .wirelist a:last-child{border-bottom:none}
 .wirelist a:hover{color:var(--gold)}
 .wirelist small{display:block;font-family:'Spline Sans Mono',monospace;font-size:11px;color:var(--faint);margin-top:2px}
@@ -93,8 +94,8 @@ h2{font-family:'Marcellus',serif;font-weight:400;font-size:clamp(24px,3.6vw,34px
 
 /* Estate plaques */
 .estate-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(195px,1fr));gap:14px;margin-top:30px}
-.plaque{display:block;background:linear-gradient(160deg,#E3C176,#C9A557 45%,#A97F2F);border-radius:10px;padding:4px;box-shadow:0 5px 16px rgba(169,127,47,.28),inset 0 1px 0 rgba(255,253,248,.5);transition:transform .15s}
-.plaque:hover{transform:translateY(-3px)}
+.plaque{display:block;cursor:pointer;background:linear-gradient(160deg,#E3C176,#C9A557 45%,#A97F2F);border-radius:10px;padding:4px;box-shadow:0 5px 16px rgba(169,127,47,.28),inset 0 1px 0 rgba(255,253,248,.5);transition:transform .18s,box-shadow .18s}
+.plaque:hover{transform:translateY(-4px);box-shadow:0 12px 32px rgba(169,127,47,.5),inset 0 1px 0 rgba(255,253,248,.6)}
 .plaque .face{border:1px solid rgba(36,27,7,.4);border-radius:7px;padding:18px 14px 16px;text-align:center;background:linear-gradient(#E9CE8C,#C9A557)}
 .plaque b{display:block;font-family:'Marcellus',serif;font-weight:400;color:#241B07;font-size:15.5px;letter-spacing:.1em;text-transform:uppercase;text-shadow:0 1px 0 rgba(255,253,248,.4)}
 .plaque i{display:block;width:26px;height:1px;background:rgba(36,27,7,.4);margin:8px auto}
@@ -119,6 +120,12 @@ footer .fine{text-align:center}
 .reveal{opacity:0;transform:translateY(18px);transition:opacity .6s ease,transform .6s ease}
 .reveal.in{opacity:1;transform:none}
 @media (prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none}}
+
+/* Observatory hero */
+.obs-hero{position:relative;width:100%;height:clamp(260px,36vw,500px);overflow:hidden;background:linear-gradient(to bottom,#1B2432,#2A3447)}
+.obs-hero-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 35%}
+.obs-hero-svg{position:absolute;inset:0;width:100%;height:100%}
+.obs-hero-veil{position:absolute;left:0;right:0;bottom:0;height:55%;background:linear-gradient(to top,rgba(22,27,34,.65),rgba(22,27,34,0));pointer-events:none}
 </style>
 </head>
 <body>
@@ -135,6 +142,44 @@ footer .fine{text-align:center}
     </div>
   </div>
 </nav>
+
+<div class="obs-hero" aria-hidden="true">
+  <img class="obs-hero-img" src="art/observatory.jpg" alt="" onerror="this.remove()">
+  <svg class="obs-hero-svg" viewBox="0 0 1200 420" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+    <rect width="1200" height="420" fill="#1B2432"/>
+    <!-- starfield -->
+    <circle cx="80" cy="60" r="1.2" fill="#E9E2D0" opacity=".8"/>
+    <circle cx="210" cy="30" r="0.9" fill="#E9E2D0" opacity=".6"/>
+    <circle cx="390" cy="80" r="1.4" fill="#E9E2D0" opacity=".7"/>
+    <circle cx="540" cy="20" r="0.8" fill="#E9E2D0" opacity=".5"/>
+    <circle cx="700" cy="55" r="1.1" fill="#C9A557" opacity=".9"/>
+    <circle cx="850" cy="35" r="0.9" fill="#E9E2D0" opacity=".6"/>
+    <circle cx="960" cy="70" r="1.3" fill="#E9E2D0" opacity=".7"/>
+    <circle cx="1100" cy="25" r="1.0" fill="#E9E2D0" opacity=".5"/>
+    <circle cx="155" cy="110" r="0.8" fill="#E9E2D0" opacity=".4"/>
+    <circle cx="460" cy="130" r="1.0" fill="#E9E2D0" opacity=".5"/>
+    <circle cx="760" cy="100" r="0.7" fill="#E9E2D0" opacity=".4"/>
+    <circle cx="1050" cy="115" r="1.1" fill="#E9E2D0" opacity=".6"/>
+    <!-- dome silhouette -->
+    <path d="M350 420 L350 310 A250 250 0 0 1 850 310 L850 420 Z" fill="#161B22"/>
+    <path d="M350 310 A250 250 0 0 1 850 310" fill="none" stroke="#A97F2F" stroke-width="3"/>
+    <!-- telescope shaft -->
+    <rect x="582" y="160" width="36" height="152" rx="8" fill="#232E3C"/>
+    <rect x="578" y="148" width="44" height="18" rx="5" fill="#8F7434"/>
+    <rect x="590" y="136" width="20" height="18" rx="4" fill="#C9A557"/>
+    <!-- eyepiece -->
+    <ellipse cx="600" cy="158" rx="16" ry="8" fill="#A97F2F"/>
+    <!-- horizon glow -->
+    <rect x="0" y="370" width="1200" height="50" fill="url(#hglow)"/>
+    <defs>
+      <linearGradient id="hglow" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#C9A557" stop-opacity=".18"/>
+        <stop offset="100%" stop-color="#1B2432" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+  </svg>
+  <div class="obs-hero-veil"></div>
+</div>
 
 <div class="ticker" aria-label="Live house ticker"><div class="ticker-track" id="tick-track"></div></div>
 
@@ -244,7 +289,7 @@ const ESTATE = [
 ];
 document.getElementById('estate-grid').innerHTML = ESTATE.map(e =>
   `<a class="plaque reveal" href="${e.url}" target="_blank" rel="noopener">
-     <span class="face"><b>${e.name}</b><i></i><span>${e.line}</span><small>Est. of the house</small></span>
+     <span class="face"><b>${e.name}</b><i></i><span>${e.line}</span></span>
    </a>`).join('');
 document.getElementById('estate-fine').innerHTML = 'Properties of the house: ' +
   ESTATE.map(e => `<a href="${e.url}" target="_blank" rel="noopener">${e.name}</a>`).join('<span class="g">&#9795;</span>');
