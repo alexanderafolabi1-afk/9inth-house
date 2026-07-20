@@ -8,10 +8,13 @@
 <meta name="keywords" content="growth agency UK, marketing agency London, startup marketing, brand strategy agency, performance marketing agency, SEO services, social media marketing, video content agency, global marketing firm">
 <meta property="og:title" content="Ninth House | Growth Partners">
 <meta property="og:description" content="Nineteen partners across four continents, one human Chief Executive holding the seal. The output of a funded agency at the payroll of none.">
+<meta property="og:image" content="https://YOUR-USERNAME.github.io/ninth-house/art/og.jpg">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#FBF7EE">
 <meta name="keywords" content="marketing agency UK, growth marketing SaaS, brand strategy, performance marketing, SEO content agency, marketing for founders, Ninth House">
 <link rel="canonical" href="https://YOUR-USERNAME.github.io/ninth-house/">
 
+<link rel="apple-touch-icon" href="art/og.jpg">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23FBF7EE'/%3E%3Ctext x='32' y='44' font-size='36' text-anchor='middle' fill='%23A97F2F' font-family='serif'%3E%E2%99%83%3C/text%3E%3C/svg%3E">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -170,11 +173,12 @@ footer .fine{text-align:center}
 .tw-artwrap{position:relative}
 .tw-art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:0}
 /* Corridor & doors */
-.tw-corridor{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;padding:6px 18px 18px}
+.tw-corridor{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;padding:6px 18px 18px}
 .tw-door{position:relative;background:linear-gradient(#2A2320,#1C1712);border:2px solid #3E2E1E;border-bottom-width:8px;border-radius:8px 8px 2px 2px;aspect-ratio:3/4.6;cursor:pointer;overflow:hidden;transition:transform .15s;box-shadow:0 4px 12px rgba(28,33,40,.18)}
 .tw-door:hover{transform:translateY(-3px)}
-.tw-door .glasspane{position:absolute;top:10%;left:14%;right:14%;height:34%;background:rgba(244,237,220,.16);border:1.5px solid #C9A557;border-radius:3px;overflow:hidden}
-.tw-door .glasspane svg{opacity:.5;filter:blur(1px)}
+.tw-door .glasspane{position:absolute;top:8%;left:8%;right:8%;height:42%;background:rgba(244,237,220,.16);border:1.5px solid #C9A557;border-radius:3px;overflow:hidden}
+.tw-door .glasspane svg{opacity:.5;filter:blur(1px);position:absolute;inset:0;width:100%;height:100%}
+.tw-door .glasspane img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:3px}
 .tw-door .plate{position:absolute;top:49%;left:10%;right:10%;background:linear-gradient(#E3C176,#A97F2F);border-radius:3px;padding:5px 4px;text-align:center;color:#241B07}
 .tw-door .plate b{display:block;font-family:'Marcellus',serif;font-weight:400;font-size:11px;line-height:1.15}
 .tw-door .plate span{font-size:8px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;opacity:.85}
@@ -224,6 +228,23 @@ footer .fine{text-align:center}
 .tw-sponsor a{color:var(--gold)}
 @media(max-width:520px){.tw-corridor{grid-template-columns:repeat(2,1fr)}}
 
+/* Lift ride overlay */
+#lift-doors-overlay{position:absolute;inset:0;z-index:15;display:flex;pointer-events:none;overflow:hidden}
+#lift-door-l,#lift-door-r{width:50%;height:100%;will-change:transform;position:relative}
+#lift-door-l{background:linear-gradient(to right,#3E2A0E 0%,#8F7434 18%,#C9A557 35%,#E3C176 50%,#C9A557 65%,#8F7434 82%,#3E2A0E 100%);transform:translateX(-100%)}
+#lift-door-r{background:linear-gradient(to left,#3E2A0E 0%,#8F7434 18%,#C9A557 35%,#E3C176 50%,#C9A557 65%,#8F7434 82%,#3E2A0E 100%);transform:translateX(100%)}
+#lift-door-l::before{content:'';position:absolute;top:12%;left:16%;right:10%;bottom:12%;border:1.5px solid rgba(233,226,208,.22);border-radius:3px}
+#lift-door-r::before{content:'';position:absolute;top:12%;left:10%;right:16%;bottom:12%;border:1.5px solid rgba(233,226,208,.22);border-radius:3px}
+#lift-door-l::after{content:'';position:absolute;top:0;right:0;bottom:0;width:4px;background:linear-gradient(to bottom,#2A1A06,#8F7434 30%,#A97F2F 50%,#8F7434 70%,#2A1A06)}
+#lift-door-r::after{content:'';position:absolute;top:0;left:0;bottom:0;width:4px;background:linear-gradient(to bottom,#2A1A06,#8F7434 30%,#A97F2F 50%,#8F7434 70%,#2A1A06)}
+#lift-cabin{position:absolute;inset:0;z-index:16;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .12s}
+.lift-cabin-box{background:rgba(18,22,28,.94);border:1px solid #C9A557;border-radius:14px;padding:20px 28px;text-align:center;min-width:200px;cursor:pointer;box-shadow:0 8px 28px rgba(0,0,0,.55)}
+.lift-glyph{font-family:'Marcellus',serif;font-size:24px;color:#C9A557;margin-bottom:2px}
+#lift-arrow{font-size:20px;color:#C9A557;margin:2px 0}
+#lift-counter{font-family:'Marcellus',serif;font-size:52px;color:#E9E2D0;line-height:1;margin:4px 0 10px}
+#lift-barnaby{font-size:12px;color:#A79F8C;max-width:190px;margin:0 auto;line-height:1.45;font-style:italic}
+.lift-skip{font-size:9.5px;color:#6E7683;letter-spacing:.18em;text-transform:uppercase;margin-top:12px}
+
 </style>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"ProfessionalService","name":"Ninth House Growth Partners","alternateName":"Ninth House","description":"A global growth and marketing studio operated by AI partner personas under the oversight and final authority of one human Chief Executive.","parentOrganization":{"@type":"Organization","name":"Lyrion Ltd"},"founder":{"@type":"Person","name":"Alexander Afolabi","jobTitle":"Chief Executive"},"areaServed":["North America","Europe","Asia","Middle East","Africa","Latin America"],"knowsAbout":["brand strategy","performance marketing","SEO","social media marketing","video production","public relations","CRM","market research","grant funding"],"slogan":"The output of a funded agency. The payroll of none."}
@@ -260,7 +281,7 @@ footer .fine{text-align:center}
 <div id="brochure"></div>
 <div class="strip">
   <div class="wrap">
-    <div><b>17</b><span>Partners on the floor</span></div>
+    <div><b>19</b><span>Partners on the floor</span></div>
     <div><b>4</b><span>Continents of craft</span></div>
     <div><b>365</b><span>Cycles a year, no holidays</span></div>
     <div><b>1</b><span>Human seal on everything</span></div>
@@ -321,6 +342,10 @@ document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
 #fd.open{display:flex}
 #fd-head{background:var(--band);border-bottom:1px solid var(--line);padding:13px 15px;display:flex;gap:11px;align-items:center}
 #fd-head .fdav{width:42px;height:42px;border-radius:50%;position:relative;overflow:hidden;border:1.5px solid var(--gold-bright);flex-shrink:0}
+.fd-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.fd-photo.fd-photo-error{display:none}
+.fd-fallback{position:absolute;inset:0;width:100%;height:100%;display:none}
+.fd-fallback.fd-show{display:block}
 #fd-head b{font-family:'Marcellus',serif;font-weight:400;font-size:15px;color:var(--ink);display:block}
 #fd-head small{color:var(--muted);font-size:11px;display:block;min-height:14px}
 #fd-close{margin-left:auto;background:none;border:none;font-size:19px;color:var(--muted);cursor:pointer;padding:4px}
@@ -342,12 +367,36 @@ document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
 
 <button id="fd-launch" aria-label="Open front desk" onclick="fdOpen()">
   <span class="ring"></span>
-  <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%"><circle cx="60" cy="60" r="60" fill="#F4EDDC"/><path d="M26 118 Q30 86 60 84 Q90 86 94 118 Z" fill="#A97F2F"/><path d="M52 90 L60 96 L68 90 L64 86 L56 86 Z" fill="#1C2128"/><circle cx="60" cy="52" r="23" fill="#F1C27D"/><path d="M37 52 Q37 26 60 26 Q83 26 83 52 Q80 34 60 33 Q40 34 37 52 Z" fill="#5B4128"/><circle cx="51" cy="50" r="2.6" fill="#1C2128"/><circle cx="69" cy="50" r="2.6" fill="#1C2128"/><path d="M49 59 Q60 71 71 59" fill="none" stroke="#1C2128" stroke-width="2.6" stroke-linecap="round"/><circle cx="44" cy="58" r="3.4" fill="#E8A98F" opacity=".55"/><circle cx="76" cy="58" r="3.4" fill="#E8A98F" opacity=".55"/></svg>
+  <img class="fd-photo" src="avatars/barnaby.jpg" alt="Photo of Barnaby Sterling" onerror="fdAvatarFallback(this)">
+  <svg class="fd-fallback" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="60" cy="60" r="60" fill="#F4EDDC"/>
+    <path d="M26 118 Q30 86 60 84 Q90 86 94 118 Z" fill="#A97F2F"/>
+    <path d="M52 90 L60 96 L68 90 L64 86 L56 86 Z" fill="#1C2128"/>
+    <circle cx="60" cy="52" r="23" fill="#F1C27D"/>
+    <path d="M37 52 Q37 26 60 26 Q83 26 83 52 Q80 34 60 33 Q40 34 37 52 Z" fill="#5B4128"/>
+    <circle cx="51" cy="50" r="2.6" fill="#1C2128"/>
+    <circle cx="69" cy="50" r="2.6" fill="#1C2128"/>
+    <path d="M49 59 Q60 71 71 59" fill="none" stroke="#1C2128" stroke-width="2.6" stroke-linecap="round"/>
+    <circle cx="44" cy="58" r="3.4" fill="#E8A98F" opacity=".55"/>
+    <circle cx="76" cy="58" r="3.4" fill="#E8A98F" opacity=".55"/>
+  </svg>
 </button>
 
 <div id="fd" role="dialog" aria-label="Ninth House Front Desk">
   <div id="fd-head">
-    <div class="fdav"><svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%"><circle cx="60" cy="60" r="60" fill="#F4EDDC"/><path d="M26 118 Q30 86 60 84 Q90 86 94 118 Z" fill="#A97F2F"/><path d="M52 90 L60 96 L68 90 L64 86 L56 86 Z" fill="#1C2128"/><circle cx="60" cy="52" r="23" fill="#F1C27D"/><path d="M37 52 Q37 26 60 26 Q83 26 83 52 Q80 34 60 33 Q40 34 37 52 Z" fill="#5B4128"/><circle cx="51" cy="50" r="2.6" fill="#1C2128"/><circle cx="69" cy="50" r="2.6" fill="#1C2128"/><path d="M49 59 Q60 71 71 59" fill="none" stroke="#1C2128" stroke-width="2.6" stroke-linecap="round"/></svg></div>
+    <div class="fdav">
+      <img class="fd-photo" src="avatars/barnaby.jpg" alt="Photo of Barnaby Sterling" onerror="fdAvatarFallback(this)">
+      <svg class="fd-fallback" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="60" cy="60" r="60" fill="#F4EDDC"/>
+        <path d="M26 118 Q30 86 60 84 Q90 86 94 118 Z" fill="#A97F2F"/>
+        <path d="M52 90 L60 96 L68 90 L64 86 L56 86 Z" fill="#1C2128"/>
+        <circle cx="60" cy="52" r="23" fill="#F1C27D"/>
+        <path d="M37 52 Q37 26 60 26 Q83 26 83 52 Q80 34 60 33 Q40 34 37 52 Z" fill="#5B4128"/>
+        <circle cx="51" cy="50" r="2.6" fill="#1C2128"/>
+        <circle cx="69" cy="50" r="2.6" fill="#1C2128"/>
+        <path d="M49 59 Q60 71 71 59" fill="none" stroke="#1C2128" stroke-width="2.6" stroke-linecap="round"/>
+      </svg>
+    </div>
     <div><b>Ninth House Front Desk</b><small id="fd-status">Barnaby Sterling, Front of House</small></div>
     <button id="fd-close" onclick="fdClose()" aria-label="Close">&times;</button>
   </div>
@@ -360,6 +409,13 @@ document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
 </div>
 
 <script>
+function fdAvatarFallback(img){
+  if(img.classList.contains('fd-photo-error')) return;
+  img.classList.add('fd-photo-error');
+  const fallback = img.parentNode.querySelector('.fd-fallback');
+  if(fallback) fallback.classList.add('fd-show');
+}
+
 (function(){
 const WA = 'https://wa.me/WANUMBER';
 const msgs = document.getElementById('fd-msgs');
@@ -916,7 +972,7 @@ function goLobby(){
 function doorHTML(p){
   return `<div class="tw-door" data-pid="${p.id}" onclick="knock('${p.id}')">
     <span class="lamp ${twBusyMap[p.id]?'busy':'free'}"></span>
-    <div class="glasspane">${FACES[p.id]||''}</div>
+    <div class="glasspane">${FACES[p.id]||''}<img src="avatars/${p.id}.jpg" alt="" onerror="this.remove()"></div>
     <div class="plate"><b>${p.n}</b><span>${p.r}</span></div>
     <span class="knob"></span>
     <span class="roomtag">${p.f}0${(TW.partners.filter(x=>x.f===p.f).indexOf(p)+1)}</span>
@@ -939,7 +995,7 @@ function goFloor(f){
        <rect x="0" y="150" width="400" height="60" fill="${NIGHT?'#171E28':'#E3D2AC'}"/>
        <rect x="120" y="158" width="160" height="10" rx="3" fill="#5B4128"/><rect x="130" y="168" width="10" height="24" fill="#3E2E1E"/><rect x="260" y="168" width="10" height="24" fill="#3E2E1E"/>
        <text x="200" y="204" text-anchor="middle" font-family="Marcellus, serif" font-size="11" fill="#A97F2F" letter-spacing="4">THE OBSERVATORY</text>
-     </svg></div>
+     </svg><img class="tw-art" src="art/observatory.jpg" alt="Observatory dome with brass telescope and glass ceiling" onerror="this.parentElement.replaceWith(...this.parentElement.childNodes); this.remove()"></div>
      <div class="tw-panel">
        <h3>The refurbishment is complete.</h3>
        <p>A dome of brass and glass above the whole city: the weather glass, the currency board, the crypto tape, the technology wire and the scores, with the Wire Brief filed every shift. Barnaby would like it noted that the works finished early, came in under budget, and that he polished the telescope himself.</p>
@@ -981,13 +1037,21 @@ function goOffice(pid){
    <div class="tw-top"><b>Office ${p.f}0${(TW.partners.filter(x=>x.f===p.f).indexOf(p)+1)} \u00b7 ${p.n}</b><button class="tw-back" onclick="goFloor(${p.f})">Corridor</button></div>
    ${officeScene(p)}
    <div class="tw-panel">
-     <h3>${p.n}</h3>
-     <p style="color:var(--gold);font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;margin-bottom:6px">${p.r}</p>
-     <p>${p.bio}</p>
-     ${PACKS[p.id]?`<p style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line)"><span style="color:var(--gold);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;font-weight:700">House product</span><br>${PACKS[p.id][0]} · <span style="font-family:'Spline Sans Mono',monospace">${PACKS[p.id][1]}</span></p>`:''}
+     <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:12px">
+       <div style="width:120px;height:120px;border-radius:10px;overflow:hidden;border:1.5px solid #C9A557;flex-shrink:0;position:relative;background:#F4EDDC">
+         ${FACES[p.id]||''}
+         <img src="avatars/${p.id}.jpg" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:9px" onerror="this.remove()">
+       </div>
+       <div style="flex:1;min-width:0">
+         <h3>${p.n}</h3>
+         <p style="color:var(--gold);font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;margin:4px 0 8px">${p.r}</p>
+         <p>${p.bio}</p>
+       </div>
+     </div>
+     ${PACKS[p.id]?`<p style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line)"><span style="color:var(--gold);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;font-weight:700">House product</span><br>${PACKS[p.id][0]} &middot; <span style="font-family:'Spline Sans Mono',monospace">${PACKS[p.id][1]}</span></p>`:''}
      <div class="tw-actions">
        ${PACKS[p.id]?`<button class="tw-btn gold" onclick="payOr(PAY.packs['${p.id}'], 'Hello Ninth House, I would like to commission the ${PACKS[p.id][0]} (${PACKS[p.id][1]}) from ${p.n.replace(/'/g,'')}.')">Commission this pack</button>`:''}
-       <button class="tw-btn" onclick="window.open('${WA9}?text='+encodeURIComponent('Hello Ninth House, I visited ${p.n.replace(/'/g,'')}\\'s office in the Tower and would like a meeting.'),'_blank')">Request a meeting</button>
+       <button class="tw-btn" onclick="window.open('${WA9}?text='+encodeURIComponent('Hello Ninth House, I visited ${p.n.replace(/'/g,'')}\'s office in the Tower and would like a meeting.'),'_blank')">Request a meeting</button>
        <button class="tw-btn" onclick="window.location.href='mailto:${p.id}@lyrion.co.uk?subject='+encodeURIComponent('Meeting request via the Tower')">Email ${p.n.split(' ')[0]}</button>
      </div>
    </div></div>`;
@@ -1031,11 +1095,19 @@ function goCEO(){
    <div class="tw-top"><b>Floor 9 \u00b7 Office of the Chief Executive</b><button class="tw-back" onclick="goFloor(9)">Corridor</button></div>
    ${officeScene(ceo, true)}
    <div class="tw-panel">
-     <h3>Alexander "Q" Afolabi</h3>
-     <p style="color:var(--gold);font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;margin-bottom:6px">Chief Executive \u00b7 Keeper of the Seal</p>
-     <p>A UK qualified lawyer out of the engine rooms of British regulation, a serial founder, a published author, and the one human every partner in this building answers to. Clients do not get an account manager here. They get the principal.</p>
+     <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:12px">
+       <div style="width:120px;height:120px;border-radius:10px;overflow:hidden;border:1.5px solid #C9A557;flex-shrink:0;position:relative;background:#F4EDDC">
+         ${FACES.ceo||''}
+         <img src="avatars/ceo.jpg" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:9px" onerror="this.remove()">
+       </div>
+       <div style="flex:1;min-width:0">
+         <h3>Alexander "Q" Afolabi</h3>
+         <p style="color:var(--gold);font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;margin:4px 0 8px">Chief Executive \u00b7 Keeper of the Seal</p>
+         <p>A UK qualified lawyer out of the engine rooms of British regulation, a serial founder, a published author, and the one human every partner in this building answers to. Clients do not get an account manager here. They get the principal.</p>
+       </div>
+     </div>
      <div class="tw-actions">
-       <button class="tw-btn gold" onclick="window.open('${WA9}?text='+encodeURIComponent('Hello, I visited the Chief Executive\\'s office in the Ninth House Tower and would like to speak about an engagement.'),'_blank')">Engage the principal</button>
+       <button class="tw-btn gold" onclick="window.open('${WA9}?text='+encodeURIComponent('Hello, I visited the Chief Executive\'s office in the Ninth House Tower and would like to speak about an engagement.'),'_blank')">Engage the principal</button>
        <button class="tw-btn" onclick="window.location.href='firm.html'">Read his full profile</button>
      </div>
    </div></div>`;
@@ -1060,6 +1132,15 @@ function goLounge(){
   const streak = examStreakInfo();
   twStage.innerHTML = `<div class="tw-screen">
    <div class="tw-top"><b>Floor 1 \u00b7 The Lounge</b><button class="tw-back" onclick="goLobby()">Lobby</button></div>
+   <div class="tw-artwrap"><svg class="tw-scene" viewBox="0 0 400 190" xmlns="http://www.w3.org/2000/svg">
+     <rect width="400" height="190" fill="#F4EDDC"/><rect y="140" width="400" height="50" fill="#EAD6AE"/>
+     <rect x="20" y="100" width="130" height="46" rx="10" fill="#5B4128"/><rect x="28" y="86" width="114" height="24" rx="8" fill="#8F7434"/>
+     <rect x="250" y="104" width="130" height="42" rx="10" fill="#5B4128"/><rect x="258" y="90" width="114" height="24" rx="8" fill="#8F7434"/>
+     <rect x="158" y="116" width="84" height="32" rx="8" fill="#3E2E1E"/><rect x="164" y="128" width="72" height="4" rx="2" fill="#C9A557" opacity=".5"/>
+     <circle cx="90" cy="56" r="22" fill="#FFFDF8" stroke="#A97F2F" stroke-width="2"/><text x="90" y="62" font-size="18" text-anchor="middle" fill="#A97F2F" font-family="serif">&#9795;</text>
+     <rect x="310" y="30" width="70" height="100" rx="4" fill="#2A2320"/><rect x="318" y="68" width="54" height="8" rx="2" fill="#C9A557"/><text x="345" y="76" text-anchor="middle" font-size="5" fill="#241B07" font-family="serif" letter-spacing="1">THE LOUNGE</text>
+     <rect x="0" y="140" width="400" height="50" fill="#EAD6AE"/>
+   </svg><img class="tw-art" src="art/lounge.jpg" alt="The Lounge interior with warm seating" onerror="this.parentElement.replaceWith(...this.parentElement.childNodes); this.remove()"></div>
    ${nhChallenge ? `<div class="tw-panel" style="border-color:var(--gold-bright)"><p style="font-size:14px"><strong style="color:var(--gold);font-family:'Marcellus',serif;font-weight:400">A challenge stands.</strong> ${escTxt(nhChallenge.name)} scored ${nhChallenge.score}${nhChallenge.type === 'quiz' ? ' in the Examination Room' : ' at Stamp Rush'}. Beat it.</p></div>` : ''}
    <div class="tw-panel">
      <h3>Stamp Rush</h3>
@@ -1318,5 +1399,196 @@ if(nhChallenge) goLounge();
 else if(nhFloor !== null){ if(nhFloor === 0) goLobby(); else goFloor(nhFloor); }
 
 </script>
+
+<script>
+/* ===== LIFT RIDE ENGINE ===== */
+(function(){
+  /* Create overlay DOM */
+  const ov = document.createElement('div');
+  ov.id = 'lift-doors-overlay';
+  ov.innerHTML =
+    '<div id="lift-door-l"></div>' +
+    '<div id="lift-door-r"></div>' +
+    '<div id="lift-cabin">' +
+      '<div class="lift-cabin-box">' +
+        '<div class="lift-glyph">&#9795;</div>' +
+        '<div id="lift-arrow">&#9650;</div>' +
+        '<div id="lift-counter">G</div>' +
+        '<div id="lift-barnaby"></div>' +
+        '<div class="lift-skip">tap to skip</div>' +
+      '</div>' +
+    '</div>';
+  document.getElementById('tower').appendChild(ov);
+
+  const doorL = document.getElementById('lift-door-l');
+  const doorR = document.getElementById('lift-door-r');
+  const cabin = document.getElementById('lift-cabin');
+
+  let busy = false;
+  let currentFloor = 0;
+  let audioCtx = null;
+  let hadGesture = false;
+  let humNodes = null;
+  let barnabyIdx = 0;
+
+  const LINES = [
+    'Mind the gap. And the hubris.',
+    'Going up. Metaphorically and literally.',
+    'This lift runs faster than a committee.',
+    'Floor change in progress. Hold your ambitions.',
+    'Barnaby oiled these cables personally. You are welcome.',
+    'The ninth floor carpet is quieter. You will see why.'
+  ];
+
+  document.addEventListener('pointerdown', function(){ hadGesture = true; }, { once: true });
+
+  function getCtx(){
+    if (!hadGesture) return null;
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      return audioCtx;
+    } catch(e){ return null; }
+  }
+
+  function playDing(){
+    var ctx = getCtx(); if(!ctx) return;
+    try {
+      var t = ctx.currentTime;
+      var o = ctx.createOscillator(), g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = 880; o.type = 'sine';
+      g.gain.setValueAtTime(0.22, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.75);
+      o.start(t); o.stop(t + 0.75);
+    } catch(e){}
+  }
+
+  function humStart(){
+    var ctx = getCtx(); if(!ctx) return;
+    try {
+      var o = ctx.createOscillator(), g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = 55; o.type = 'sine';
+      g.gain.setValueAtTime(0.04, ctx.currentTime);
+      o.start();
+      humNodes = {o:o, g:g};
+    } catch(e){}
+  }
+
+  function humStop(){
+    var ctx = getCtx();
+    if (!humNodes) return;
+    try {
+      if (ctx) {
+        var t = ctx.currentTime;
+        humNodes.g.gain.setValueAtTime(humNodes.g.gain.value, t);
+        humNodes.g.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+        humNodes.o.stop(t + 0.25);
+      } else {
+        humNodes.o.stop();
+      }
+    } catch(e){}
+    humNodes = null;
+  }
+
+  /* Store reference to original goFloor */
+  var _orig = window.goFloor;
+
+  window.goFloor = function(f){
+    /* Honour prefers-reduced-motion */
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      currentFloor = f;
+      _orig(f);
+      return;
+    }
+    /* Same floor (e.g. back from office to corridor) - no ride */
+    if (f === currentFloor && currentFloor !== 0) {
+      _orig(f);
+      return;
+    }
+    if (busy) return;
+    busy = true;
+
+    var from = currentFloor;
+    currentFloor = f;
+    var up = f >= from;
+
+    /* Disable lift buttons */
+    document.querySelectorAll('.tw-fbtn').forEach(function(b){ b.disabled = true; });
+
+    ov.style.pointerEvents = 'all';
+    humStart();
+
+    /* Close doors */
+    var ease = 'cubic-bezier(0.4,0,0.6,1)';
+    doorL.style.transition = 'transform 0.35s ' + ease;
+    doorR.style.transition = 'transform 0.35s ' + ease;
+    doorL.style.transform = 'translateX(0)';
+    doorR.style.transform = 'translateX(0)';
+
+    var cabinTimer = null, tickTimer = null, done = false;
+
+    function arrive(){
+      if (done) return;
+      done = true;
+      clearTimeout(cabinTimer);
+      clearInterval(tickTimer);
+      cabin.style.opacity = '0';
+      /* Open doors */
+      doorL.style.transition = 'transform 0.35s ' + ease;
+      doorR.style.transition = 'transform 0.35s ' + ease;
+      doorL.style.transform = 'translateX(-100%)';
+      doorR.style.transform = 'translateX(100%)';
+      humStop();
+      playDing();
+      setTimeout(function(){
+        ov.style.pointerEvents = 'none';
+        busy = false;
+        _orig(f);
+      }, 350);
+    }
+
+    setTimeout(function(){
+      if (done) return;
+      /* Allow tap-to-skip once doors are closed */
+      ov.addEventListener('click', arrive, { once: true });
+      /* Show cabin info */
+      var arrow   = document.getElementById('lift-arrow');
+      var counter = document.getElementById('lift-counter');
+      var barnaby = document.getElementById('lift-barnaby');
+      arrow.textContent   = up ? '\u25b2' : '\u25bc';
+      barnaby.textContent = LINES[barnabyIdx++ % LINES.length];
+      counter.textContent = from === 0 ? 'G' : String(from);
+      cabin.style.opacity = '1';
+
+      /* Build floor steps for counter */
+      var steps = [];
+      if (f > from)      { for (var i = from + 1; i <= f; i++) steps.push(i); }
+      else if (f < from) { for (var i = from - 1; i >= f; i--) steps.push(i); }
+      else               { steps.push(f); }
+
+      var si = 0;
+      var interval = Math.max(50, Math.min(Math.floor(820 / steps.length), 250));
+      tickTimer = setInterval(function(){
+        if (si < steps.length){
+          counter.textContent = steps[si] === 0 ? 'G' : String(steps[si]);
+          si++;
+        } else {
+          clearInterval(tickTimer);
+        }
+      }, interval);
+
+      cabinTimer = setTimeout(arrive, 900);
+    }, 350);
+  };
+
+  /* Keep currentFloor updated when goLobby() is called directly (e.g. back buttons).
+     goLobby is always defined by the tower engine script above; the && guard is belt-and-suspenders. */
+  var _goLobby = window.goLobby;
+  window.goLobby = function(){ currentFloor = 0; _goLobby && _goLobby(); };
+})();
+</script>
+
 </body>
 </html>
