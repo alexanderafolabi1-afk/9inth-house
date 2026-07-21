@@ -97,13 +97,19 @@ async function ping(url) {
   }
 }
 
+const CEO_ACTIONS_DELIMITER = 'CEO_ACTIONS:';
+const CEO_ACTIONS_DELIMITER_RE = /CEO_ACTIONS:/i;
+const MARKDOWN_RULE_RE = /^\s*---+\s*$/gm;
+const DEFAULT_PRESS_CEO_ACTIONS = '- Read it over coffee; if anything displeases you, edit or delete the file in the repo\n- Share it once on the matching brand channel';
+
 function sanitisePublishedHtml(input = '') {
   let out = String(input || '').replace(/\r\n/g, '\n').trim();
-  out = out.split(/\bCEO_ACTIONS:\b/i)[0];
-  out = out.split(/\n##\s*CEO ACTIONS[\s\S]*$/i)[0];
-  out = out.replace(/^\s*---+\s*$/gm, '');
+  out = out.split(/CEO_ACTIONS:|\n##\s*CEO ACTIONS/i)[0];
+  out = out.replace(MARKDOWN_RULE_RE, '');
   out = out.replace(/^\s*##\s+(.+?)\s*$/gm, '<h2>$1</h2>');
-  out = out.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  out = out.replace(/\*\*([\s\S]+?)\*\*/g, '<strong>$1</strong>');
+  // Three passes: strip heading prefixes, remove unmatched bold markers, then hard remove any leftover tokens.
+  // Expected source is article HTML with occasional markdown leakage.
   out = out.replace(/(^|[\s>])##\s*/g, '$1');
   out = out.replace(/\*\*/g, '');
   out = out.replace(/##/g, '');
@@ -113,12 +119,12 @@ function sanitisePublishedHtml(input = '') {
 
 function sanitiseCeoActions(input = '') {
   let out = String(input || '').replace(/\r\n/g, '\n').trim();
-  out = out.replace(/^CEO_ACTIONS:\s*/i, '');
+  out = out.replace(CEO_ACTIONS_DELIMITER_RE, '');
   out = out.replace(/^##\s*CEO ACTIONS\s*/i, '');
-  out = out.replace(/^\s*---+\s*$/gm, '');
+  out = out.replace(MARKDOWN_RULE_RE, '');
   out = out.trim();
   if (!out) {
-    return '- Read it over coffee; if anything displeases you, edit or delete the file in the repo\n- Share it once on the matching brand channel';
+    return DEFAULT_PRESS_CEO_ACTIONS;
   }
   return out;
 }
@@ -207,6 +213,29 @@ const PRESS_BEATS = [
     topics:['AI marketing agency explained','can AI run a marketing department','marketing on a solo founder budget','productized marketing services','AI transparency in advertising','one person business marketing systems'] }
 ];
 
+const PRESS_NAV = `<nav>
+  <div class="nav-wrap">
+    <a href="../" style="display:flex;align-items:center;gap:12px;text-decoration:none"><div class="glyph">&#9795;</div><b>Ninth House</b></a>
+    <div class="links">
+      <a href="../firm.html">The Firm</a>
+      <a href="../clientele.html">Clientele</a>
+      <a href="./" style="color:var(--gold)">Journal</a>
+      <a href="../observatory.html">Observatory</a>
+      <a href="../table.html">The Table</a>
+      <a href="../charter.html">The Charter</a>
+      <a class="cta-btn cta" href="../#engage">Engage Us</a>
+    </div>
+  </div>
+</nav>`;
+
+const PRESS_FOOTER = `<footer>
+  <div class="fwrap">
+    <p style="text-align:center;font-size:12.5px;margin:0 auto 14px"><a href="https://setpostgo.xyz" target="_blank" rel="noopener">SetPostGo</a><span style="color:var(--faint);padding:0 7px;font-size:11px">&#9795;</span><a href="https://nagori.xyz" target="_blank" rel="noopener">NAGORI</a><span style="color:var(--faint);padding:0 7px;font-size:11px">&#9795;</span><a href="https://renviait.co.uk" target="_blank" rel="noopener">RenviaIT</a><span style="color:var(--faint);padding:0 7px;font-size:11px">&#9795;</span><a href="https://lyrion.co.uk" target="_blank" rel="noopener">Lyrion Atelier</a><span style="color:var(--faint);padding:0 7px;font-size:11px">&#9795;</span><a href="https://iwriteyouread.org" target="_blank" rel="noopener">iwriteyouread</a><span style="color:var(--faint);padding:0 7px;font-size:11px">&#9795;</span><a href="#" data-pending title="Opening soon" onclick="return false">ChurchOS</a><span style="color:var(--faint);padding:0 7px;font-size:11px">&#9795;</span><a href="#" data-pending title="Opening soon" onclick="return false">WishWall</a></p>
+    <p class="disc"><strong>Openly built:</strong> Ninth House’s partners are personas of the house, not human beings; their portraits are engravings, not photographs. Every piece of work is produced under the oversight and final authority of one human Chief Executive. The full governance is in <a href="../charter.html">the Charter</a>.</p>
+    <p class="fine">&#9795; Ninth House Growth Partners &middot; A Lyr&#299;on Ltd venture &middot; United Kingdom &middot; &copy; 2026</p>
+  </div>
+</footer>`;
+
 const PRESS_TPL = (a) => `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -256,33 +285,14 @@ footer .fine{text-align:center}
 </style>
 </head>
 <body>
-<nav>
-  <div class="nav-wrap">
-    <a href="../" style="display:flex;align-items:center;gap:12px;text-decoration:none"><div class="glyph">&#9795;</div><b>Ninth House</b></a>
-    <div class="links">
-      <a href="../firm.html">The Firm</a>
-      <a href="../clientele.html">Clientele</a>
-      <a href="./" style="color:var(--gold)">Journal</a>
-      <a href="../observatory.html">Observatory</a>
-      <a href="../table.html">The Table</a>
-      <a href="../charter.html">The Charter</a>
-      <a class="cta-btn cta" href="../#engage">Engage Us</a>
-    </div>
-  </div>
-</nav>
+${PRESS_NAV}
 <div class="wrap">
 <h1>${a.title}</h1>
 <div class="date">${a.date} \u00b7 The Ninth Times</div>
 ${a.body}
 <div class="cta"><strong>${a.ctaLead}</strong><br><a href="${a.ctaUrl}" rel="noopener">${a.cta} \u2192</a></div>
 </div>
-<footer>
-  <div class="fwrap">
-    <p style="text-align:center;font-size:12.5px;margin:0 auto 14px"><a href="https://setpostgo.xyz" target="_blank" rel="noopener">SetPostGo</a><span style="color:var(--faint);padding:0 7px;font-size:11px">&#9795;</span><a href="https://nagori.xyz" target="_blank" rel="noopener">NAGORI</a><span style="color:var(--faint);padding:0 7px;font-size:11px">&#9795;</span><a href="https://renviait.co.uk" target="_blank" rel="noopener">RenviaIT</a><span style="color:var(--faint);padding:0 7px;font-size:11px">&#9795;</span><a href="https://lyrion.co.uk" target="_blank" rel="noopener">Lyrion Atelier</a><span style="color:var(--faint);padding:0 7px;font-size:11px">&#9795;</span><a href="https://iwriteyouread.org" target="_blank" rel="noopener">iwriteyouread</a><span style="color:var(--faint);padding:0 7px;font-size:11px">&#9795;</span><a href="#" data-pending title="Opening soon" onclick="return false">ChurchOS</a><span style="color:var(--faint);padding:0 7px;font-size:11px">&#9795;</span><a href="#" data-pending title="Opening soon" onclick="return false">WishWall</a></p>
-    <p class="disc"><strong>Openly built:</strong> Ninth House’s partners are personas of the house, not human beings; their portraits are engravings, not photographs. Every piece of work is produced under the oversight and final authority of one human Chief Executive. The full governance is in <a href="../charter.html">the Charter</a>.</p>
-    <p class="fine">&#9795; Ninth House Growth Partners &middot; A Lyr&#299;on Ltd venture &middot; United Kingdom &middot; &copy; 2026</p>
-  </div>
-</footer>
+${PRESS_FOOTER}
 </body>
 </html>`;
 
@@ -295,7 +305,7 @@ async function nightPress() {
   const raw = await claude(CHARS.priya.sys + '\n\n' + FIRM_CTX,
 `Night Press, ${today}. Write one complete, genuinely useful SEO article on: "${topic}".
 Audience: real people searching this. 900-1200 words. UK English. No fluff, no dashes, warm and expert.
-Public article only in BODY. Do not include internal notes in BODY.
+Public article only in BODY. Put internal notes only after the CEO_ACTIONS: delimiter shown below.
 Output EXACTLY this format:
 TITLE: [compelling, keyword-bearing, under 62 chars]
 META: [meta description under 155 chars]
@@ -311,10 +321,9 @@ CEO_ACTIONS:
   let slug = (grab('SLUG') || title).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
   const bodyIdx = raw.indexOf('BODY:');
   const bodyAndActions = bodyIdx > -1 ? raw.slice(bodyIdx + 5).trim() : raw;
-  const actionsDelim = 'CEO_ACTIONS:';
-  const actionsIdx = bodyAndActions.indexOf(actionsDelim);
+  const actionsIdx = bodyAndActions.indexOf(CEO_ACTIONS_DELIMITER);
   const articleRaw = actionsIdx > -1 ? bodyAndActions.slice(0, actionsIdx).trim() : bodyAndActions;
-  const actionsRaw = actionsIdx > -1 ? bodyAndActions.slice(actionsIdx + actionsDelim.length).trim() : '';
+  const actionsRaw = actionsIdx > -1 ? bodyAndActions.slice(actionsIdx + CEO_ACTIONS_DELIMITER.length).trim() : '';
   const body = sanitisePublishedHtml(articleRaw);
   const ceoActions = sanitiseCeoActions(actionsRaw);
   if (!title || !slug || body.length < 400) { console.log('Night Press: output malformed, skipping tonight.'); return; }
