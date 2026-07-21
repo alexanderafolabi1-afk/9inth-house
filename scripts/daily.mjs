@@ -168,8 +168,7 @@ try {
 
 /* ============ THE NIGHT PRESS ============ */
 /* Every night: one full SEO article, published as a live page, sitemap updated. Compounds forever. */
-const REPO = process.env.GITHUB_REPOSITORY || '';
-const BASE = REPO ? `https://${REPO.split('/')[0]}.github.io/${REPO.split('/')[1]}/` : 'https://9thpoint.com/';
+const BASE = 'https://9thpoint.com/';
 
 const PRESS_BEATS = [
   { target:'setpostgo', url:'https://setpostgo.xyz', cta:'Generate a month of posts for your profession with SetPostGo',
