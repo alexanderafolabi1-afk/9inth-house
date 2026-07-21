@@ -17,24 +17,63 @@
 body{font-family:'Albert Sans',sans-serif;background:#FBF7EE;color:#3A4048;line-height:1.75;margin:0}
 .wrap{max-width:700px;margin:0 auto;padding:30px 22px 60px}
 a{color:#A97F2F}
-nav{border-bottom:1px solid #E4DCC6;padding:14px 22px;font-family:'Marcellus',serif;letter-spacing:.14em;text-transform:uppercase;font-size:14px}
-nav a{text-decoration:none;color:#1C2128}
+:root{--bg:#FBF7EE;--card:#FFFDF8;--band:#F4EDDC;--ink:#1C2128;--body:#3A4048;--muted:#6E6858;--faint:#98917E;--line:#E4DCC6;--gold:#A97F2F;--gold-bright:#C9A557}
+nav{position:sticky;top:0;z-index:50;background:rgba(251,247,238,.92);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+nav .nav-wrap{max-width:1080px;margin:0 auto;padding:14px 22px;display:flex;align-items:center;gap:12px}
+.glyph{width:38px;height:38px;border:1px solid var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--gold);font-size:20px;font-family:'Marcellus',serif;flex-shrink:0;background:var(--card)}
+nav b{font-family:'Marcellus',serif;font-weight:400;letter-spacing:.14em;text-transform:uppercase;font-size:15px;color:var(--ink)}
+nav .links{margin-left:auto;display:flex;gap:22px;font-size:13px;align-items:center}
+nav .links a{color:var(--muted);font-weight:500;text-decoration:none}
+nav .links a:hover{color:var(--gold)}
+@media(max-width:640px){nav .links a:not(.cta){display:none}}
+.cta-btn{background:var(--gold);color:#FFFDF8 !important;font-weight:700;padding:9px 18px;border-radius:10px;font-size:13px}
 h1{font-family:'Marcellus',serif;font-weight:400;font-size:32px;line-height:1.2;color:#1C2128}
 h2{font-family:'Marcellus',serif;font-weight:400;font-size:22px;color:#1C2128;margin-top:34px}
 .date{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:#A97F2F;margin:8px 0 26px}
 .cta{background:#F4EDDC;border:1px solid #C9A557;border-radius:14px;padding:20px;margin-top:40px}
 .cta a{display:inline-block;background:#A97F2F;color:#FFFDF8;text-decoration:none;font-weight:700;border-radius:10px;padding:11px 20px;margin-top:8px}
-footer{border-top:1px solid #E4DCC6;padding:22px;text-align:center;font-size:12px;color:#98917E}
+.archive-list{margin-top:16px;display:flex;flex-direction:column;gap:14px}
+.archive-card{display:block;background:#FFFDF8;border:1px solid #E4DCC6;border-radius:14px;padding:16px 18px;text-decoration:none;box-shadow:0 1px 3px rgba(28,33,40,.04);transition:transform .12s ease,box-shadow .2s ease,border-color .2s ease}
+.archive-card:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(169,127,47,.16);border-color:#C9A557}
+.archive-card h2{font-size:22px;margin:0 0 6px;color:#1C2128;transition:color .2s ease}
+.archive-card:hover h2{color:#A97F2F}
+.archive-meta{font-size:11px;letter-spacing:.16em;color:#A97F2F;text-transform:uppercase;margin:0 0 7px}
+.archive-desc{color:#6E6858;font-size:14px;margin:0}
+.archive-read{margin-top:10px;font-size:12px;letter-spacing:.08em;color:#A97F2F;font-weight:700;text-transform:uppercase}
+footer{border-top:1px solid var(--line);padding:36px 0 46px;color:var(--faint);font-size:12.5px;background:var(--band)}
+footer .fwrap{max-width:1080px;margin:0 auto;padding:0 22px}
+footer .disc{max-width:760px;margin:0 auto 14px;text-align:center;color:var(--muted)}
+footer .fine{text-align:center}
 </style>
 </head>
 <body>
-<nav><a href="../">♃ Ninth House</a> &nbsp;·&nbsp; <a href="./" style="font-size:11px;color:#A97F2F">The Ninth Times</a></nav>
+<nav>
+  <div class="nav-wrap">
+    <a href="../" style="display:flex;align-items:center;gap:12px;text-decoration:none"><div class="glyph">&#9795;</div><b>Ninth House</b></a>
+    <div class="links">
+      <a href="../firm.html">The Firm</a>
+      <a href="../clientele.html">Clientele</a>
+      <a href="./" style="color:var(--gold)">Journal</a>
+      <a href="../observatory.html">Observatory</a>
+      <a href="../table.html">The Table</a>
+      <a href="../charter.html">The Charter</a>
+      <a class="cta-btn cta" href="../#engage">Engage Us</a>
+    </div>
+  </div>
+</nav>
 <div class="wrap">
 <h1>The Ninth Times</h1>
 <div class="date">2026-07-21 · The Ninth Times</div>
-<p>Written by the house, one article a night, while the city sleeps.</p><div style="margin-bottom:22px"><a href="2026-07-21-one-person-business-marketing-systems.html" style="font-family:'Marcellus',serif;font-size:19px;color:#1C2128;text-decoration:none">One Person Business Marketing Systems That Actually Work</a><div style="font-size:11px;letter-spacing:.16em;color:#A97F2F;text-transform:uppercase;margin:3px 0">2026-07-21</div><div style="color:#6E6858;font-size:14px">Build a lean, compounding marketing system as a one-person business. Real tools, real structure, zero team required — updated for 2026.</div></div>
+<p>Written by the house, one article a night, while the city sleeps.</p>
+<div class="archive-list"><a class="archive-card" href="2026-07-21-one-person-business-marketing-systems.html"><h2>One Person Business Marketing Systems That Actually Work</h2><div class="archive-meta">2026-07-21</div><p class="archive-desc">Build a lean, compounding marketing system as a one-person business. Real tools, real structure, zero team required — updated for 2026.</p><div class="archive-read">Read the article &#8594;</div></a></div>
 <div class="cta"><strong>Every article here was drafted overnight and sealed by a human.</strong><br><a href="../firm.html" rel="noopener">Meet the firm behind the journal →</a></div>
 </div>
-<footer>Published by Ninth House, an AI-operated growth studio under human CEO oversight. · <a href="../charter.html">The Charter</a></footer>
+<footer>
+  <div class="fwrap">
+    <p style="text-align:center;font-size:12.5px;margin:0 auto 14px"><a href="https://setpostgo.xyz" target="_blank" rel="noopener">SetPostGo</a><span style="color:var(--faint);padding:0 7px;font-size:11px">&#9795;</span><a href="https://nagori.xyz" target="_blank" rel="noopener">NAGORI</a><span style="color:var(--faint);padding:0 7px;font-size:11px">&#9795;</span><a href="https://renviait.co.uk" target="_blank" rel="noopener">RenviaIT</a><span style="color:var(--faint);padding:0 7px;font-size:11px">&#9795;</span><a href="https://lyrion.co.uk" target="_blank" rel="noopener">Lyrion Atelier</a><span style="color:var(--faint);padding:0 7px;font-size:11px">&#9795;</span><a href="https://iwriteyouread.org" target="_blank" rel="noopener">iwriteyouread</a><span style="color:var(--faint);padding:0 7px;font-size:11px">&#9795;</span><a href="#" data-pending title="Opening soon" onclick="return false">ChurchOS</a><span style="color:var(--faint);padding:0 7px;font-size:11px">&#9795;</span><a href="#" data-pending title="Opening soon" onclick="return false">WishWall</a></p>
+    <p class="disc"><strong>Openly built:</strong> Ninth House’s partners are personas of the house, not human beings; their portraits are engravings, not photographs. Every piece of work is produced under the oversight and final authority of one human Chief Executive. The full governance is in <a href="../charter.html">the Charter</a>.</p>
+    <p class="fine">&#9795; Ninth House Growth Partners &middot; A Lyr&#299;on Ltd venture &middot; United Kingdom &middot; &copy; 2026</p>
+  </div>
+</footer>
 </body>
 </html>
