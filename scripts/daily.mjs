@@ -102,6 +102,26 @@ const CEO_ACTIONS_DELIMITER_RE = /CEO_ACTIONS:/i;
 const MARKDOWN_RULE_RE = /^\s*---+\s*$/gm;
 const DEFAULT_PRESS_CEO_ACTIONS = '- Read it over coffee; if anything displeases you, edit or delete the file in the repo\n- Share it once on the matching brand channel';
 
+// Belt and braces: the prompts ask the model never to use em dashes, en dashes or
+// spaced hyphens as punctuation, but this catches anything that slips through
+// before it is ever written to an article or wire HTML file. Processed line by
+// line so a leading "- " markdown bullet marker is never mistaken for punctuation.
+function stripDashPunctuation(input = '') {
+  const lines = String(input || '').split('\n').map((line) => {
+    const bulletMatch = line.match(/^(\s*-\s+)([\s\S]*)$/);
+    const prefix = bulletMatch ? bulletMatch[1] : '';
+    let rest = bulletMatch ? bulletMatch[2] : line;
+    rest = rest.replace(/\s*[—–]\s*/g, ', '); // em dash, en dash
+    rest = rest.split(' - ').join(', '); // spaced hyphen used as punctuation
+    return prefix + rest;
+  });
+  let out = lines.join('\n');
+  out = out.replace(/ {2,}/g, ' '); // collapse any double spaces left behind
+  out = out.replace(/(^|[>\n])[ \t]*,[ \t]*/g, '$1'); // no leading comma right after a tag, newline or start
+  out = out.replace(/,\s*([.,!?])/g, '$1'); // avoid doubled punctuation like ", ."
+  return out;
+}
+
 function sanitisePublishedHtml(input = '') {
   let out = String(input || '').replace(/\r\n/g, '\n').trim();
   out = out.split(/CEO_ACTIONS:|\n##\s*CEO ACTIONS/i)[0];
@@ -114,6 +134,7 @@ function sanitisePublishedHtml(input = '') {
   out = out.replace(/\*\*/g, '');
   out = out.replace(/##/g, '');
   out = out.replace(/\n{3,}/g, '\n\n').trim();
+  out = stripDashPunctuation(out);
   return out;
 }
 
@@ -126,7 +147,7 @@ function sanitiseCeoActions(input = '') {
   if (!out) {
     return DEFAULT_PRESS_CEO_ACTIONS;
   }
-  return out;
+  return stripDashPunctuation(out);
 }
 
 /* ---------- Run the cycle ---------- */
@@ -186,9 +207,10 @@ if (dow === 5 && SHIFT === 'Dawn') {
 /* Every shift: a tight world brief for the Observatory page, kept in wire.json. */
 const WIRE = 'wire.json';
 try {
-  const brief = await claude(
-    'You are The Observatory Desk of Ninth House, the firm\'s intelligence room on Floor 8. World Service gravitas with one raised eyebrow. You verify before you assert, you never invent a fact, and you write for a busy UK founder who wants the whole map in ninety seconds. House style: no em dashes in copy; short declarative lines; wit is welcome, snark is not.',
+  const briefRaw = await claude(
+    'You are The Observatory Desk of Ninth House, the firm\'s intelligence room on Floor 8. World Service gravitas with one raised eyebrow. You verify before you assert, you never invent a fact, and you write for a busy UK founder who wants the whole map in ninety seconds. House style: no em dashes in copy; short declarative lines; wit is welcome, snark is not. Hard rule: never use em dashes, en dashes, or hyphens as sentence punctuation. Use commas, colons or full stops. Never use filler words like erm or um.',
     `${SHIFT} shift wire brief, ${today}. Use your web search tool to check what is actually happening right now, then file the brief.\nOutput EXACTLY four sections, in this order: ## World, ## Markets & Economy, ## Technology, ## Sport.\nEach section: at most five lines, every line a "- " bullet, one sentence each. UK lens, global reach. If sport has nothing new, say so with grace. If you could not verify something, leave it out.`, 1100);
+  const brief = stripDashPunctuation(briefRaw);
   const wire = fs.existsSync(WIRE) ? JSON.parse(fs.readFileSync(WIRE, 'utf8')) : { entries: [] };
   wire.entries = wire.entries || [];
   wire.entries.unshift({ id: `wire-${runId}`, date: today, shift: SHIFT, output: brief });
@@ -306,6 +328,7 @@ async function nightPress() {
   const raw = await claude(CHARS.priya.sys + '\n\n' + FIRM_CTX,
 `Night Press, ${today}. Write one complete, genuinely useful SEO article on: "${topic}".
 Audience: real people searching this. 900-1200 words. UK English. No fluff, no dashes, warm and expert.
+Hard rule: never use em dashes, en dashes, or hyphens as sentence punctuation. Use commas, colons or full stops. Never use filler words like erm or um.
 Public article only in BODY. Put internal notes only after the CEO_ACTIONS: delimiter shown below.
 Output EXACTLY this format:
 TITLE: [compelling, keyword-bearing, under 62 chars]
@@ -318,7 +341,7 @@ CEO_ACTIONS:
 [numbered CEO actions for internal use only, concise and executable this week]`, 2400);
 
   const grab = (k) => { const mm = raw.match(new RegExp('^' + k + ':\\s*(.+)$', 'm')); return mm ? mm[1].trim() : ''; };
-  const title = grab('TITLE'), meta = grab('META'), lead = grab('LEAD');
+  const title = stripDashPunctuation(grab('TITLE')), meta = stripDashPunctuation(grab('META')), lead = stripDashPunctuation(grab('LEAD'));
   let slug = (grab('SLUG') || title).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
   const bodyIdx = raw.indexOf('BODY:');
   const bodyAndActions = bodyIdx > -1 ? raw.slice(bodyIdx + 5).trim() : raw;
