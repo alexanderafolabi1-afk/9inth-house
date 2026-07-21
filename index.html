@@ -189,7 +189,14 @@ footer .fine{text-align:center}
 .tw-door .roomtag{position:absolute;bottom:6%;left:0;right:0;text-align:center;color:#C9A557;font-family:'Spline Sans Mono',monospace;font-size:9px;letter-spacing:.14em}
 /* Elevator */
 /* Luxury brass cabin lift panel */
-#tw-lift{position:fixed;bottom:18px;left:18px;z-index:60;background:linear-gradient(158deg,#E9CE8C,#C9A557 42%,#A97F2F);border:1px solid #8F7434;border-radius:15px;padding:9px 8px;display:none;flex-direction:column;gap:6px;box-shadow:0 12px 30px rgba(28,33,40,.32),inset 0 1px 0 rgba(255,253,248,.55),inset 0 -2px 6px rgba(36,27,7,.25)}
+#tw-lift{position:fixed;bottom:74px;left:18px;z-index:60;background:linear-gradient(158deg,#E9CE8C,#C9A557 42%,#A97F2F);border:1px solid #8F7434;border-radius:15px;padding:9px 8px;display:none;flex-direction:column;gap:6px;box-shadow:0 12px 30px rgba(28,33,40,.32),inset 0 1px 0 rgba(255,253,248,.55),inset 0 -2px 6px rgba(36,27,7,.25)}
+/* House sound toggle: discreet brass control, bottom-left corner */
+#tw-sound{position:fixed;bottom:18px;left:18px;z-index:61;display:inline-flex;align-items:center;gap:7px;background:linear-gradient(158deg,#E9CE8C,#C9A557 42%,#A97F2F);border:1px solid #8F7434;border-radius:20px;padding:7px 13px 7px 10px;cursor:pointer;font-family:'Spline Sans Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.04em;color:#241B07;box-shadow:0 6px 18px rgba(28,33,40,.26),inset 0 1px 0 rgba(255,253,248,.55)}
+#tw-sound .note{font-size:14px;line-height:1;transition:transform .3s}
+#tw-sound.on{background:radial-gradient(circle at 40% 30%,#3E2E1E,#241B07);color:#E9CE8C;border-color:#241B07;box-shadow:0 0 10px rgba(201,165,87,.55),inset 0 0 5px rgba(233,206,140,.35)}
+#tw-sound.on .note{animation:tw-sway 2.6s ease-in-out infinite}
+@keyframes tw-sway{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+@media (prefers-reduced-motion:reduce){#tw-sound.on .note{animation:none}}
 #tw-lift.on{display:flex}
 #tw-lift b{font-size:8px;letter-spacing:.22em;color:#241B07;text-align:center;font-family:'Spline Sans Mono',monospace;padding-bottom:2px;border-bottom:1px solid rgba(36,27,7,.28);margin-bottom:2px}
 .tw-fbtn{width:42px;height:32px;border-radius:8px;border:1px solid #8F7434;background:linear-gradient(#FBF7EE,#EADFC8);color:#3E2E1E;font-family:'Spline Sans Mono',monospace;font-size:12px;font-weight:600;cursor:pointer;box-shadow:inset 0 1px 0 rgba(255,255,255,.65),0 1px 2px rgba(36,27,7,.18);transition:transform .1s}
@@ -266,6 +273,7 @@ footer .fine{text-align:center}
       <a href="clientele.html">Clientele</a>
       <a href="press/index.html">Journal</a>
       <a href="observatory.html">Observatory</a>
+      <a href="table.html">The Table</a>
       <a href="charter.html">The Charter</a>
       <a class="cta-btn cta" href="#engage">Engage Us</a>
     </div>
@@ -275,6 +283,7 @@ footer .fine{text-align:center}
 <div id="tower">
   <div id="tw-stage"></div>
   <div id="tw-lift"><b>LIFT</b></div>
+  <button id="tw-sound" aria-pressed="false" aria-label="House sound, off" title="House sound" onclick="soundToggle(this)"><span class="note">&#9834;</span> House sound</button>
   <div id="tw-avail"><div class="box"><div class="spin2"></div><p id="tw-avail-txt" style="font-family:'Marcellus',serif;font-size:17px;color:var(--ink)"></p></div></div>
 </div>
 
@@ -559,6 +568,11 @@ window.fdSend = function(){
   const t = v.toLowerCase();
   if(/book|meet|call|appoint|schedul|diary/.test(t)) return book();
   if(/price|cost|fee|how much|rate/.test(t)) return say(["Fees are agreed with the human, scoped to the work, and famously smaller than the payroll we replaced. Book a meeting and bring your ambitions."],[['Book a meeting', book],['Back', greet]]);
+  if(/music|composition|the piece|what.*play|playing|song|tune|melody|jupiter|house sound|soundscape|ambient/.test(t)) return say([
+    "Ah, you have an ear. The house plays its own composition, generated fresh in your browser and never quite the same twice.",
+    "It is called \"Jupiter, Patiently\". The Studio insists it is not background music but foreground patience. I switch it off when the auditors visit.",
+    "The little brass note in the corner starts and stops it, whenever you please."
+  ], MAIN());
   if(/whatsapp|urgent|now|instant|phone/.test(t)) return instant();
   if(/what|who|about|explain|service/.test(t)) return explain();
   if(/hello|hi|hey|good/.test(t)) return say(["And a very good day to you. How may I direct you?"], MAIN());
@@ -1085,6 +1099,7 @@ function goSuite(){
      <rect x="308" y="26" width="70" height="120" rx="4" fill="#2A2320"/><rect x="316" y="70" width="54" height="10" rx="2" fill="#C9A557"/><text x="343" y="78" text-anchor="middle" font-size="5.5" fill="#241B07" font-family="serif" letter-spacing="1">CHIEF EXECUTIVE</text>
    </svg><img class="tw-art" src="art/waiting.jpg" alt="" onerror="this.parentElement.replaceWith(...this.parentElement.childNodes); this.remove()"></div>
    <div class="tw-panel"><h3 id="suite-msg">Please take a seat.</h3><p>The assistant will call you through. The magazines are current, the clock is honest, and the door at the end opens for very few.</p>
+   <p style="margin-top:8px;font-size:12.5px;color:var(--muted)">The house plays its own composition. Ask Barnaby for the name of the piece.</p>
    <div class="tw-actions"><button class="tw-btn" onclick="goTimes()">Read The Ninth Times</button></div></div></div>`;
   setTimeout(()=>{ const m = document.getElementById('suite-msg'); if(m){ m.textContent = 'The Chief Executive will see you now.'; setTimeout(goCEO, 1400); } }, 2400);
 }
@@ -1161,7 +1176,8 @@ function goLounge(){
      </div>
      <div id="exam-arena"></div>
    </div>
-   <p class="tw-sponsor">The Lounge is presented by Ninth House. <a href="#engage">This seat could carry your brand.</a></p>
+   <p class="tw-sponsor" style="margin-bottom:2px">The house plays its own composition. Ask Barnaby for the name of the piece.</p>
+   <p class="tw-sponsor" style="margin-top:6px">The Lounge is presented by Ninth House. <a href="#engage">This seat could carry your brand.</a></p>
   </div>`;
   updateStamp(); stampIdle();
 }
@@ -1397,6 +1413,96 @@ let nhFloor = null;
 goExterior();
 if(nhChallenge) goLounge();
 else if(nhFloor !== null){ if(nhFloor === 0) goLobby(); else goFloor(nhFloor); }
+
+/* ============ THE HOUSE SOUND ============ */
+/* Generative ambient soundscape, Web Audio only, no files. Off by default,
+   starts only on tap (browser rule), state held for the session. The piece
+   is called "Jupiter, Patiently". */
+let houseAudio = null;      // active graph, or null when silent
+let houseSoundOn = false;   // session state variable
+
+function soundStart(){
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if(!AC) return false;
+  const ctx = new AC();
+  const master = ctx.createGain();
+  master.gain.value = 0;
+  master.connect(ctx.destination);
+
+  // Drone bus, gently swelling
+  const droneBus = ctx.createGain();
+  droneBus.gain.value = 0.9;
+  droneBus.connect(master);
+
+  const parts = [];
+  function drone(type, freq, detuneRate, detuneDepth, level){
+    const osc = ctx.createOscillator(); osc.type = type; osc.frequency.value = freq;
+    const g = ctx.createGain(); g.gain.value = level;
+    osc.connect(g); g.connect(droneBus);
+    const lfo = ctx.createOscillator(); lfo.type = 'sine'; lfo.frequency.value = detuneRate;
+    const lg = ctx.createGain(); lg.gain.value = detuneDepth; // cents of drift
+    lfo.connect(lg); lg.connect(osc.detune);
+    osc.start(); lfo.start();
+    parts.push(osc, lfo);
+  }
+  // A2 (110Hz) and a warm fifth above, E3 (~164.81Hz), slowly detuning apart
+  drone('sine', 110, 0.05, 7, 0.5);
+  drone('triangle', 164.81, 0.07, 8, 0.34);
+
+  // Very soft filtered noise wash
+  const noiseBuf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+  const nd = noiseBuf.getChannelData(0);
+  for(let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+  const noise = ctx.createBufferSource(); noise.buffer = noiseBuf; noise.loop = true;
+  const nf = ctx.createBiquadFilter(); nf.type = 'lowpass'; nf.frequency.value = 480; nf.Q.value = 0.6;
+  const ng = ctx.createGain(); ng.gain.value = 0.02;
+  noise.connect(nf); nf.connect(ng); ng.connect(master); noise.start();
+  parts.push(noise);
+
+  // Swell cycle, roughly every 10 seconds, modulating the drone bus
+  const swell = ctx.createOscillator(); swell.type = 'sine'; swell.frequency.value = 0.1;
+  const swellDepth = ctx.createGain(); swellDepth.gain.value = 0.22;
+  swell.connect(swellDepth); swellDepth.connect(droneBus.gain);
+  swell.start(); parts.push(swell);
+
+  // Fade in over 3 seconds to a low master level
+  const now = ctx.currentTime;
+  master.gain.setValueAtTime(0, now);
+  master.gain.linearRampToValueAtTime(0.08, now + 3);
+
+  houseAudio = { ctx, master, parts };
+  return true;
+}
+
+function soundStop(){
+  if(!houseAudio) return;
+  const { ctx, master, parts } = houseAudio;
+  const now = ctx.currentTime;
+  master.gain.cancelScheduledValues(now);
+  master.gain.setValueAtTime(master.gain.value, now);
+  master.gain.linearRampToValueAtTime(0, now + 1.6);
+  setTimeout(() => {
+    parts.forEach(n => { try{ n.stop(); }catch(e){} });
+    try{ ctx.close(); }catch(e){}
+  }, 1800);
+  houseAudio = null;
+}
+
+window.soundToggle = function(btn){
+  if(houseSoundOn){
+    soundStop();
+    houseSoundOn = false;
+    btn.classList.remove('on');
+    btn.setAttribute('aria-pressed', 'false');
+    btn.setAttribute('aria-label', 'House sound, off');
+  } else {
+    if(soundStart() === false) return;
+    houseSoundOn = true;
+    btn.classList.add('on');
+    btn.setAttribute('aria-pressed', 'true');
+    btn.setAttribute('aria-label', 'House sound, on');
+  }
+};
 
 </script>
 
