@@ -9,6 +9,7 @@
 <meta name="theme-color" content="#FBF7EE">
 <!-- Cloudflare Web Analytics. CEO: replace CFTOKEN with your real site token from dash.cloudflare.com > Analytics & Logs > Web Analytics > (your site) > Manage site > JS snippet. -->
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "CFTOKEN"}'></script>
+<script>if(location.pathname.endsWith('/index.html'))history.replaceState(null,'',location.pathname.slice(0,-10)+location.search+location.hash);</script>
 <link rel="icon" type="image/svg+xml" href="../favicon.svg">
 <link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Albert+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"The Ninth Times","description":"The nightly journal of Ninth House: growth, marketing and the businesses we build.","datePublished":"2026-07-21","author":{"@type":"Organization","name":"Ninth House Growth Partners"},"publisher":{"@type":"Organization","name":"Ninth House Growth Partners"}}</script>
@@ -27,7 +28,7 @@ footer{border-top:1px solid #E4DCC6;padding:22px;text-align:center;font-size:12p
 </style>
 </head>
 <body>
-<nav><a href="../index.html">♃ Ninth House</a> &nbsp;·&nbsp; <a href="index.html" style="font-size:11px;color:#A97F2F">The Ninth Times</a></nav>
+<nav><a href="../">♃ Ninth House</a> &nbsp;·&nbsp; <a href="./" style="font-size:11px;color:#A97F2F">The Ninth Times</a></nav>
 <div class="wrap">
 <h1>The Ninth Times</h1>
 <div class="date">2026-07-21 · The Ninth Times</div>

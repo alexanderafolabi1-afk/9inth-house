@@ -192,6 +192,7 @@ const PRESS_TPL = (a) => `<!DOCTYPE html>
 <meta name="theme-color" content="#FBF7EE">
 <!-- Cloudflare Web Analytics. CEO: replace CFTOKEN with your real site token from dash.cloudflare.com > Analytics & Logs > Web Analytics > (your site) > Manage site > JS snippet. -->
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "CFTOKEN"}'></script>
+<script>if(location.pathname.endsWith('/index.html'))history.replaceState(null,'',location.pathname.slice(0,-10)+location.search+location.hash);</script>
 <link rel="icon" type="image/svg+xml" href="../favicon.svg">
 <link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Albert+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script type="application/ld+json">${JSON.stringify({'@context':'https://schema.org','@type':'Article','headline':a.title,'description':a.meta,'datePublished':a.date,'author':{'@type':'Organization','name':'Ninth House Growth Partners'},'publisher':{'@type':'Organization','name':'Ninth House Growth Partners'}})}</script>
@@ -210,7 +211,7 @@ footer{border-top:1px solid #E4DCC6;padding:22px;text-align:center;font-size:12p
 </style>
 </head>
 <body>
-<nav><a href="../index.html">\u2643 Ninth House</a> &nbsp;\u00b7&nbsp; <a href="index.html" style="font-size:11px;color:#A97F2F">The Ninth Times</a></nav>
+<nav><a href="../">\u2643 Ninth House</a> &nbsp;\u00b7&nbsp; <a href="./" style="font-size:11px;color:#A97F2F">The Ninth Times</a></nav>
 <div class="wrap">
 <h1>${a.title}</h1>
 <div class="date">${a.date} \u00b7 The Ninth Times</div>
@@ -261,7 +262,7 @@ BODY:
     let sm = fs.readFileSync('sitemap.xml', 'utf8');
     const loc = `${BASE}press/${slug}.html`;
     if (!sm.includes(loc)) sm = sm.replace('</urlset>', `  <url><loc>${loc}</loc></url>\n</urlset>`);
-    if (!sm.includes(`${BASE}press/index.html`)) sm = sm.replace('</urlset>', `  <url><loc>${BASE}press/index.html</loc></url>\n</urlset>`);
+    if (!sm.includes(`${BASE}press/`)) sm = sm.replace('</urlset>', `  <url><loc>${BASE}press/</loc></url>\n</urlset>`);
     fs.writeFileSync('sitemap.xml', sm);
   }
   console.log('Night Press published: ' + slug);

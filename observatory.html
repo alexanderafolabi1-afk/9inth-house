@@ -13,6 +13,7 @@
 <meta name="theme-color" content="#FBF7EE">
 <!-- Cloudflare Web Analytics. CEO: replace CFTOKEN with your real site token from dash.cloudflare.com > Analytics & Logs > Web Analytics > (your site) > Manage site > JS snippet. -->
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "CFTOKEN"}'></script>
+<script>if(location.pathname.endsWith('/index.html'))history.replaceState(null,'',location.pathname.slice(0,-10)+location.search+location.hash);</script>
 <link rel="canonical" href="https://9thpoint.com/observatory.html">
 <link rel="apple-touch-icon" href="art/og.jpg">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23FBF7EE'/%3E%3Ctext x='32' y='44' font-size='36' text-anchor='middle' fill='%23A97F2F' font-family='serif'%3E%E2%99%83%3C/text%3E%3C/svg%3E">
@@ -201,15 +202,15 @@ footer .fine{text-align:center}
 <body>
 <nav>
   <div class="wrap">
-    <a href="index.html" style="display:flex;align-items:center;gap:12px"><div class="glyph">&#9795;</div><b>Ninth House</b></a>
+    <a href="./" style="display:flex;align-items:center;gap:12px"><div class="glyph">&#9795;</div><b>Ninth House</b></a>
     <div class="links">
       <a href="firm.html">The Firm</a>
       <a href="clientele.html">Clientele</a>
-      <a href="press/index.html">Journal</a>
+      <a href="press/">Journal</a>
       <a href="observatory.html" style="color:var(--gold)">Observatory</a>
       <a href="table.html">The Table</a>
       <a href="charter.html">The Charter</a>
-      <a class="cta-btn cta" href="index.html#engage">Engage Us</a>
+      <a class="cta-btn cta" href="./#engage">Engage Us</a>
     </div>
   </div>
 </nav>
@@ -599,7 +600,7 @@ const obsLift = document.getElementById('obs-lift');
 if(obsLift){
   const FLOORS = [['9','Executive Suite'],['8','The Observatory'],['5','The Partners'],['4','The Studio'],['3','Intelligence'],['2','Operations'],['1','The Lounge'],['G','Lobby']];
   obsLift.innerHTML = '<b>LIFT</b>' + FLOORS.map(([f, name]) =>
-    `<a href="index.html?floor=${f === 'G' ? '0' : f}" title="${name}">${f}</a>`).join('');
+    `<a href="./?floor=${f === 'G' ? '0' : f}" title="${name}">${f}</a>`).join('');
 }
 
 /* ============ WIRE BRIEF (wire.json) ============ */
