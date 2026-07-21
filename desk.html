@@ -214,6 +214,8 @@ const defaultState = () => ({
   standups: [],          // {day, text}
   minutes: [],           // {day, text}
   execDone: {},          // id -> true when executed IRL
+  shipped: {},           // id -> true when a Morning Tray item was actually published or sent
+  weeklyTarget: '',      // plain text, CEO-edited, no API call
   kpis: {
     setpostgo: { 'Active subscribers': 0, 'Trials started (wk)': 0, 'MRR £': 0 },
     renviait:  { 'Units acquired (wk)': 0, 'Units sold (wk)': 0, 'Revenue £ (mo)': 0 },
@@ -318,7 +320,8 @@ FORMAT: use ## for section headers, - for bullets, **bold** for emphasis. Be con
 DOCTRINE OF THE HOUSE (operate like the geniuses of commerce): compounding beats spikes; distribution before vanity; own the audience you rent today; price on value and defend margin like territory; cash is oxygen and the ledger never lies; speed of iteration beats size of budget; positioning must be first, different or better, never vague; write every decision down so the institution outlives any single actor.
 LEGACY STANDARD (how intercontinental firms endure a century): documented decisions, one brand system enforced everywhere, compliance before cleverness, a quarterly operating rhythm, succession thinking inside every plan, continuity through the ledger.
 CURRENCY: when the web search tool is available, check the latest developments, platforms, prices and news relevant to your task before finalising; prefer what is true this month over what was true last year, and say what you verified.
-PERSONALITY: you are warm, playful and quick to celebrate wins; a light joke is welcome, sloppiness is not; happiness is house policy.`;
+PERSONALITY: you are warm, playful and quick to celebrate wins; a light joke is welcome, sloppiness is not; happiness is house policy.
+STANDING DOCTRINE: The house plays for global standing. Every deliverable must be deliberate about revenue, intentional about popularity, and unafraid. Bold, classy, never timid, never dishonest. Every piece of work ends with how it wins users, revenue, or renown, and names the metric it moves.`;
 
 /* ============ CONTENT CONSTITUTION ============ */
 const CONTENT_CONST = `THE NINTH HOUSE CONTENT CONSTITUTION (binding on all public output):
@@ -459,7 +462,24 @@ function vDesk(){
   const appr = S.docket.filter(d=>d.status==='approved');
   const done = appr.filter(d=>S.execDone[d.id]).length;
   const stand = S.standups.filter(s=>s.day===S.day).slice(-1)[0];
+  const weekStart = Math.max(1, S.day - 6);
+  const sealedWeek = S.docket.filter(d=>d.status==='approved' && d.day>=weekStart).length;
+  const postsShipped = S.docket.filter(d=>d.brief==="Morning Tray: today's posts, ready to publish" && d.day>=weekStart && S.shipped[d.id]).length;
+  const outreachSent = S.docket.filter(d=>d.brief==='Morning Tray: three doors to knock today' && d.day>=weekStart && S.shipped[d.id]).length;
   return `
+  <div class="eyebrow">War Room: Standing</div>
+  <div class="card" style="border-color:var(--gold)">
+    <div class="stats">
+      <div class="stat"><b>${sealedWeek}</b><span>Sealed this week</span></div>
+      <div class="stat"><b>${postsShipped}</b><span>Posts shipped</span></div>
+      <div class="stat"><b>${outreachSent}</b><span>Outreach sent</span></div>
+    </div>
+    <div class="hr"></div>
+    <label>This week's target</label>
+    <input type="text" id="war-target" value="${esc(S.weeklyTarget||'')}" placeholder="e.g. 3 SetPostGo trials, 1 RenviaIT contract signed">
+    <div class="btnrow"><button class="btn sm gold" onclick="saveWeeklyTarget()">Save target</button></div>
+  </div>
+
   <div class="eyebrow">Chief Executive's Desk</div>
   <div class="card" style="border-color:var(--gold);background:linear-gradient(180deg,rgba(201,165,87,.08),transparent)">
     <p style="font-family:'Marcellus',serif;color:var(--paper);font-size:15.5px;line-height:1.5;margin:0">${esc(floorGreeting())}</p>
@@ -591,6 +611,8 @@ function vDocket(){
   <div class="eyebrow">The Docket. CEO Seal Required</div>
   ${items.length? items.map(d=>{
     const c = charById(d.charId);
+    const shipLabel = d.brief==="Morning Tray: today's posts, ready to publish" ? 'Posts published'
+      : d.brief==='Morning Tray: three doors to knock today' ? 'Outreach sent' : null;
     return `<div class="card docket-item ${d.status}">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
         <div class="avatar" style="width:34px;height:34px;font-size:12px"><span>${c.ini}</span><img src="avatars/${c.id}.jpg" alt="" onerror="this.remove()"></div>
@@ -600,6 +622,10 @@ function vDocket(){
         </div>
         <span class="status ${d.status}">${d.status}</span>
       </div>
+      ${shipLabel?`<div style="display:flex;align-items:center;gap:10px;margin:8px 0 2px">
+        <input type="checkbox" ${S.shipped[d.id]?'checked':''} onchange="toggleShipped('${d.id}')" style="width:18px;height:18px;accent-color:var(--jade)">
+        <span class="tiny" style="color:var(--paper)">${shipLabel}</span>
+      </div>`:''}
       <div class="btnrow" style="align-items:center">
         <button class="btn sm" onclick="viewItem('${d.id}')">Read deliverable</button>
         ${d.status==='pending'?`
@@ -689,6 +715,8 @@ function vBoard(){
 
 /* ============ ACTIONS ============ */
 function toggleExec(id){ S.execDone[id] = !S.execDone[id]; save(); render(); }
+function toggleShipped(id){ S.shipped[id] = !S.shipped[id]; save(); render(); }
+function saveWeeklyTarget(){ S.weeklyTarget = document.getElementById('war-target').value.trim(); save(); render(); }
 function setKpi(biz, m, v){ S.kpis[biz][m] = Number(v)||0; S.kpiDay[biz] = S.day; save(); }
 function setStatus(id, st){ const d = S.docket.find(x=>x.id===id); if(d){ d.status=st; save(); render(); } }
 function approve(id, el){

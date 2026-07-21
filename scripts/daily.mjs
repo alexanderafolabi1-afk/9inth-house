@@ -36,6 +36,7 @@ LEGACY STANDARD (how intercontinental firms endure a century): documented decisi
 CURRENCY: use the web search tool to check the latest developments, platforms, prices and news relevant to your task before finalising; prefer what is true this month over what was true last year, and say what you verified.
 HOUSE DOCTRINE (in every deliverable): compounding beats spikes; distribution before decoration; pricing power over discounting; unit economics before vanity metrics; cash is oxygen; speed of iteration is a moat; the brand is the balance sheet nobody audits. Operate like a legacy intercontinental corporation: decisions written down with reasons, the Docket as institutional memory, quarterly rhythm, live risk register, one voice across every border, continuity beyond any single person or tool. Your web search is on: verify anything time-sensitive before you assert it, and say plainly what you could not verify.
 PERSONALITY: warm, playful, quick to celebrate wins; a light joke is welcome, sloppiness is not; happiness is house policy.
+STANDING DOCTRINE: The house plays for global standing. Every deliverable must be deliberate about revenue, intentional about popularity, and unafraid. Bold, classy, never timid, never dishonest. Every piece of work ends with how it wins users, revenue, or renown, and names the metric it moves.
 DISCLOSURE: any public-facing copy you draft must carry the line "Produced by Ninth House, an AI-operated growth studio under human CEO oversight."`;
 
 const CHARS = {
@@ -234,6 +235,30 @@ if (SHIFT === 'Dawn') {
       items.push({ id: `ap-${runId}-tray-grants`, date: today, type: 'work', charId: 'chidinma', biz: 'renviait', title: 'Grant Scan', output: grants });
     } catch (e) { console.log('Morning Tray Advancement Desk failed: ' + String(e).slice(0, 160)); }
   }
+
+  // Growth War Desk (Theo + Valentina + Rocco): one call, the daily Public Engagement Raid
+  try {
+    const raidRaw = await claude(
+      CHARS.theo.sys + '\n\nWorking alongside Valentina Ibarra, Head of Social & Culture: ' + CHARS.valentina.sys + '\n\nWorking alongside Rocco Fuentes, Head of Data & Analytics: ' + CHARS.rocio.sys + '\n\n' + FIRM_CTX + '\n' + DASH_HARD_RULE,
+      `Dawn shift, ${today}. Use your web search tool to check what is genuinely live right now on X, LinkedIn, TikTok and Reddit, then file today's Public Engagement Raid:\n## Enter the Conversation\nFor each brand, SetPostGo, RenviaIT, NAGORI: one live trend, conversation or community moment today it could classily enter, the platform, and the exact post or reply to drop into it.\n## Growth Experiment of the Day\nOne experiment: hypothesis, mechanism, success metric.\n## Ground to Take This Week\nOne community, directory or platform where a venture should be listed or active this week, with the exact submission copy.\nStay honest throughout: never invent a number, a quote, or a scarcity claim that is not real.`, 1500);
+    const raid = stripDashPunctuation(raidRaw);
+    items.push({ id: `ap-${runId}-tray-raid`, date: today, type: 'work', charId: 'theo', biz: 'setpostgo', title: "The Raid: today's ground to take", output: raid });
+  } catch (e) { console.log('Growth War Desk failed: ' + String(e).slice(0, 160)); }
+}
+
+// Weekly Sunday dawn: Maren reviews the week's tray and raid outcomes, issues The Sunday Order
+if (dow === 0 && SHIFT === 'Dawn') {
+  const weekCutoff = new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10);
+  const trayHistory = (prev.items || [])
+    .filter(i => i.date >= weekCutoff && /^(Morning Tray|Grant Scan|The Raid)/.test(i.title || ''))
+    .map(i => `- [${i.date}] ${i.title}`)
+    .join('\n') || '- No tray or raid items filed this week.';
+  try {
+    const orderRaw = await claude(CHARS.maren.sys + '\n\n' + FIRM_CTX + '\n' + DASH_HARD_RULE,
+      `Sunday dawn review, ${today}. This week's Morning Tray, Grant Scan and Raid dockets:\n${trayHistory}\n\nReview what the house shipped and issue The Sunday Order: three priorities for the coming week, one sentence each. Bold, concrete, no filler, each ending with the metric it moves.`, 700);
+    const order = stripDashPunctuation(orderRaw);
+    items.push({ id: `ap-${runId}-sunday-order`, date: today, type: 'work', charId: 'maren', biz: 'setpostgo', title: 'The Sunday Order', output: order });
+  } catch (e) { console.log('The Sunday Order failed: ' + String(e).slice(0, 160)); }
 }
 
 
