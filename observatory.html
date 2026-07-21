@@ -337,7 +337,7 @@ document.getElementById('estate-grid').innerHTML = ESTATE.map(e =>
   `<a class="plaque reveal" href="${e.url}" target="_blank" rel="noopener">
      <span class="face"><b>${e.name}</b><i></i><span>${e.line}</span></span>
    </a>`).join('');
-document.getElementById('estate-fine').innerHTML = 'Properties of the house: ' +
+document.getElementById('estate-fine').innerHTML =
   ESTATE.map(e => `<a href="${e.url}" target="_blank" rel="noopener">${e.name}</a>`).join('<span class="g">&#9795;</span>');
 
 /* ============ TICKER ============ */
