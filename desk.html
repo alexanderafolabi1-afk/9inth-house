@@ -210,6 +210,7 @@ const LS_KEY = 'ninthhouse_v1';
 const defaultState = () => ({
   day: 1, apiKey: '',
   docket: [],            // {id, day, charId, biz, brief, output, status}
+  ledger: [],            // {text, day} durable facts the house learns about the keeper (this device only)
   standups: [],          // {day, text}
   minutes: [],           // {day, text}
   execDone: {},          // id -> true when executed IRL
@@ -329,8 +330,39 @@ BRAND VOICES:
 - NAGORI. poetic, restrained, emotional; the trace of what remains; scarcity of the million plots is stated quietly, never shouted. CTA → nagori.xyz. Platforms: Instagram (primary), TikTok, X.
 CONTACT: where a contact point strengthens the CTA, use the group WhatsApp line (provided in settings) via its wa.me link.`;
 
+/* ============ THE PRINCIPAL'S LEDGER (this device only, never public) ============ */
+function ledgerBlock(){
+  const facts = (S.ledger || []).slice(-25);
+  if(!facts.length) return '';
+  return '\n\nWHAT THE HOUSE KNOWS ABOUT ITS KEEPER (the CEO; durable private context to serve him better, never repeat verbatim in public output):\n'
+    + facts.map(f => '- ' + f.text).join('\n');
+}
+async function learnFromItem(d){
+  if(!d || !S.apiKey) return; // learning is best-effort and needs the key
+  try{
+    const brief = (d.brief || '').slice(0, 600);
+    const body = (d.output || '').slice(0, 3000);
+    const out = await callClaude(
+      'You quietly distil durable facts about a person from their work documents. Terse and factual, never speculative.',
+      'From the CEO brief and the deliverable below, extract up to three short durable facts about the principal himself: his preferences, situation, constraints or goals (for example "prefers evening deep work" or "prioritising credit rebuild until autumn"). Only facts likely to stay true for weeks. One per line, no numbering, under 12 words each. If there is nothing durable about the person, output only NONE.\n\nBRIEF: ' + brief + '\n\nDELIVERABLE:\n' + body,
+      300, true);
+    const lines = (out || '').split('\n').map(s => s.replace(/^[-*\d.\s]+/, '').trim())
+      .filter(s => s && s.toUpperCase() !== 'NONE' && s.length >= 4 && s.length <= 90);
+    let added = 0;
+    for(const t of lines.slice(0, 3)){
+      const norm = t.toLowerCase();
+      if((S.ledger || []).some(f => f.text.toLowerCase() === norm)) continue;
+      S.ledger.push({ text: t, day: S.day });
+      added++;
+    }
+    if(S.ledger.length > 60) S.ledger = S.ledger.slice(-60);
+    if(added){ save(); if(TAB === 'desk') render(); }
+  }catch(e){ /* silent: the house keeps learning quietly */ }
+}
+function ledgerForget(i){ if(S.ledger && i >= 0 && i < S.ledger.length){ S.ledger.splice(i, 1); save(); render(); } }
+
 /* ============ CLAUDE API ============ */
-async function callClaude(system, user, maxTokens){
+async function callClaude(system, user, maxTokens, skipLedger){
   const headers = {'Content-Type':'application/json'};
   if(S.apiKey){
     headers['x-api-key'] = S.apiKey;
@@ -338,7 +370,7 @@ async function callClaude(system, user, maxTokens){
     headers['anthropic-dangerous-direct-browser-access'] = 'true';
   }
   const payload = { model:'claude-sonnet-4-6', max_tokens: maxTokens||1000,
-      system: system, messages:[{role:'user', content:user}] };
+      system: skipLedger ? system : (system + ledgerBlock()), messages:[{role:'user', content:user}] };
   if(S.apiKey) payload.tools = [{ type:'web_search_20250305', name:'web_search' }];
   const res = await fetch('https://api.anthropic.com/v1/messages',{
     method:'POST', headers, body: JSON.stringify(payload)
@@ -392,6 +424,36 @@ function render(){
 }
 
 /* ============ VIEWS ============ */
+/* ============ TIME-AWARE GREETINGS FROM THE FLOOR ============ */
+function deskHourGreeting(){
+  const h = new Date().getHours();
+  if(h < 12) return 'Good morning, sir.';
+  if(h < 17) return 'Good afternoon, sir.';
+  if(h < 21) return 'Good evening, sir.';
+  return 'Working late, sir?';
+}
+const FLOOR_VOICES = [
+  ['maren',   'the floor is calm and the docket is moving.'],
+  ['margaret',"the week's numbers are steadier than you fear."],
+  ['priya',   'two keywords climbed the mountain overnight.'],
+  ['noor',    'the brand voice held the line, as ever.'],
+  ['tobias',  'all three estates reporting green.'],
+  ['ingrid',  'the proposition is sharper than it was yesterday.'],
+  ['lin',     'the render suite is warm and waiting for you.'],
+  ['harrison','New York returns your call at a civilised hour.'],
+  ['bea',     'your week is arranged; do try to rest inside it.'],
+  ['rocio',   'the funnel gave up one honest number today.']
+];
+function floorGreeting(){
+  const [pid, quip] = FLOOR_VOICES[Math.floor(Math.random() * FLOOR_VOICES.length)];
+  const first = ((charById(pid) || {}).name || 'The house').split(' ')[0];
+  let line = first + ' here: ' + quip;
+  if((S.ledger || []).length && Math.random() < 0.45){
+    line = first + ' here: the house has been keeping your ledger, and it remembers what matters to you.';
+  }
+  return deskHourGreeting() + ' ' + line;
+}
+
 function vDesk(){
   const pend = S.docket.filter(d=>d.status==='pending').length;
   const appr = S.docket.filter(d=>d.status==='approved');
@@ -399,6 +461,9 @@ function vDesk(){
   const stand = S.standups.filter(s=>s.day===S.day).slice(-1)[0];
   return `
   <div class="eyebrow">Chief Executive's Desk</div>
+  <div class="card" style="border-color:var(--gold);background:linear-gradient(180deg,rgba(201,165,87,.08),transparent)">
+    <p style="font-family:'Marcellus',serif;color:var(--paper);font-size:15.5px;line-height:1.5;margin:0">${esc(floorGreeting())}</p>
+  </div>
   <div class="stats">
     <div class="stat"><b>${pend}</b><span>Awaiting seal</span></div>
     <div class="stat"><b>${appr.length}</b><span>Approved</span></div>
@@ -424,6 +489,19 @@ function vDesk(){
       <button class="btn gold" id="beacredit" onclick="beaCredit()">Credit rebuild plan</button>
       <button class="btn" id="beaweek" onclick="beaWeek()">Plan my week</button>
     </div>
+  </div>
+
+  <div class="card">
+    <h3>The Ledger</h3>
+    <p class="sub" style="margin-bottom:10px">What the house has learned about its keeper. Kept on this device only.</p>
+    ${(S.ledger && S.ledger.length) ? S.ledger.slice().reverse().map((f)=>{
+      const realIndex = S.ledger.indexOf(f);
+      return `<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-top:1px solid var(--line)">
+        <span style="color:var(--gold);flex-shrink:0">&#9795;</span>
+        <div style="flex:1;font-size:13.5px;color:var(--paper)">${esc(f.text)}<span class="tiny" style="display:block;color:var(--faint)">Day ${f.day}</span></div>
+        <button class="btn sm ghost" style="color:var(--rust);padding:4px 10px" onclick="ledgerForget(${realIndex})" aria-label="Forget this">Forget</button>
+      </div>`;
+    }).join('') : `<p class="tiny" style="color:var(--faint)">Nothing yet. As you seal work, the house quietly learns your preferences, situation and goals, and every partner comes to know you better.</p>`}
   </div>
 
   <div class="eyebrow">The Studio. Lin Chen &amp; Mei-Ling Chow</div>
@@ -615,7 +693,8 @@ function setKpi(biz, m, v){ S.kpis[biz][m] = Number(v)||0; S.kpiDay[biz] = S.day
 function setStatus(id, st){ const d = S.docket.find(x=>x.id===id); if(d){ d.status=st; save(); render(); } }
 function approve(id, el){
   el.classList.add('stamped'); el.textContent='Sealed';
-  setTimeout(()=>{ setStatus(id,'approved'); }, 550);
+  const d = S.docket.find(x=>x.id===id);
+  setTimeout(()=>{ setStatus(id,'approved'); if(d) learnFromItem(d); }, 550);
 }
 function viewItem(id){
   const d = S.docket.find(x=>x.id===id); if(!d) return;

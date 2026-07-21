@@ -519,16 +519,48 @@ function showOpts(list){
   });
 }
 
+/* The staff entrance: a discreet recognition for the Keeper only. Nothing personal
+   is ever committed or shown to ordinary visitors; the flag lives on this device. */
+try{ if(new URLSearchParams(location.search).get('keeper') === '9') localStorage.setItem('nh_keeper', '1'); }catch(e){}
+window.nhIsKeeper = function(){ try{ return localStorage.getItem('nh_keeper') === '1'; }catch(e){ return false; } };
+window.nhKeeperOut = function(){ try{ localStorage.removeItem('nh_keeper'); }catch(e){} };
+function fdHour(){ return new Date().getHours(); }
+function keeperOpener(){
+  const h = fdHour();
+  if(h < 12) return 'Good morning, sir. The house is already at work.';
+  if(h < 17) return 'Good afternoon, sir.';
+  if(h < 21) return 'Good evening, sir. The lamps are lit.';
+  return 'Working late, sir? The night shift has it covered. Do rest.';
+}
+function publicOpener(){
+  const h = fdHour();
+  const g = h < 12 ? 'Good morning.' : h < 17 ? 'Good afternoon.' : h < 21 ? 'Good evening.' : 'A late hour, and the house still lit.';
+  return g + ' Welcome to Ninth House. Barnaby Sterling, Front of House.';
+}
+
 const MAIN = ()=>[
   ['What is this place?', explain],
   ['I need marketing help', sell],
   ['Book a meeting', book],
   ['Instant line &#128222;', instant]
 ];
+const MAIN_KEEPER = ()=> MAIN().concat([['Sign out of the staff book', keeperSignOut]]);
+function keeperSignOut(){
+  window.nhKeeperOut();
+  say(["Signed out of the staff book, sir. The house will greet you as a guest until you sign in again."], MAIN());
+}
 
 function greet(){
+  if(window.nhIsKeeper()){
+    say([
+      keeperOpener(),
+      "The floor is yours, as ever. Nineteen partners at their desks and the seal within reach.",
+      "How may I serve you?"
+    ], MAIN_KEEPER());
+    return;
+  }
   say([
-    "Welcome to Ninth House. Barnaby Sterling, Front of House. Do come in, mind the ambition.",
+    publicOpener(),
     "The partners are in session at the moment. Nineteen of them. Someone is defending a comma and I fear it may go to a vote.",
     "How may I direct you?"
   ], MAIN());
@@ -1012,7 +1044,7 @@ function goLobby(){
    <div class="tw-panel">
      <h3>Reception</h3>
      <p id="tw-ticker" style="font-family:'Spline Sans Mono',monospace;font-size:11px;color:var(--gold);min-height:16px;margin-bottom:6px"></p>
-     <p>${twGuest?('Welcome back, '+twGuest+'. Your visitor badge still suits you.'):'Barnaby is at the desk, the lift is to your left, and the directory never lies.'} Where to?</p>
+     <p>${(window.nhIsKeeper&&window.nhIsKeeper())?'Welcome, Keeper of the Seal. The desk stands ready, the lift is to your left, and the house is exactly as you left it.':(twGuest?('Welcome back, '+twGuest+'. Your visitor badge still suits you.'):'Barnaby is at the desk, the lift is to your left, and the directory never lies.')} Where to?</p>
      ${twGuest?'':'<div style="display:flex;gap:8px;margin-top:10px"><input id="tw-guest-in" placeholder="Sign the visitors\' book (first name)" style="flex:1;border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-family:\'Albert Sans\',sans-serif;font-size:13px;background:var(--band);color:var(--ink);outline:none"><button class="tw-btn gold" onclick="twSign()">Sign in</button></div>'}
      <div class="tw-actions">
        <button class="tw-btn gold" onclick="fdOpen()">Speak to the front desk</button>
@@ -1082,7 +1114,8 @@ function knock(pid){
   txt.textContent = 'Checking ' + p.n.split(' ')[0] + "'s availability\u2026";
   const busy = twBusyMap[pid];
   setTimeout(()=>{
-    txt.textContent = busy ? (p.n.split(' ')[0] + ' is just wrapping a call\u2026 and done. In you go' + (twGuest?', '+twGuest:'') + '.') : (p.n.split(' ')[0] + ' will see you now' + (twGuest?', '+twGuest:'') + '.');
+    const keeperNote = (window.nhIsKeeper&&window.nhIsKeeper()) ? ' Always a pleasure, sir.' : '';
+    txt.textContent = (busy ? (p.n.split(' ')[0] + ' is just wrapping a call\u2026 and done. In you go' + (twGuest?', '+twGuest:'') + '.') : (p.n.split(' ')[0] + ' will see you now' + (twGuest?', '+twGuest:'') + '.')) + keeperNote;
     setTimeout(()=>{ ov.classList.remove('on'); twBusyMap[pid]=true; goOffice(pid); }, busy?1500:900);
   }, 1200);
 }
@@ -1657,7 +1690,11 @@ const TICKER = [
   'Tobias reports all three estates green'
 ];
 let tki = 0;
-setInterval(()=>{ const el = document.getElementById('tw-ticker'); if(el) el.textContent = '\u2643 ' + TICKER[tki = (tki+1)%TICKER.length]; }, 3800);
+setInterval(()=>{
+  const el = document.getElementById('tw-ticker'); if(!el) return;
+  if(window.nhIsKeeper && window.nhIsKeeper() && Math.random() < 0.2){ el.textContent = '\u2643 The Keeper is in the building'; return; }
+  el.textContent = '\u2643 ' + TICKER[tki = (tki+1)%TICKER.length];
+}, 3800);
 
 /* Challenge links: ?duel / ?quiz open the Lounge, ?dice opens the Parlour */
 (function(){
