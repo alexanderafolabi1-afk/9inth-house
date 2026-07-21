@@ -201,15 +201,15 @@ footer .fine{text-align:center}
 <body>
 <nav>
   <div class="wrap">
-    <a href="index.html" style="display:flex;align-items:center;gap:12px"><div class="glyph">&#9795;</div><b>Ninth House</b></a>
+    <a href="./" style="display:flex;align-items:center;gap:12px"><div class="glyph">&#9795;</div><b>Ninth House</b></a>
     <div class="links">
       <a href="firm.html">The Firm</a>
       <a href="clientele.html">Clientele</a>
-      <a href="press/index.html">Journal</a>
+      <a href="press/">Journal</a>
       <a href="observatory.html" style="color:var(--gold)">Observatory</a>
       <a href="table.html">The Table</a>
       <a href="charter.html">The Charter</a>
-      <a class="cta-btn cta" href="index.html#engage">Engage Us</a>
+      <a class="cta-btn cta" href="./#engage">Engage Us</a>
     </div>
   </div>
 </nav>
@@ -599,7 +599,7 @@ const obsLift = document.getElementById('obs-lift');
 if(obsLift){
   const FLOORS = [['9','Executive Suite'],['8','The Observatory'],['5','The Partners'],['4','The Studio'],['3','Intelligence'],['2','Operations'],['1','The Lounge'],['G','Lobby']];
   obsLift.innerHTML = '<b>LIFT</b>' + FLOORS.map(([f, name]) =>
-    `<a href="index.html?floor=${f === 'G' ? '0' : f}" title="${name}">${f}</a>`).join('');
+    `<a href="./?floor=${f === 'G' ? '0' : f}" title="${name}">${f}</a>`).join('');
 }
 
 /* ============ WIRE BRIEF (wire.json) ============ */
