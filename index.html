@@ -233,6 +233,46 @@ footer .fine{text-align:center}
 .exam-opt.wrong{background:#B5563F;border-color:#B5563F;color:#FFFDF8}
 .tw-sponsor{text-align:center;font-size:12.5px;color:var(--faint);margin:16px 18px 0}
 .tw-sponsor a{color:var(--gold)}
+
+/* ============ THE PARLOUR ============ */
+.parlour-room{margin:14px 18px;padding:20px 18px 8px;border-radius:16px;border:1px solid var(--gold-deep);color:#EDE6D4;background:radial-gradient(120% 90% at 50% 0%,#25313F 0%,#161d27 45%,#10151d 100%);box-shadow:inset 0 1px 0 rgba(201,165,87,.18),0 10px 30px rgba(12,16,22,.5)}
+.parlour-room .p-intro{color:#B9B2A0;font-size:13.5px;margin-top:4px}
+.parlour-room h3{font-family:'Marcellus',serif;font-weight:400;color:#E9CE8C;font-size:19px}
+.p-amuse{background:linear-gradient(#1c2632,#141a23);border:1px solid rgba(201,165,87,.32);border-radius:14px;padding:16px;margin-top:14px;box-shadow:inset 0 1px 0 rgba(201,165,87,.12)}
+.p-amuse h4{font-family:'Marcellus',serif;font-weight:400;color:#E9CE8C;font-size:16.5px;margin-bottom:3px}
+.p-amuse p.p-sub{color:#9aa3ad;font-size:12.5px;margin-bottom:6px}
+.p-result{margin-top:12px;background:#0f141b;border:1px solid rgba(201,165,87,.3);border-radius:11px;padding:13px 15px;color:#EDE6D4;font-size:14px;line-height:1.5;min-height:20px}
+.p-result .glyph{color:#E9CE8C}
+.p-btn{border:1px solid #8F7434;background:linear-gradient(#E9CE8C,#C9A557 55%,#A97F2F);color:#241B07;border-radius:11px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer;font-family:'Albert Sans',sans-serif;box-shadow:inset 0 1px 0 rgba(255,253,248,.5)}
+.p-btn:active{transform:scale(.97)}
+.p-btn.ghost{background:transparent;color:#E9CE8C;border-color:rgba(201,165,87,.5);box-shadow:none}
+.p-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:12px;align-items:center}
+.p-favour{color:#E9CE8C;font-family:'Spline Sans Mono',monospace;letter-spacing:.12em;border:1px dashed rgba(201,165,87,.6);border-radius:8px;padding:3px 9px;display:inline-block}
+
+/* Wheel of Fortunes */
+.wheel-wrap{position:relative;width:min(280px,74vw);margin:8px auto 4px;aspect-ratio:1}
+.wheel-svg{width:100%;height:100%;display:block;filter:drop-shadow(0 6px 16px rgba(12,16,22,.55))}
+.wheel-rot{transform-origin:150px 150px}
+.wheel-pointer{position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:11px solid transparent;border-right:11px solid transparent;border-top:20px solid #E9CE8C;z-index:2;filter:drop-shadow(0 2px 2px rgba(0,0,0,.5))}
+
+/* The Cards */
+.cards-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+.pcard{aspect-ratio:3/4.3;perspective:700px;cursor:pointer;background:none;border:none;padding:0}
+.pcard-inner{position:relative;width:100%;height:100%;transition:transform .55s cubic-bezier(.3,.7,.3,1);transform-style:preserve-3d}
+.pcard.flipped .pcard-inner{transform:rotateY(180deg)}
+.pcard-face{position:absolute;inset:0;-webkit-backface-visibility:hidden;backface-visibility:hidden;border-radius:9px;display:flex;align-items:center;justify-content:center;text-align:center;padding:12px;overflow:hidden}
+.pcard-back{background:linear-gradient(150deg,#5a2333,#3c1723);border:1px solid #A97F2F;box-shadow:inset 0 0 0 3px rgba(201,165,87,.25)}
+.pcard-back::after{content:"\2643";color:#E9CE8C;font-family:'Marcellus',serif;font-size:26px;opacity:.85}
+.pcard-front{transform:rotateY(180deg);background:linear-gradient(#FFFDF8,#F4EDDC);border:1px solid #C9A557;color:#1C2128;font-family:'Marcellus',serif;font-size:13px;line-height:1.4;box-shadow:inset 0 0 0 3px rgba(201,165,87,.18)}
+.pcard-front .cg{display:block;color:#A97F2F;font-size:16px;margin-bottom:6px}
+
+/* High Tower Dice */
+.dice-row{display:flex;gap:16px;justify-content:center;margin:12px 0 2px}
+.die{width:58px;height:58px;border-radius:11px;background:linear-gradient(150deg,#FBF7EE,#E3D2AC);border:1px solid #8F7434;position:relative;box-shadow:inset 0 2px 3px rgba(255,255,255,.6),0 4px 8px rgba(12,16,22,.4)}
+.die.rolling{animation:die-tumble .62s ease-in-out}
+@keyframes die-tumble{0%{transform:rotate(0) scale(1)}25%{transform:rotate(160deg) scale(.9)}50%{transform:rotate(300deg) scale(1.06)}75%{transform:rotate(420deg) scale(.94)}100%{transform:rotate(540deg) scale(1)}}
+.pip{position:absolute;width:9px;height:9px;border-radius:50%;background:#241B07}
+@media (prefers-reduced-motion:reduce){.die.rolling{animation:none}.pcard-inner{transition:none}}
 @media(max-width:520px){.tw-corridor{grid-template-columns:repeat(2,1fr)}}
 
 /* Lift ride overlay */
@@ -1156,7 +1196,12 @@ function goLounge(){
      <rect x="310" y="30" width="70" height="100" rx="4" fill="#2A2320"/><rect x="318" y="68" width="54" height="8" rx="2" fill="#C9A557"/><text x="345" y="76" text-anchor="middle" font-size="5" fill="#241B07" font-family="serif" letter-spacing="1">THE LOUNGE</text>
      <rect x="0" y="140" width="400" height="50" fill="#EAD6AE"/>
    </svg><img class="tw-art" src="art/lounge.jpg" alt="The Lounge interior with warm seating" onerror="this.parentElement.replaceWith(...this.parentElement.childNodes); this.remove()"></div>
-   ${nhChallenge ? `<div class="tw-panel" style="border-color:var(--gold-bright)"><p style="font-size:14px"><strong style="color:var(--gold);font-family:'Marcellus',serif;font-weight:400">A challenge stands.</strong> ${escTxt(nhChallenge.name)} scored ${nhChallenge.score}${nhChallenge.type === 'quiz' ? ' in the Examination Room' : ' at Stamp Rush'}. Beat it.</p></div>` : ''}
+   ${nhChallenge && nhChallenge.type !== 'dice' ? `<div class="tw-panel" style="border-color:var(--gold-bright)"><p style="font-size:14px"><strong style="color:var(--gold);font-family:'Marcellus',serif;font-weight:400">A challenge stands.</strong> ${escTxt(nhChallenge.name)} scored ${nhChallenge.score}${nhChallenge.type === 'quiz' ? ' in the Examination Room' : ' at Stamp Rush'}. Beat it.</p></div>` : ''}
+   <div class="tw-panel" style="border-color:var(--gold-bright)">
+     <h3>The Parlour</h3>
+     <p>A quieter corner of the Lounge, deep ink and brass. The wheel, the cards and the dice deal in fortunes only.</p>
+     <div class="tw-actions"><button class="tw-btn gold" onclick="goParlour()">Enter the Parlour</button></div>
+   </div>
    <div class="tw-panel">
      <h3>Stamp Rush</h3>
      <p>Documents land on the table; seal every one before it slips away. Twenty seconds. Margaret holds the record and will not let anyone forget it.</p>
@@ -1186,6 +1231,227 @@ function stampIdle(){
   const a = document.getElementById('stamp-arena'); if(!a) return;
   a.innerHTML = `<div class="stamp-idle"><span class="bigmark">\u2643</span><b>The baize is clear.</b><p>Press Play and seal every document that lands. Sealed is saved; hesitation is filed under regret.</p></div>`;
 }
+
+/* ============ THE PARLOUR ============ */
+/* A corner of the Lounge. Amusements of fortune, with no consequence. */
+const FAVOUR_INDEX = 3;
+const P_FORTUNES = [
+  'A rival will copy you by Thursday. Flattering.',
+  'Your best idea arrives in the shower. Bring a notebook.',
+  'The quiet client is the loyal one. Send thanks today.',
+  'A dull spreadsheet hides one bright number. Go and find it.',
+  'Ship the imperfect thing. Perfection is a comfort blanket.',
+  'An old contact reappears bearing an opportunity. Reply warmly.',
+  'The post you almost deleted is the one that lands.',
+  'Patience now, applause later, in that order.',
+  'A small, brave price rise will pass unremarked.',
+  'Rest is a strategy, not a treat. The house insists.',
+  'The second draft is where the charm was hiding.'
+];
+const P_APHORISMS = [
+  'Compounding is patience with a ledger.',
+  'Distribution before decoration, always.',
+  'Own the audience you merely rent today.',
+  'Price on the value you create, not the hours you keep.',
+  'Speed of iteration is a moat no rival can purchase.',
+  'The brand is the balance sheet nobody audits.',
+  'Write the decision down, or you will relive it.',
+  'Positioning is first, different or better, never vague.',
+  'The ledger never lies; read it before your feelings do.'
+];
+const P_DOUBLES = {
+  1: 'Double aces. Small numbers, large intentions.',
+  2: 'Double twos. Quietly, things are aligning.',
+  3: 'Double threes. The middle path, walked twice.',
+  4: 'Double fours. Steady hands, steady house.',
+  5: 'Double fives. The Board would like a word about your luck.',
+  6: 'Double sixes. The tower tips its hat.'
+};
+// Build the wheel segments: eleven fortunes and one favour
+const P_SEG = (function(){
+  const seg = []; let fi = 0;
+  for(let i = 0; i < 12; i++){
+    if(i === FAVOUR_INDEX) seg.push({ favour: true });
+    else seg.push({ favour: false, text: P_FORTUNES[fi++] });
+  }
+  return seg;
+})();
+
+let pCardOrder = [];
+let wheelSpinning = false, wheelAngle = 0;
+let parlourAC = null;
+
+function parlourTick(){
+  try{
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if(!AC) return;
+    if(!parlourAC) parlourAC = new AC();
+    const ctx = parlourAC, t = ctx.currentTime;
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'triangle'; o.frequency.value = 1300;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.08, t + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(t); o.stop(t + 0.06);
+  }catch(e){ /* silent fail before a gesture, or where audio is unavailable */ }
+}
+
+function pt(deg){ const r = deg * Math.PI / 180; return { x: (150 + 140 * Math.sin(r)).toFixed(2), y: (150 - 140 * Math.cos(r)).toFixed(2) }; }
+function parlourWheelSVG(){
+  let w = '';
+  for(let i = 0; i < 12; i++){
+    const a0 = pt(i * 30), a1 = pt((i + 1) * 30);
+    const fill = i === FAVOUR_INDEX ? '#E3C176' : (i % 2 ? '#B98F3E' : '#D8B65C');
+    w += `<path d="M150,150 L${a0.x},${a0.y} A140,140 0 0 1 ${a1.x},${a1.y} Z" fill="${fill}" stroke="#8F7434" stroke-width="1"/>`;
+    const mid = pt(i * 30 + 15), m = i * 30 + 15;
+    const gx = 150 + 108 * Math.sin(m * Math.PI / 180), gy = 150 - 108 * Math.cos(m * Math.PI / 180);
+    if(i === FAVOUR_INDEX){
+      w += `<text x="${gx.toFixed(1)}" y="${(gy + 5).toFixed(1)}" text-anchor="middle" font-family="Marcellus,serif" font-size="20" fill="#241B07" transform="rotate(${m} ${gx.toFixed(1)} ${gy.toFixed(1)})">&#9795;</text>`;
+    } else {
+      w += `<circle cx="${gx.toFixed(1)}" cy="${gy.toFixed(1)}" r="3.4" fill="#241B07" opacity=".55"/>`;
+    }
+  }
+  return `<svg class="wheel-svg" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="150" cy="150" r="146" fill="none" stroke="#C9A557" stroke-width="4"/>
+    <g class="wheel-rot" id="wheel-rot">${w}</g>
+    <circle cx="150" cy="150" r="26" fill="#3c1723" stroke="#C9A557" stroke-width="2"/>
+    <text x="150" y="157" text-anchor="middle" font-family="Marcellus,serif" font-size="22" fill="#E9CE8C">&#9795;</text>
+  </svg>`;
+}
+
+function parlourCardsHTML(){
+  return pCardOrder.map((ai, idx) =>
+    `<button class="pcard" data-i="${idx}" onclick="parlourDraw(${idx})" aria-label="Draw a card">
+       <div class="pcard-inner">
+         <div class="pcard-face pcard-back"></div>
+         <div class="pcard-face pcard-front"><span><span class="cg">&#9795;</span>${escTxt(P_APHORISMS[ai])}</span></div>
+       </div>
+     </button>`).join('');
+}
+
+function goParlour(){
+  liftPanel(1);
+  pCardOrder = [...Array(P_APHORISMS.length).keys()];
+  for(let i = pCardOrder.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [pCardOrder[i], pCardOrder[j]] = [pCardOrder[j], pCardOrder[i]]; }
+  wheelSpinning = false; wheelAngle = 0;
+  const challenge = (nhChallenge && nhChallenge.type === 'dice')
+    ? `<div class="p-amuse" style="border-color:var(--gold-bright)"><p style="color:#EDE6D4;font-size:14px"><span style="color:#E9CE8C;font-family:'Marcellus',serif">A cast stands.</span> ${escTxt(nhChallenge.name)} rolled ${nhChallenge.score}. Match it, or better it.</p></div>` : '';
+  twStage.innerHTML = `<div class="tw-screen">
+   <div class="tw-top"><b>Floor 1 \u00b7 The Parlour</b><button class="tw-back" onclick="goLounge()">Lounge</button></div>
+   <div class="parlour-room">
+     <h3>The Parlour</h3>
+     <p class="p-intro">Deep ink, brass and velvet. Three amusements, all fortune and no consequence. The lift is to hand and the Lounge is a step away.</p>
+     ${challenge}
+
+     <div class="p-amuse">
+       <h4>The Wheel of Fortunes</h4>
+       <p class="p-sub">Give it a turn and let the brass decide your afternoon.</p>
+       <div class="wheel-wrap"><div class="wheel-pointer"></div>${parlourWheelSVG()}</div>
+       <div class="p-actions" style="justify-content:center"><button class="p-btn" id="wheel-go" onclick="parlourSpin()">Turn the wheel</button></div>
+       <div class="p-result" id="wheel-result">The wheel waits, patient as Jupiter.</div>
+     </div>
+
+     <div class="p-amuse">
+       <h4>The Cards</h4>
+       <p class="p-sub">Nine cards, face down. Draw one and read what the house has set for you.</p>
+       <div class="cards-grid" id="cards-grid">${parlourCardsHTML()}</div>
+       <div class="p-actions"><button class="p-btn ghost" onclick="parlourReshuffle()">Reshuffle the deck</button></div>
+     </div>
+
+     <div class="p-amuse">
+       <h4>High Tower Dice</h4>
+       <p class="p-sub">Two dice from the top of the tower. Matching faces earn a title.</p>
+       <div class="dice-row"><div class="die" id="die-a"></div><div class="die" id="die-b"></div></div>
+       <div class="p-actions" style="justify-content:center"><button class="p-btn" id="dice-go" onclick="parlourRoll()">Cast the dice</button></div>
+       <div class="p-result" id="dice-result">The dice rest in the cup, keeping their counsel.</div>
+     </div>
+
+     <p class="tw-sponsor" style="color:#9aa3ad">The Parlour deals in fortunes only. The firm deals in outcomes. <a href="#engage" style="color:#E9CE8C">Engage the firm.</a></p>
+   </div>
+  </div>`;
+  diceFace('die-a', 2); diceFace('die-b', 5);
+}
+
+function parlourReshuffle(){
+  for(let i = pCardOrder.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [pCardOrder[i], pCardOrder[j]] = [pCardOrder[j], pCardOrder[i]]; }
+  const g = document.getElementById('cards-grid'); if(g) g.innerHTML = parlourCardsHTML();
+}
+window.parlourDraw = function(idx){
+  const card = document.querySelector('.pcard[data-i="' + idx + '"]');
+  if(card) card.classList.toggle('flipped');
+};
+
+window.parlourSpin = function(){
+  if(wheelSpinning) return;
+  const rot = document.getElementById('wheel-rot'); const res = document.getElementById('wheel-result');
+  if(!rot) return;
+  wheelSpinning = true;
+  const go = document.getElementById('wheel-go'); if(go) go.disabled = true;
+  const favour = Math.random() < 0.06;
+  let target;
+  if(favour) target = FAVOUR_INDEX;
+  else { do { target = Math.floor(Math.random() * 12); } while(target === FAVOUR_INDEX); }
+  const startAngle = ((wheelAngle % 360) + 360) % 360;
+  const centerAngle = target * 30 + 15;
+  const finalMod = (360 - centerAngle + 360) % 360;
+  const jitter = (Math.random() * 2 - 1) * 8;
+  const total = 5 * 360 + ((finalMod - startAngle + 360) % 360) + jitter;
+  const dur = 4200, t0 = performance.now();
+  let lastSeg = -1;
+  (function frame(now){
+    const p = Math.min(1, (now - t0) / dur);
+    const e = 1 - Math.pow(1 - p, 3);
+    const ang = startAngle + total * e;
+    rot.setAttribute('transform', 'rotate(' + ang.toFixed(2) + ' 150 150)');
+    const seg = Math.floor((((ang % 360) + 360) % 360) / 30);
+    if(seg !== lastSeg){ lastSeg = seg; parlourTick(); }
+    if(p < 1) requestAnimationFrame(frame);
+    else {
+      wheelAngle = ang; wheelSpinning = false;
+      if(go) go.disabled = false;
+      const s = P_SEG[target];
+      if(s.favour){
+        res.innerHTML = '<strong style="color:#E9CE8C;font-family:\'Marcellus\',serif;font-weight:400">The House Favour.</strong> The wheel seldom rests here. Mention the code <span class="p-favour">HOUSE FAVOUR</span> when you engage the firm, and \u00a320 is taken off The Ninth House Audit.' +
+          '<div class="p-actions" style="justify-content:center"><button class="p-btn" onclick="document.getElementById(\'engage\').scrollIntoView({behavior:\'smooth\'})">Engage the firm</button></div>';
+      } else {
+        res.innerHTML = '<span class="glyph">&#9795;</span> ' + escTxt(s.text);
+      }
+    }
+  })(requestAnimationFrame ? performance.now() : 0);
+};
+
+const PIP_MAP = { 1:[4], 2:[0,8], 3:[0,4,8], 4:[0,2,6,8], 5:[0,2,4,6,8], 6:[0,2,3,5,6,8] };
+function diceFace(id, val){
+  const d = document.getElementById(id); if(!d) return;
+  const cells = [[22,22],[50,22],[78,22],[22,50],[50,50],[78,50],[22,78],[50,78],[78,78]]; // percent-ish on 58px
+  const pos = PIP_MAP[val] || [];
+  d.innerHTML = pos.map(i => {
+    const [x, y] = cells[i];
+    return `<span class="pip" style="left:${(x/100*58-4.5).toFixed(1)}px;top:${(y/100*58-4.5).toFixed(1)}px"></span>`;
+  }).join('');
+}
+window.parlourRoll = function(){
+  const da = document.getElementById('die-a'), db = document.getElementById('die-b'), res = document.getElementById('dice-result');
+  if(!da || !db) return;
+  const go = document.getElementById('dice-go'); if(go) go.disabled = true;
+  da.classList.remove('rolling'); db.classList.remove('rolling');
+  void da.offsetWidth; void db.offsetWidth;
+  da.classList.add('rolling'); db.classList.add('rolling');
+  let ticks = 0;
+  const shuffle = setInterval(() => { diceFace('die-a', 1 + Math.floor(Math.random()*6)); diceFace('die-b', 1 + Math.floor(Math.random()*6)); if(++ticks > 4) clearInterval(shuffle); }, 120);
+  setTimeout(() => {
+    const a = 1 + Math.floor(Math.random() * 6), b = 1 + Math.floor(Math.random() * 6);
+    diceFace('die-a', a); diceFace('die-b', b);
+    if(go) go.disabled = false;
+    if(a === b){
+      res.innerHTML = '<span class="glyph">&#9795;</span> ' + escTxt(P_DOUBLES[a]) + shareRow(a + b, 'dice');
+    } else {
+      const words = { 1:'one', 2:'two', 3:'three', 4:'four', 5:'five', 6:'six' };
+      res.innerHTML = '<span class="glyph">&#9795;</span> A ' + words[a] + ' and a ' + words[b] + '. The dice keep their counsel. Cast again.';
+    }
+  }, 640);
+};
 
 function shareRow(score, type){
   let nm = twGuest || '';
@@ -1391,10 +1657,10 @@ const TICKER = [
 let tki = 0;
 setInterval(()=>{ const el = document.getElementById('tw-ticker'); if(el) el.textContent = '\u2643 ' + TICKER[tki = (tki+1)%TICKER.length]; }, 3800);
 
-/* Challenge links: ?duel=SCORE&name=NAME or ?quiz=SCORE&name=NAME open straight into the Lounge */
+/* Challenge links: ?duel / ?quiz open the Lounge, ?dice opens the Parlour */
 (function(){
   const p = new URLSearchParams(location.search);
-  const type = p.has('duel') ? 'duel' : (p.has('quiz') ? 'quiz' : null);
+  const type = p.has('duel') ? 'duel' : (p.has('quiz') ? 'quiz' : (p.has('dice') ? 'dice' : null));
   if(!type) return;
   const score = Math.max(0, Math.min(999, parseInt(p.get(type), 10) || 0));
   const name = (p.get('name') || 'A rival').replace(/[^\w\s'.\-]/g, '').trim().slice(0, 20) || 'A rival';
@@ -1411,7 +1677,7 @@ let nhFloor = null;
 })();
 
 goExterior();
-if(nhChallenge) goLounge();
+if(nhChallenge){ if(nhChallenge.type === 'dice'){ goLounge(); goParlour(); } else goLounge(); }
 else if(nhFloor !== null){ if(nhFloor === 0) goLobby(); else goFloor(nhFloor); }
 
 /* ============ THE HOUSE SOUND ============ */
