@@ -192,7 +192,7 @@ const PRESS_TPL = (a) => `<!DOCTYPE html>
 <meta name="theme-color" content="#FBF7EE">
 <!-- Cloudflare Web Analytics. CEO: replace CFTOKEN with your real site token from dash.cloudflare.com > Analytics & Logs > Web Analytics > (your site) > Manage site > JS snippet. -->
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "CFTOKEN"}'></script>
-${a.slug === 'index' ? `<script src="../scripts/clean-index-url.js"></script>` : ''}
+${a.cleanIndexUrl ? `<script defer src="../scripts/clean-index-url.js"></script>` : ''}
 <link rel="icon" type="image/svg+xml" href="../favicon.svg">
 <link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Albert+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script type="application/ld+json">${JSON.stringify({'@context':'https://schema.org','@type':'Article','headline':a.title,'description':a.meta,'datePublished':a.date,'author':{'@type':'Organization','name':'Ninth House Growth Partners'},'publisher':{'@type':'Organization','name':'Ninth House Growth Partners'}})}</script>
@@ -255,7 +255,7 @@ BODY:
   idx.unshift({ slug, title, meta, date: today });
   fs.writeFileSync(idxPath, JSON.stringify(idx, null, 1));
   const list = idx.map(x => `<div style="margin-bottom:22px"><a href="${x.slug}.html" style="font-family:'Marcellus',serif;font-size:19px;color:#1C2128;text-decoration:none">${x.title}</a><div style="font-size:11px;letter-spacing:.16em;color:#A97F2F;text-transform:uppercase;margin:3px 0">${x.date}</div><div style="color:#6E6858;font-size:14px">${x.meta}</div></div>`).join('\n');
-  fs.writeFileSync('press/index.html', PRESS_TPL({ title: 'The Ninth Times', meta: 'The nightly journal of Ninth House: growth, marketing and the businesses we build.', slug: 'index', date: today, body: '<p>Written by the house, one article a night, while the city sleeps.</p>' + list, cta: 'Meet the firm behind the journal', ctaUrl: '../firm.html', ctaLead: 'Every article here was drafted overnight and sealed by a human.' }).replace(`<link rel="canonical" href="${BASE}press/index.html">`, `<link rel="canonical" href="${BASE}press/">`));
+  fs.writeFileSync('press/index.html', PRESS_TPL({ title: 'The Ninth Times', meta: 'The nightly journal of Ninth House: growth, marketing and the businesses we build.', slug: 'index', cleanIndexUrl: true, date: today, body: '<p>Written by the house, one article a night, while the city sleeps.</p>' + list, cta: 'Meet the firm behind the journal', ctaUrl: '../firm.html', ctaLead: 'Every article here was drafted overnight and sealed by a human.' }).replace(`<link rel="canonical" href="${BASE}press/index.html">`, `<link rel="canonical" href="${BASE}press/">`));
 
   // sitemap
   if (fs.existsSync('sitemap.xml')) {
