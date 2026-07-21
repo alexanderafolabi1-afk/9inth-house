@@ -104,7 +104,11 @@ const history = (prev.items || []).slice(-10).map(i => `- [${i.date}] ${i.title}
 const sites = await Promise.all([
   ping('https://setpostgo.xyz'),
   ping('https://nagori.xyz'),
-  ping('https://renviait.co.uk')
+  ping('https://renviait.co.uk'),
+  ping('https://9thpoint.com')
+  // Ventures opening soon, add their pings once the domains are live:
+  // ping('https://churchos.xyz'),   // ChurchOS, domain to confirm
+  // ping('https://wishwall.xyz'),   // WishWall, domain to confirm
 ]);
 const siteReport = sites.map(s => `${s.url}: ${s.up ? `UP, HTTP ${s.status}, ${s.ms}ms` : `DOWN or unreachable (${s.err || 'HTTP ' + s.status})`}`).join('\n');
 console.log('Estate:\n' + siteReport);
@@ -165,7 +169,7 @@ try {
 /* ============ THE NIGHT PRESS ============ */
 /* Every night: one full SEO article, published as a live page, sitemap updated. Compounds forever. */
 const REPO = process.env.GITHUB_REPOSITORY || '';
-const BASE = REPO ? `https://${REPO.split('/')[0]}.github.io/${REPO.split('/')[1]}/` : 'https://YOUR-USERNAME.github.io/ninth-house/';
+const BASE = REPO ? `https://${REPO.split('/')[0]}.github.io/${REPO.split('/')[1]}/` : 'https://9thpoint.com/';
 
 const PRESS_BEATS = [
   { target:'setpostgo', url:'https://setpostgo.xyz', cta:'Generate a month of posts for your profession with SetPostGo',
@@ -187,6 +191,8 @@ const PRESS_TPL = (a) => `<!DOCTYPE html>
 <meta name="description" content="${a.meta}">
 <link rel="canonical" href="${BASE}press/${a.slug}.html">
 <meta name="theme-color" content="#FBF7EE">
+<!-- Cloudflare Web Analytics. CEO: replace CFTOKEN with your real site token from dash.cloudflare.com > Analytics & Logs > Web Analytics > (your site) > Manage site > JS snippet. -->
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "CFTOKEN"}'></script>
 <link rel="icon" type="image/svg+xml" href="../favicon.svg">
 <link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Albert+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script type="application/ld+json">${JSON.stringify({'@context':'https://schema.org','@type':'Article','headline':a.title,'description':a.meta,'datePublished':a.date,'author':{'@type':'Organization','name':'Ninth House Growth Partners'},'publisher':{'@type':'Organization','name':'Ninth House Growth Partners'}})}</script>

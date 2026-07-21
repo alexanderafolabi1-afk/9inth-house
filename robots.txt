@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 Disallow: /desk.html
-Sitemap: https://YOUR-USERNAME.github.io/ninth-house/sitemap.xml
+Sitemap: https://9thpoint.com/sitemap.xml
