@@ -202,6 +202,40 @@ if (dow === 5 && SHIFT === 'Dawn') {
   items.push({ id: `ap-${runId}-margaret-fin`, date: today, type: 'work', charId: 'margaret', biz: 'renviait', title: 'Friday finance & compliance review', output: fin });
 }
 
+/* ============ THE MORNING TRAY (Dawn shift only) ============ */
+const DASH_HARD_RULE = 'Hard rule: never use em dashes, en dashes, or hyphens as sentence punctuation. Use commas, colons or full stops. Never use filler words like erm or um.';
+
+if (SHIFT === 'Dawn') {
+  // Content Desk (Noor + Valentina): one call, today's full ready-to-post set, all brands
+  try {
+    const contentRaw = await claude(
+      CHARS.noor.sys + '\n\nWorking alongside Valentina Ibarra, Head of Social & Culture: ' + CHARS.valentina.sys + '\n\n' + FIRM_CTX + '\n' + DASH_HARD_RULE,
+      `Dawn shift, ${today}. Recent packs (do NOT repeat angles):\n${history}\n\nDraft today's Morning Tray, one fresh paste-ready item per slot:\n1. Ninth House: one LinkedIn post.\n2. SetPostGo: one LinkedIn post.\n3. SetPostGo: one X post.\n4. NAGORI: one TikTok script, 30 seconds, shot by shot.\n5. NAGORI: one X post.\n6. RenviaIT: one LinkedIn post.\nFor each, in this order: ## [Brand, Platform], Hook:, Body: (exact paste-ready copy; for the TikTok script, numbered shots), Hashtags:, CTA link:.`, 1500);
+    const content = stripDashPunctuation(contentRaw);
+    items.push({ id: `ap-${runId}-tray-content`, date: today, type: 'work', charId: 'noor', biz: 'setpostgo', title: "Morning Tray: today's posts, ready to publish", output: content });
+  } catch (e) { console.log('Morning Tray Content Desk failed: ' + String(e).slice(0, 160)); }
+
+  // Outreach Desk (Sipho + Harrison): one call, three real cold outreach drafts
+  try {
+    const outreachRaw = await claude(
+      CHARS.sipho.sys + '\n\nWorking alongside Harrison Cole III, Head of Capital & Institutional Funding: ' + CHARS.harrison.sys + '\n\n' + FIRM_CTX + '\n' + DASH_HARD_RULE,
+      `Dawn shift, ${today}. Use your web search tool to find three REAL, named, currently active targets, then draft the outreach for each:\n1. Press or newsletter pitch: a named journalist or publication that covers AI or SME growth right now.\n2. Partnership or client pitch: a named UK SME or agency that is a real fit for the Ninth House Audit.\n3. Angel or fund intro: a named investor or fund active in AI or UK pre-seed right now.\nFor each, in this order: ## [Doorway], Target:, Why them (one line):, Subject:, Email (under 140 words, paste-ready).\nEnd with one bold line: verify every address before sending, nothing here has been sent yet.`, 1100);
+    const outreach = stripDashPunctuation(outreachRaw);
+    items.push({ id: `ap-${runId}-tray-outreach`, date: today, type: 'work', charId: 'sipho', biz: 'nagori', title: 'Morning Tray: three doors to knock today', output: outreach });
+  } catch (e) { console.log('Morning Tray Outreach Desk failed: ' + String(e).slice(0, 160)); }
+
+  // Advancement Desk (Chidinma): one call, Mondays and Thursdays only
+  if (dow === 1 || dow === 4) {
+    try {
+      const grantsRaw = await claude(
+        CHARS.chidinma.sys + '\n\n' + FIRM_CTX + '\n' + DASH_HARD_RULE,
+        `Dawn shift, ${today}. Use your web search tool to find CURRENT, live UK grants, competitions and support schemes, open or published now, that fit:\nRenviaIT (circular economy, ITAD), SetPostGo or NAGORI (creative and digital), ChurchOS (community tech).\nFor each scheme found, in this order: ## [Scheme name], Deadline:, Amount:, Fit (one line):, Link:. List only what you can verify; say plainly if a category has nothing live right now.`, 1100);
+      const grants = stripDashPunctuation(grantsRaw);
+      items.push({ id: `ap-${runId}-tray-grants`, date: today, type: 'work', charId: 'chidinma', biz: 'renviait', title: 'Grant Scan', output: grants });
+    } catch (e) { console.log('Morning Tray Advancement Desk failed: ' + String(e).slice(0, 160)); }
+  }
+}
+
 
 /* ============ THE WIRE BRIEF (The Observatory Desk) ============ */
 /* Every shift: a tight world brief for the Observatory page, kept in wire.json. */
