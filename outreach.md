@@ -121,3 +121,54 @@ Could I send you a one page summary and take fifteen minutes of your time?
 
 With respect,
 [Your name], Chief Executive, Ninth House
+
+---
+
+## 6. The Shadow Department, to a corporate CMO
+
+Subject: A complete AI marketing department, under your seal, from £2,500 monthly
+
+Dear [Name],
+
+Most marketing departments carry three costs: headcount, coordination and slow output. Ours carries none of them.
+
+The Shadow Department is a full AI marketing operation, strategy, content, performance and minutes to the board, working under a human seal your team controls end to end. It sits alongside your existing department or ahead of a hire you have been deferring, live within a week, at the same standard whether it lands at nine in the morning or nine at night.
+
+Worth twenty minutes to see a sample docket?
+
+Warm regards,
+[Your name], Ninth House
+
+---
+
+## 7. The Market Landing, to an embassy or trade body
+
+Subject: A UK market entry docket for your member companies, from £3,500
+
+Dear [Name],
+
+Companies you represent often ask the same question before entering the UK: where to start, and what will trip them up.
+
+The Market Landing answers it in one docket: positioning built for UK buyers, the regulatory flags that matter for the sector, a launch calendar and ninety days of content ready to publish from day one. We would welcome offering it as a standing resource for your member companies, at a preferential rate for referrals through your desk.
+
+Might a short call suit this month?
+
+Kind regards,
+[Your name], Ninth House
+
+---
+
+## 8. The Transparency Charter Programme, to a local authority innovation lead
+
+Subject: Deploying AI communications openly, a charter for your authority
+
+Dear [Name],
+
+Public institutions are already using AI in communications; few say so plainly. We think the silence is the risk, not the technology.
+
+The Transparency Charter Programme installs openly disclosed AI communications for public bodies: public facing disclosure language, staff and board training, and a published charter modelled on the one Ninth House operates on itself. Built for institutions that want the efficiency without hiding the method.
+
+Could I send the charter for a first look?
+
+Regards,
+[Your name], Ninth House
