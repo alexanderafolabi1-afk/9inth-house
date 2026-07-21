@@ -14,18 +14,42 @@
 body{font-family:'Albert Sans',sans-serif;background:#FBF7EE;color:#3A4048;line-height:1.75;margin:0}
 .wrap{max-width:700px;margin:0 auto;padding:30px 22px 60px}
 a{color:#A97F2F}
-nav{border-bottom:1px solid #E4DCC6;padding:14px 22px;font-family:'Marcellus',serif;letter-spacing:.14em;text-transform:uppercase;font-size:14px}
-nav a{text-decoration:none;color:#1C2128}
+:root{--bg:#FBF7EE;--card:#FFFDF8;--band:#F4EDDC;--ink:#1C2128;--body:#3A4048;--muted:#6E6858;--faint:#98917E;--line:#E4DCC6;--gold:#A97F2F;--gold-bright:#C9A557}
+nav{position:sticky;top:0;z-index:50;background:rgba(251,247,238,.92);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+nav .nav-wrap{max-width:1080px;margin:0 auto;padding:14px 22px;display:flex;align-items:center;gap:12px}
+.glyph{width:38px;height:38px;border:1px solid var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--gold);font-size:20px;font-family:'Marcellus',serif;flex-shrink:0;background:var(--card)}
+nav b{font-family:'Marcellus',serif;font-weight:400;letter-spacing:.14em;text-transform:uppercase;font-size:15px;color:var(--ink)}
+nav .links{margin-left:auto;display:flex;gap:22px;font-size:13px;align-items:center}
+nav .links a{color:var(--muted);font-weight:500;text-decoration:none}
+nav .links a:hover{color:var(--gold)}
+@media(max-width:640px){nav .links a:not(.cta){display:none}}
+.cta-btn{background:var(--gold);color:#FFFDF8 !important;font-weight:700;padding:9px 18px;border-radius:10px;font-size:13px}
 h1{font-family:'Marcellus',serif;font-weight:400;font-size:32px;line-height:1.2;color:#1C2128}
 h2{font-family:'Marcellus',serif;font-weight:400;font-size:22px;color:#1C2128;margin-top:34px}
 .date{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:#A97F2F;margin:8px 0 26px}
 .cta{background:#F4EDDC;border:1px solid #C9A557;border-radius:14px;padding:20px;margin-top:40px}
 .cta a{display:inline-block;background:#A97F2F;color:#FFFDF8;text-decoration:none;font-weight:700;border-radius:10px;padding:11px 20px;margin-top:8px}
-footer{border-top:1px solid #E4DCC6;padding:22px;text-align:center;font-size:12px;color:#98917E}
+footer{border-top:1px solid var(--line);padding:36px 0 46px;color:var(--faint);font-size:12.5px;background:var(--band)}
+footer .fwrap{max-width:1080px;margin:0 auto;padding:0 22px}
+footer .disc{max-width:760px;margin:0 auto 14px;text-align:center;color:var(--muted)}
+footer .fine{text-align:center}
 </style>
 </head>
 <body>
-<nav><a href="../">♃ Ninth House</a> &nbsp;·&nbsp; <a href="./" style="font-size:11px;color:#A97F2F">The Ninth Times</a></nav>
+<nav>
+  <div class="nav-wrap">
+    <a href="../" style="display:flex;align-items:center;gap:12px;text-decoration:none"><div class="glyph">&#9795;</div><b>Ninth House</b></a>
+    <div class="links">
+      <a href="../firm.html">The Firm</a>
+      <a href="../clientele.html">Clientele</a>
+      <a href="./" style="color:var(--gold)">Journal</a>
+      <a href="../observatory.html">Observatory</a>
+      <a href="../table.html">The Table</a>
+      <a href="../charter.html">The Charter</a>
+      <a class="cta-btn cta" href="../#engage">Engage Us</a>
+    </div>
+  </div>
+</nav>
 <div class="wrap">
 <h1>One Person Business Marketing Systems That Actually Work</h1>
 <div class="date">2026-07-21 · The Ninth Times</div>
@@ -35,7 +59,7 @@ footer{border-top:1px solid #E4DCC6;padding:22px;text-align:center;font-size:12p
 
 <p>
 Pushing content out on social media, sending an occasional email blast, or running ads without a bigger picture strategy often leads to inconsistent results.
- Sound familiar? That is not a workload problem — it is a systems problem. 
+ Sound familiar? That is not a workload problem — it is a systems problem.
 Businesses that are growing are designing connected marketing systems where each channel supports the others and moves prospects forward.
  A one-person operation cannot afford to do otherwise. Every hour spent on disconnected activity is an hour stolen from the work that actually pays.</p>
 
@@ -48,16 +72,16 @@ We need to stop looking at marketing as a set of channels and start seeing it as
 <p>A working one-person marketing system has four interdependent pillars: <strong>an owned audience, a content engine, a lead capture mechanism, and a nurture sequence.</strong> Every tool you add should serve one of these four. If it does not, it is overhead.</p>
 
 <ul>
-  <li><strong>Owned audience (your email list):</strong> 
+  <li><strong>Owned audience (your email list):</strong>
 Your email list is the one audience you truly own. Social media algorithms change, platforms disappear, but your subscriber list stays with you.
  Build this before anything else. It is the only channel you cannot be evicted from.</li>
-  <li><strong>Content engine (social + search):</strong> 
+  <li><strong>Content engine (social + search):</strong>
 Social media is expected to be the marketing channel that drives the most expected value for small businesses in 2026.
  But social rents you an audience; SEO compounds it. The smartest solo operators publish one piece of long-form content weekly and repurpose it across platforms, so one idea does the work of five.</li>
-  <li><strong>Lead capture:</strong> 
+  <li><strong>Lead capture:</strong>
 Create an automated funnel — a lead magnet captures subscribers, a welcome sequence builds trust over 7 to 10 days, then an evergreen pitch sequence presents your offer.
  This is not complicated. A single landing page and a free download will do it.</li>
-  <li><strong>Nurture sequence (email automation):</strong> 
+  <li><strong>Nurture sequence (email automation):</strong>
 Email marketing delivers an average return of £36 for every £1 spent — the highest ROI of any digital marketing channel — making automation the highest-priority system for solopreneurs building sustainable revenue.
  Set it up once; let it work every day.</li>
 </ul>
@@ -66,17 +90,17 @@ Email marketing delivers an average return of £36 for every £1 spent — the h
 
 <p>
 A solopreneur today can have AI handle customer service, draft marketing copy, manage a sales funnel, write code, and analyse finances — all for a software subscription instead of a salary.
- That is not hyperbole; it is the current reality. 
+ That is not hyperbole; it is the current reality.
 AI automation now returns 10 to 40 per cent of a solopreneur's daily work time, and AI adoption among solopreneurs has reached 74 per cent as of 2026 — meaning three out of four solo founders are now using AI for content, customer service, research, or operations.
 </p>
 
-<p>The key principle is division of labour: 
+<p>The key principle is division of labour:
 let AI handle production, iteration, and optimisation. Keep positioning, pricing, and brand voice human-led.
  Your personality is the differentiator. The AI is the engine room.</p>
 
 <p>
 AI marketing automation for solopreneurs means using AI tools to handle the repeatable parts of marketing — content drafting, lead research, email nurture, and social distribution — so one person can run a full marketing system without hiring a team.
- 
+
 A lean AI marketing stack typically costs between £80 and £240 per month in 2026. Most solopreneurs start with one or two tools covering content and email, then add lead generation and distribution as the workflow matures.
 </p>
 
@@ -85,14 +109,14 @@ A lean AI marketing stack typically costs between £80 and £240 per month in 20
 <p>Tool paralysis kills more solo marketing systems than any algorithm change. Here is a straightforward starting stack verified for the UK market this month:</p>
 
 <ul>
-  <li><strong>Email automation:</strong> 
+  <li><strong>Email automation:</strong>
 Brevo offers the most accessible entry point, with plans starting around £7 per month. It covers email marketing and SMS well, with a straightforward automation builder that handles welcome sequences, abandoned cart reminders, and basic behavioural triggers.
 </li>
   <li><strong>Social content scheduling:</strong> A tool that batches your posts — whether Buffer, Later, or a dedicated AI content platform — so you are not touching social media every day. Consistency beats brilliance on every platform.</li>
-  <li><strong>Workflow glue:</strong> 
+  <li><strong>Workflow glue:</strong>
 Zapier AI connects over 6,000 apps, achieving significant workflow optimisation by automating repetitive tasks such as lead follow-ups and calendar bookings.
 </li>
-  <li><strong>Content drafting:</strong> Any major AI writing assistant. The rule is simple: AI writes the first draft, you edit it into your voice. 
+  <li><strong>Content drafting:</strong> Any major AI writing assistant. The rule is simple: AI writes the first draft, you edit it into your voice.
 Tools should help you amplify what makes your brand unique, not replace it. Use AI to generate ideas, draft content, and personalise offers — but always refine output through your brand's lens.
 </li>
 </ul>
@@ -117,7 +141,7 @@ The businesses that win in 2026 do not run more campaigns. They design better sy
   <li>Write down your three best-performing pieces of content and ask why they worked. That is your editorial compass.</li>
   <li>Set up one automated welcome sequence of five emails. That single sequence will outperform a month of ad-hoc social posts.</li>
   <li>Pick one primary platform for distribution and one for owned audience building. Master those before adding a third.</li>
-  <li>Schedule a monthly review — 30 minutes, same day each month — to check what is working and kill what is not. 
+  <li>Schedule a monthly review — 30 minutes, same day each month — to check what is working and kill what is not.
 Growth is shaped by how well you understand your customers, structure your marketing systems, and connect every tactic back to measurable business outcomes.
 </li>
 </ul>
@@ -125,16 +149,14 @@ Growth is shaped by how well you understand your customers, structure your marke
 <p>A one-person business with a documented marketing system is not a small business playing at being big. It is a focused, efficient operation that larger competitors will genuinely struggle to outmanoeuvre. Build the system. Everything else follows.</p>
 
 <p><em>Produced by Ninth House, an AI-operated growth studio under human CEO oversight.</em></p>
-
----
-
-## CEO ACTIONS
-
-1. **Publish this article** on the Ninth House or relevant portfolio blog this week. Assign the slug `one-person-business-marketing-systems`, set the meta as written, and add a CTA button ("Commission the Ninth House Audit — from £99") at the foot of the post. *(15 min)*
-
-2. **Create a
 <div class="cta"><strong>If your marketing still runs on hope and scrambled Canva sessions, it is time for a proper audit — commission the Ninth House Audit from £99 and leave with a documented system, not a to-do list.</strong><br><a href="https://9thpoint.com/" rel="noopener">Commission the Ninth House Audit from £99 →</a></div>
 </div>
-<footer>Published by Ninth House, an AI-operated growth studio under human CEO oversight. · <a href="../charter.html">The Charter</a></footer>
+<footer>
+  <div class="fwrap">
+    <p style="text-align:center;font-size:12.5px;margin:0 auto 14px"><a href="https://setpostgo.xyz" target="_blank" rel="noopener">SetPostGo</a><span style="color:var(--faint);padding:0 7px;font-size:11px">&#9795;</span><a href="https://nagori.xyz" target="_blank" rel="noopener">NAGORI</a><span style="color:var(--faint);padding:0 7px;font-size:11px">&#9795;</span><a href="https://renviait.co.uk" target="_blank" rel="noopener">RenviaIT</a><span style="color:var(--faint);padding:0 7px;font-size:11px">&#9795;</span><a href="https://lyrion.co.uk" target="_blank" rel="noopener">Lyrion Atelier</a><span style="color:var(--faint);padding:0 7px;font-size:11px">&#9795;</span><a href="https://iwriteyouread.org" target="_blank" rel="noopener">iwriteyouread</a><span style="color:var(--faint);padding:0 7px;font-size:11px">&#9795;</span><a href="#" data-pending title="Opening soon" onclick="return false">ChurchOS</a><span style="color:var(--faint);padding:0 7px;font-size:11px">&#9795;</span><a href="#" data-pending title="Opening soon" onclick="return false">WishWall</a></p>
+    <p class="disc"><strong>Openly built:</strong> Ninth House’s partners are personas of the house, not human beings; their portraits are engravings, not photographs. Every piece of work is produced under the oversight and final authority of one human Chief Executive. The full governance is in <a href="../charter.html">the Charter</a>.</p>
+    <p class="fine">&#9795; Ninth House Growth Partners &middot; A Lyr&#299;on Ltd venture &middot; United Kingdom &middot; &copy; 2026</p>
+  </div>
+</footer>
 </body>
 </html>
