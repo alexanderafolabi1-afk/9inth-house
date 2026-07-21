@@ -8,7 +8,9 @@
 <meta property="og:title" content="The House Table | Ninth House Growth Partners">
 <meta property="og:description" content="Where the firm sends its guests: a short register of celebrated restaurants, kept deliberately short.">
 <meta name="theme-color" content="#FBF7EE">
-<link rel="canonical" href="https://YOUR-USERNAME.github.io/ninth-house/table.html">
+<!-- Cloudflare Web Analytics. CEO: replace CFTOKEN with your real site token from dash.cloudflare.com > Analytics & Logs > Web Analytics > (your site) > Manage site > JS snippet. -->
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "CFTOKEN"}'></script>
+<link rel="canonical" href="https://9thpoint.com/table.html">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23FBF7EE'/%3E%3Ctext x='32' y='44' font-size='36' text-anchor='middle' fill='%23A97F2F' font-family='serif'%3E%E2%99%83%3C/text%3E%3C/svg%3E">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -145,10 +147,13 @@ document.getElementById('register').innerHTML = TABLE.map(t =>
 /* Slim registry of house properties, names separated by the Jupiter glyph */
 const ESTATE = [
   ['SetPostGo','https://setpostgo.xyz'], ['NAGORI','https://nagori.xyz'], ['RenviaIT','https://renviait.co.uk'],
-  ['Lyrion Atelier','https://lyrion.co.uk'], ['iwriteyouread','https://iwriteyouread.org']
+  ['Lyrion Atelier','https://lyrion.co.uk'], ['iwriteyouread','https://iwriteyouread.org'],
+  ['ChurchOS','#'], ['WishWall','#']
 ];
 document.getElementById('reg-line').innerHTML =
-  ESTATE.map(([n, u]) => `<a href="${u}" target="_blank" rel="noopener">${n}</a>`).join('<span class="g">&#9795;</span>');
+  ESTATE.map(([n, u]) => u === '#'
+    ? `<a href="#" data-pending title="Opening soon" onclick="return false">${n}</a>`
+    : `<a href="${u}" target="_blank" rel="noopener">${n}</a>`).join('<span class="g">&#9795;</span>');
 
 const io = new IntersectionObserver(es => es.forEach(e => { if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } }), { threshold:.12 });
 document.querySelectorAll('.reveal').forEach(el => io.observe(el));

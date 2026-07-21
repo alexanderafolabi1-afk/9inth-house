@@ -1,117 +1,123 @@
-# Ninth House Outreach Templates
+# Ninth House Outreach Armoury
 
-Reusable letter templates for the firm's advancement and partnership work.
-Fill the [bracketed] fields per recipient. House voice: warm, precise, no
-overclaiming. Every real send is sealed by the human before it goes out.
-
----
-
-## 1. Grant application enquiry (Chidinma, Advancement and Grants)
-
-Subject: Enquiry regarding [Fund or Programme]
-
-Dear [Programme Team],
-
-I am writing on behalf of [venture], a [one line on what it does]. Your
-[fund or programme] supports [stated aim], which maps closely to the work we
-have in hand: [one concrete outcome with a number].
-
-Could you confirm the current round's deadline and eligibility so we submit
-against the right criteria? I will keep our application short and evidenced.
-
-With thanks,
-[Name], Advancement, Ninth House
+Five cold email templates in the house voice. Fill the [bracketed] fields per
+recipient. Keep them short, warm and specific. Every real send is sealed by the
+human before it leaves the building.
 
 ---
 
-## 2. Institutional funding introduction (Harrison, Capital)
+## 1. The Agency Audit pitch
 
-Subject: [Venture], a brief introduction
+Subject: A second opinion on [Company]'s growth, from £99
 
 Dear [Name],
 
-[Venture] is [one line], with [one verifiable traction point]. We are mapping
-partners who understand [sector] rather than casting widely.
+I run a small growth studio that reads a business the way a good doctor reads a
+chart: quickly, honestly, and with a plan at the end.
 
-If useful, I will send a one page summary and the numbers you would need to
-decide whether a first conversation is worth your time. No deck marathon.
+For £99 we run The Ninth House Audit. You answer ten sharp questions, our
+partners convene, and within two working days you receive a sealed docket:
+where the money is leaking, the three quickest wins, and what to ignore.
 
-Best,
-[Name], Capital, Ninth House
+No retainer, no lock-in, no slide marathon. If it is useful you will know
+inside a week. If it is not, you have lost the price of a good dinner.
+
+Shall I send you the ten questions?
+
+Warm regards,
+[Your name], Ninth House
 
 ---
 
-## 3. Press pitch (Sipho, Partnerships and PR)
+## 2. SetPostGo for professionals
 
-Subject: A story your readers would actually finish
+Subject: A month of posts for [profession], written before Monday
+
+Dear [Name],
+
+Posting consistently is the part of marketing that quietly beats everything
+else, and it is the part busy [professionals] never have time for.
+
+SetPostGo generates a full month of platform-ready content for your exact
+profession: hooks, captions, hashtags and posting times, across the channels
+you actually use. You review, you approve, you publish. Minutes, not evenings.
+
+It was built for people who are excellent at their craft and tired of staring
+at an empty caption box. There is a free trial, so you can judge it on your own
+feed rather than my word.
+
+Try a month on us and see if your calendar fills itself.
+
+Best,
+[Your name], Ninth House
+
+---
+
+## 3. NAGORI press pitch
+
+Subject: A story: one million letters, then the door closes forever
 
 Dear [Journalist],
 
-You cover [beat] with more care than most, so here is one worth a look:
-[the angle in a single sentence]. The hook: [why now]. I can supply quotes,
-figures and a named human on the record within a day.
+Here is a piece your readers would finish. NAGORI is a permanent digital
+archive capped at exactly one million sealed letters. Words meant to outlast
+their writers, priced from £1.99, refused to everyone who arrives after the
+millionth.
 
-If it is not for you, a one word no is kinder than silence, and I will not
-mind it.
+The angle writes itself: scarcity as sincerity, a memento mori for the phone
+age, and a quiet rebellion against the internet that forgets nothing yet keeps
+nothing. I can offer figures, founder quotes on the record, and the story of
+who writes these letters and why.
 
-Regards,
-[Name], PR, Ninth House
+If it suits your desk, I will send a short brief before you commit a word.
+
+Kind regards,
+[Your name], Ninth House
 
 ---
 
-## 4. Partnership proposal (Maren, Managing Partner)
+## 4. RenviaIT ITAD pitch
 
-Subject: [Their brand] and Ninth House, a small proposal
+Subject: The retiring laptops at [Company], handled properly
 
 Dear [Name],
 
-Our audiences overlap where it matters: [shared audience]. I have a modest,
-testable idea that serves both sides without either of us pretending it is
-bigger than it is: [the idea in one line].
+When business technology reaches the end of its life at [Company], it usually
+becomes someone's quiet problem: data risk in a cupboard, value walking out of
+the door.
 
-Shall we take twenty minutes to see if it has legs? I will bring the plan,
-you bring the veto.
+RenviaIT, based in Milton Keynes, collects retired IT, wipes it to a certified
+standard, refurbishes what can live again and resells the rest. You get secure
+data destruction, a clear audit trail, and a sustainability story measured in
+kilograms diverted rather than vague promises.
 
-Warmly,
-[Name], Ninth House
+It is tidy, compliant, and often pays for itself. A single collection is enough
+to see whether we are the right hands for your estate.
 
----
+May I send you a quote for your next batch?
 
-## 5. Press contribution offer (Priya, SEO and Content)
-
-Subject: A guest piece, written to your standard
-
-Dear [Editor],
-
-I would like to contribute one genuinely useful article to [publication] on
-[topic your readers search for]. No product placement, no filler, just a
-piece that earns its place and carries a single modest credit line.
-
-If the topic fits your calendar, I will send an outline first so you keep
-control of the angle.
-
-Kind regards,
-[Name], Content, Ninth House
+Regards,
+[Your name], RenviaIT, a Ninth House venture
 
 ---
 
-## 6. Seasonal featured plaque, The House Table (Concierge Desk)
+## 5. Angel investor introduction, the house model
 
-Subject: A reserved plaque at The House Table
+Subject: One founder, an AI firm, the output of a funded team
 
-Dear [General Manager],
+Dear [Name],
 
-Ninth House keeps a short register called The House Table: the restaurants
-where we send our founders, executives and visiting clients. It is read by
-exactly the guests you would choose for your best tables.
+I am building something I think you will find genuinely new. Ninth House is a
+growth studio run by AI partner personas under one human seal: a full firm of
+strategy, creative, media, finance and research, awake around the clock, at the
+payroll of none.
 
-Each season we reserve one plaque for a house partner, and I would be glad to
-offer [Restaurant] that place in the coming sitting. It is patronage, plainly
-marked as a featured placement, sitting alongside a curated register we stand
-behind rather than an advertisement lost in a crowd.
+It already serves a live portfolio of ventures and sells productised services,
+all in the open, with transparency as the headline rather than the small print.
+I am not raising on a dream; I am showing a working machine and asking who wants
+to help it compound.
 
-If it appeals, I will send the season's terms and a short note on placement.
-A brief call would tell us both whether the fit is right.
+Could I send you a one page summary and take fifteen minutes of your time?
 
-With regard,
-[Name], The Concierge Desk, Ninth House
+With respect,
+[Your name], Chief Executive, Ninth House
