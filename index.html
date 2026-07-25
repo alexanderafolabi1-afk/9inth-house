@@ -239,6 +239,23 @@ footer .fine{text-align:center}
 .tw-sponsor{text-align:center;font-size:12.5px;color:var(--faint);margin:16px 18px 0}
 .tw-sponsor a{color:var(--gold)}
 
+/* The Nineteenth Hole */
+#golf-green{position:relative;height:300px;background:linear-gradient(160deg,#2f6b4f,#1f4a37 55%,#173a2a);border:1px solid var(--gold-deep);border-radius:14px;overflow:hidden;margin-top:12px;touch-action:none;cursor:crosshair;box-shadow:inset 0 2px 12px rgba(0,0,0,.3)}
+.golf-bunker{position:absolute;border-radius:50%;background:radial-gradient(circle at 40% 35%,#E3D4A0,#C9AF74);opacity:.92}
+.golf-hole{position:absolute;width:18px;height:18px;border-radius:50%;background:#0B1710;box-shadow:inset 0 3px 5px rgba(0,0,0,.7);transform:translate(-50%,-50%)}
+.golf-flag{position:absolute;transform:translate(-1px,-100%)}
+.golf-ball{position:absolute;width:13px;height:13px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#FFFFFF,#D8D2C2);box-shadow:0 2px 4px rgba(0,0,0,.4);transform:translate(-50%,-50%);z-index:3}
+.golf-aim{position:absolute;height:2px;background:rgba(251,247,238,.7);transform-origin:0 50%;pointer-events:none;z-index:2;border-radius:2px}
+.golf-hud{display:flex;justify-content:space-between;font-family:'Spline Sans Mono',monospace;font-size:12px;color:var(--muted);margin-top:9px}
+.golf-msg{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center;padding:20px;gap:8px;color:#EDE6D4}
+.golf-msg b{font-family:'Marcellus',serif;font-weight:400;font-size:18px;color:#E9CE8C}
+.golf-msg p{color:#B9B2A0;font-size:13px;max-width:400px;margin:0}
+.golf-plaque{background:linear-gradient(160deg,#E3C176,#C9A557 45%,#A97F2F);border-radius:14px;padding:4px;box-shadow:0 5px 16px rgba(169,127,47,.28),inset 0 1px 0 rgba(255,253,248,.5)}
+.golf-plaque .face{border:1px solid rgba(36,27,7,.4);border-radius:11px;padding:20px;background:linear-gradient(#E9CE8C,#C9A557)}
+.golf-plaque b{display:block;font-family:'Marcellus',serif;font-weight:400;color:#241B07;font-size:18px}
+.golf-plaque p{color:#3E2E1E;font-size:13.5px;margin-top:8px;line-height:1.5}
+.golf-plaque .price{display:block;font-family:'Spline Sans Mono',monospace;font-size:11.5px;color:#241B07;font-weight:600;margin-top:10px}
+
 /* ============ THE PARLOUR ============ */
 .parlour-room{margin:14px 18px;padding:20px 18px 8px;border-radius:16px;border:1px solid var(--gold-deep);color:#EDE6D4;background:radial-gradient(120% 90% at 50% 0%,#25313F 0%,#161d27 45%,#10151d 100%);box-shadow:inset 0 1px 0 rgba(201,165,87,.18),0 10px 30px rgba(12,16,22,.5)}
 .parlour-room .p-intro{color:#B9B2A0;font-size:13.5px;margin-top:4px}
@@ -319,6 +336,7 @@ footer .fine{text-align:center}
       <a href="press/">Journal</a>
       <a href="observatory.html">Observatory</a>
       <a href="institutions.html">Institutions</a>
+      <a href="africa.html">Africa Desk</a>
       <a href="table.html">The Table</a>
       <a href="charter.html">The Charter</a>
       <a class="cta-btn cta" href="#engage">Engage Us</a>
@@ -700,7 +718,7 @@ const TW = {
 };
 const twStage = document.getElementById('tw-stage');
 const WA9 = 'https://wa.me/447448668350';
-const PAY = { boardroom:'', audit:'', packs:{} }; // paste Stripe Payment Links here when created; empty falls back to WhatsApp
+const PAY = { boardroom:'', audit:'', golf:'', packs:{} }; // paste Stripe Payment Links here when created; empty falls back to WhatsApp
 const PACKS = { maren:['The Boardroom Session','£149'], jonah:['Brand Platform Sprint','£220'], ingrid:['Positioning Sprint','£220'], valentina:['30 Day Social Series','£160'], adaeze:['Africa Market Entry Map','£180'], theo:['Paid Media Test Plan','£150'], priya:['SEO Sprint','£250'], sipho:['Press Pitch Pack','£140'], kenji:['Lifecycle Flow Pack','£180'], noor:['Brand Voice Bible','£160'], lin:['The Film Pack','£180'], mei:['Brand Image Pack','£120'], rocio:['Funnel Diagnosis','£140'], lena:['Competitor Teardown','£160'], amara:['Impact Report','£180'], tobias:['Site Health Audit','£120'], margaret:['Finance Health Check','£160'], chidinma:['Grant Scan','£140'], harrison:['Funding Readiness Pack','£220'] };
 function payOr(link, waText){ if(link){ window.open(link,'_blank'); } else { window.open(WA9+'?text='+encodeURIComponent(waText),'_blank'); } }
 const HOURNOW = new Date().getHours();
@@ -1140,6 +1158,7 @@ function goOffice(pid){
          <h3>${p.n}</h3>
          <p style="color:var(--gold);font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;margin:4px 0 8px">${p.r}</p>
          <p>${p.bio}</p>
+         ${p.id === 'adaeze' ? `<p style="margin-top:6px;color:var(--muted)">Adaeze also keeps <a href="africa.html" style="color:var(--gold);font-weight:600">The Africa Desk</a>.</p>` : ''}
        </div>
      </div>
      ${PACKS[p.id]?`<p style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line)"><span style="color:var(--gold);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;font-weight:700">House product</span><br>${PACKS[p.id][0]} &middot; <span style="font-family:'Spline Sans Mono',monospace">${PACKS[p.id][1]}</span></p>`:''}
@@ -1237,7 +1256,7 @@ function goLounge(){
      <rect x="310" y="30" width="70" height="100" rx="4" fill="#2A2320"/><rect x="318" y="68" width="54" height="8" rx="2" fill="#C9A557"/><text x="345" y="76" text-anchor="middle" font-size="5" fill="#241B07" font-family="serif" letter-spacing="1">THE LOUNGE</text>
      <rect x="0" y="140" width="400" height="50" fill="#EAD6AE"/>
    </svg><img class="tw-art" src="art/lounge.jpg" alt="The Lounge interior with warm seating" onerror="this.parentElement.replaceWith(...this.parentElement.childNodes); this.remove()"></div>
-   ${nhChallenge && nhChallenge.type !== 'dice' ? `<div class="tw-panel" style="border-color:var(--gold-bright)"><p style="font-size:14px"><strong style="color:var(--gold);font-family:'Marcellus',serif;font-weight:400">A challenge stands.</strong> ${escTxt(nhChallenge.name)} scored ${nhChallenge.score}${nhChallenge.type === 'quiz' ? ' in the Examination Room' : ' at Stamp Rush'}. Beat it.</p></div>` : ''}
+   ${nhChallenge && nhChallenge.type !== 'dice' && nhChallenge.type !== 'golf' ? `<div class="tw-panel" style="border-color:var(--gold-bright)"><p style="font-size:14px"><strong style="color:var(--gold);font-family:'Marcellus',serif;font-weight:400">A challenge stands.</strong> ${escTxt(nhChallenge.name)} scored ${nhChallenge.score}${nhChallenge.type === 'quiz' ? ' in the Examination Room' : ' at Stamp Rush'}. Beat it.</p></div>` : ''}
    <div class="tw-panel" style="border-color:var(--gold-bright)">
      <h3>The Parlour</h3>
      <p>A quieter corner of the Lounge, deep ink and brass. The wheel, the cards and the dice deal in fortunes only.</p>
@@ -1261,6 +1280,11 @@ function goLounge(){
        <span style="align-self:center;font-family:'Spline Sans Mono',monospace;font-size:12px;color:var(--muted)" id="exam-score"></span>
      </div>
      <div id="exam-arena"></div>
+   </div>
+   <div class="tw-panel">
+     <h3>The Nineteenth Hole</h3>
+     <p>A quiet green in the corner of the Lounge, deep jade felt and a gold flag. Three holes, gentle friction, no consequence but pride.</p>
+     <div class="tw-actions"><button class="tw-btn gold" onclick="goGolf()">The Nineteenth Hole</button></div>
    </div>
    <p class="tw-sponsor" style="margin-bottom:2px">The house plays its own composition. Ask Barnaby for the name of the piece.</p>
    <p class="tw-sponsor" style="margin-top:6px">The Lounge is presented by Ninth House. <a href="#engage">This seat could carry your brand.</a></p>
@@ -1680,6 +1704,211 @@ function examEnd(){
   examState = null;
 }
 
+/* ============ THE NINETEENTH HOLE ============ */
+/* A quiet green in the corner of the Lounge. Drag to aim and set power, gentle friction, three holes. */
+const GOLF_HOLES = [
+  { label:'The First', ballX:0.15, ballY:0.5, holeX:0.84, holeY:0.5, bunkers:[] },
+  { label:'The Second', ballX:0.14, ballY:0.78, holeX:0.85, holeY:0.22, bunkers:[{x:0.62,y:0.72,r:0.10}] },
+  { label:'The Eighteenth', ballX:0.5, ballY:0.86, holeX:0.5, holeY:0.14, bunkers:[{x:0.32,y:0.48,r:0.09},{x:0.68,y:0.48,r:0.09}] }
+];
+const GOLF_SINK_LINES = [
+  'Read like a lawyer. Sunk like a partner.',
+  'Filed, sealed and holed.',
+  'The house does not miss twice.',
+  'That one goes straight into the minutes.',
+  'Sunk with the quiet confidence of an unbilled hour.'
+];
+const GOLF_MAX_DRAG = 90, GOLF_MAX_SPEED = 8.5;
+let golfState = null, golfRoundStrokes = 0;
+
+function goGolf(){
+  golfRoundStrokes = 0;
+  twStage.innerHTML = `<div class="tw-screen">
+   <div class="tw-top"><b>Floor 1 \u00b7 The Nineteenth Hole</b><button class="tw-back" onclick="goLounge()">Lounge</button></div>
+   ${nhChallenge && nhChallenge.type === 'golf' ? `<div class="tw-panel" style="border-color:var(--gold-bright)"><p style="font-size:14px"><strong style="color:var(--gold);font-family:'Marcellus',serif;font-weight:400">A card stands.</strong> ${escTxt(nhChallenge.name)} carded ${nhChallenge.score} for the round. Beat it.</p></div>` : ''}
+   <div class="tw-panel">
+     <h3 id="golf-title">The First</h3>
+     <p>Drag back from the ball to aim and set your power, then let go. Three holes, gentle friction, no consequence but pride.</p>
+     <div id="golf-green"></div>
+     <div class="golf-hud"><span id="golf-hole-n">Hole 1 of 3</span><span id="golf-strokes">Strokes: 0</span></div>
+   </div>
+   <p class="tw-sponsor">Practise here. Play him for real upstairs.</p>
+   <div class="tw-panel">
+     <div class="golf-plaque"><div class="face">
+       <b>A Round with the Principal</b>
+       <p>Eighteen holes with the Chief Executive. Business discussed on the fairway, plans sealed in the clubhouse. A morning that outperforms most boardrooms.</p>
+       <span class="price">\u00a3350 per guest, UK courses, by arrangement</span>
+     </div></div>
+     <div class="tw-actions"><button class="tw-btn gold" onclick="payOr(PAY.golf, 'Hello Ninth House, I would like to request a tee time for A Round with the Principal (\u00a3350).')">Request a tee time</button></div>
+   </div>
+  </div>`;
+  golfSetupHole(0);
+}
+
+function golfSetupHole(idx){
+  const cfg = GOLF_HOLES[idx];
+  const green = document.getElementById('golf-green'); if(!green || !cfg) return;
+  const w = green.clientWidth || 320, h = green.clientHeight || 300;
+  golfState = {
+    holeIdx: idx, strokes: 0,
+    ballX: cfg.ballX * w, ballY: cfg.ballY * h, vx: 0, vy: 0,
+    holeX: cfg.holeX, holeY: cfg.holeY, bunkers: cfg.bunkers,
+    dragging: false, dragStart: null, dragNow: null,
+    canShoot: true, animId: null
+  };
+  const title = document.getElementById('golf-title'); if(title) title.textContent = cfg.label;
+  const holeN = document.getElementById('golf-hole-n'); if(holeN) holeN.textContent = 'Hole ' + (idx + 1) + ' of ' + GOLF_HOLES.length;
+  const strokesEl = document.getElementById('golf-strokes'); if(strokesEl) strokesEl.textContent = 'Strokes: ' + golfRoundStrokes;
+  golfRenderStatics();
+  golfRenderBall();
+  golfBindEvents();
+}
+
+function golfRenderStatics(){
+  const green = document.getElementById('golf-green'); if(!green || !golfState) return;
+  const w = green.clientWidth, h = green.clientHeight;
+  const hx = golfState.holeX * w, hy = golfState.holeY * h;
+  let html = '';
+  for(const b of golfState.bunkers){
+    const bx = b.x * w, by = b.y * h, br = b.r * Math.min(w, h);
+    html += `<div class="golf-bunker" style="left:${bx-br}px;top:${by-br}px;width:${br*2}px;height:${br*2}px"></div>`;
+  }
+  html += `<svg class="golf-flag" style="left:${hx}px;top:${hy}px" width="24" height="42" viewBox="0 0 24 42"><line x1="2" y1="2" x2="2" y2="40" stroke="#E9E2D0" stroke-width="2"/><path d="M2 2 L22 8 L2 14 Z" fill="#C9A557"/></svg>`;
+  html += `<div class="golf-hole" style="left:${hx}px;top:${hy}px"></div>`;
+  html += `<div class="golf-ball" id="golf-ball"></div>`;
+  html += `<div class="golf-aim" id="golf-aim" style="display:none"></div>`;
+  green.innerHTML = html;
+}
+
+function golfRenderBall(){
+  const b = document.getElementById('golf-ball'); if(!b || !golfState) return;
+  b.style.left = golfState.ballX + 'px';
+  b.style.top = golfState.ballY + 'px';
+}
+
+function golfLocalPoint(e){
+  const green = document.getElementById('golf-green');
+  const r = green.getBoundingClientRect();
+  return { x: e.clientX - r.left, y: e.clientY - r.top };
+}
+
+function golfBindEvents(){
+  const green = document.getElementById('golf-green'); if(!green) return;
+  green.onpointerdown = (e) => {
+    if(!golfState || !golfState.canShoot || golfState.dragging) return;
+    e.preventDefault();
+    golfState.dragging = true;
+    golfState.dragStart = golfLocalPoint(e);
+    golfState.dragNow = golfState.dragStart;
+    if(green.setPointerCapture){ try{ green.setPointerCapture(e.pointerId); }catch(err){} }
+  };
+  green.onpointermove = (e) => {
+    if(!golfState || !golfState.dragging) return;
+    golfState.dragNow = golfLocalPoint(e);
+    golfRenderAim();
+  };
+  const release = () => {
+    if(!golfState || !golfState.dragging) return;
+    golfState.dragging = false;
+    golfShoot();
+  };
+  green.onpointerup = release;
+  green.onpointercancel = release;
+  green.onpointerleave = () => { if(golfState && golfState.dragging) release(); };
+}
+
+function golfRenderAim(){
+  const aim = document.getElementById('golf-aim'); if(!aim || !golfState) return;
+  const dx = golfState.dragStart.x - golfState.dragNow.x;
+  const dy = golfState.dragStart.y - golfState.dragNow.y;
+  const dist = Math.min(Math.hypot(dx, dy), GOLF_MAX_DRAG);
+  const ang = Math.atan2(dy, dx);
+  aim.style.display = 'block';
+  aim.style.width = (dist * 1.6) + 'px';
+  aim.style.left = golfState.ballX + 'px';
+  aim.style.top = golfState.ballY + 'px';
+  aim.style.transform = 'rotate(' + ang + 'rad)';
+  aim.style.opacity = String(0.3 + 0.5 * (dist / GOLF_MAX_DRAG));
+}
+
+function golfShoot(){
+  const g = golfState; if(!g) return;
+  const aim = document.getElementById('golf-aim'); if(aim) aim.style.display = 'none';
+  const dx = g.dragStart.x - g.dragNow.x;
+  const dy = g.dragStart.y - g.dragNow.y;
+  const dist = Math.min(Math.hypot(dx, dy), GOLF_MAX_DRAG);
+  if(dist < 6) return; // too soft, no shot taken, try again
+  const power = dist / GOLF_MAX_DRAG;
+  const ang = Math.atan2(dy, dx);
+  g.vx = Math.cos(ang) * power * GOLF_MAX_SPEED;
+  g.vy = Math.sin(ang) * power * GOLF_MAX_SPEED;
+  g.canShoot = false;
+  golfRoundStrokes++; g.strokes++;
+  const strokesEl = document.getElementById('golf-strokes'); if(strokesEl) strokesEl.textContent = 'Strokes: ' + golfRoundStrokes;
+  if(g.animId) cancelAnimationFrame(g.animId);
+  g.animId = requestAnimationFrame(golfTick);
+}
+
+function golfTick(){
+  const g = golfState; if(!g) return;
+  const green = document.getElementById('golf-green'); if(!green) return;
+  const w = green.clientWidth, h = green.clientHeight;
+  g.ballX += g.vx; g.ballY += g.vy;
+  const rad = 7;
+  if(g.ballX < rad){ g.ballX = rad; g.vx = -g.vx * 0.55; }
+  if(g.ballX > w - rad){ g.ballX = w - rad; g.vx = -g.vx * 0.55; }
+  if(g.ballY < rad){ g.ballY = rad; g.vy = -g.vy * 0.55; }
+  if(g.ballY > h - rad){ g.ballY = h - rad; g.vy = -g.vy * 0.55; }
+  for(const b of g.bunkers){
+    const bx = b.x * w, by = b.y * h, br = b.r * Math.min(w, h);
+    if(Math.hypot(g.ballX - bx, g.ballY - by) < br){ g.vx *= 0.90; g.vy *= 0.90; }
+  }
+  g.vx *= 0.985; g.vy *= 0.985;
+  golfRenderBall();
+  const speed = Math.hypot(g.vx, g.vy);
+  const hx = g.holeX * w, hy = g.holeY * h;
+  const distHole = Math.hypot(g.ballX - hx, g.ballY - hy);
+  if(distHole < 14 && speed < 3.4){ golfSink(); return; }
+  if(speed < 0.06){ g.vx = 0; g.vy = 0; g.canShoot = true; g.animId = null; return; }
+  g.animId = requestAnimationFrame(golfTick);
+}
+
+function golfSink(){
+  const g = golfState; if(!g) return;
+  g.vx = 0; g.vy = 0; g.canShoot = false; g.animId = null;
+  const green = document.getElementById('golf-green'); if(!green) return;
+  const line = GOLF_SINK_LINES[Math.floor(Math.random() * GOLF_SINK_LINES.length)];
+  const isLast = g.holeIdx >= GOLF_HOLES.length - 1;
+  green.innerHTML = `<div class="golf-msg"><b>${escTxt(line)}</b><p>Sunk in ${g.strokes} stroke${g.strokes === 1 ? '' : 's'}.</p>
+    <div class="tw-actions" style="justify-content:center">
+      <button class="tw-btn gold" onclick="${isLast ? 'golfEndRound()' : 'golfNextHole()'}">${isLast ? 'See the round' : 'Next hole'}</button>
+    </div></div>`;
+  const holeN = document.getElementById('golf-hole-n'); if(holeN && isLast) holeN.textContent = 'Round complete';
+}
+
+function golfNextHole(){ if(golfState) golfSetupHole(golfState.holeIdx + 1); }
+
+function golfEndRound(){
+  const green = document.getElementById('golf-green'); if(!green) return;
+  const total = golfRoundStrokes;
+  let line;
+  if(nhChallenge && nhChallenge.type === 'golf'){
+    line = total < nhChallenge.score
+      ? escTxt(nhChallenge.name) + ' carded ' + nhChallenge.score + '. You carded ' + total + '. The trophy changes hands.'
+      : escTxt(nhChallenge.name) + '\u2019s ' + nhChallenge.score + ' stands. You carded ' + total + '. The house suggests more practice.';
+  } else {
+    line = total <= 5 ? 'A card of ' + total + '. Barnaby is already telling people.'
+         : total <= 9 ? 'A card of ' + total + '. Entirely respectable.'
+         : 'A card of ' + total + '. The green forgives, eventually.';
+  }
+  green.innerHTML = `<div class="golf-msg"><b>The round is complete.</b><p>${line}</p>
+    <div class="tw-actions" style="justify-content:center"><button class="tw-btn" onclick="golfRestart()">Play again</button></div>
+    ${shareRow(total, 'golf')}
+  </div>`;
+}
+
+function golfRestart(){ golfRoundStrokes = 0; golfSetupHole(0); }
+
 window.twSign = function(){
   const v = (document.getElementById('tw-guest-in')||{}).value || '';
   twGuest = v.trim().slice(0,20).replace(/[^a-zA-Z\-\s]/g,'');
@@ -1702,10 +1931,10 @@ setInterval(()=>{
   el.textContent = '\u2643 ' + TICKER[tki = (tki+1)%TICKER.length];
 }, 3800);
 
-/* Challenge links: ?duel / ?quiz open the Lounge, ?dice opens the Parlour */
+/* Challenge links: ?duel / ?quiz open the Lounge, ?dice opens the Parlour, ?golf opens the Nineteenth Hole */
 (function(){
   const p = new URLSearchParams(location.search);
-  const type = p.has('duel') ? 'duel' : (p.has('quiz') ? 'quiz' : (p.has('dice') ? 'dice' : null));
+  const type = p.has('duel') ? 'duel' : (p.has('quiz') ? 'quiz' : (p.has('dice') ? 'dice' : (p.has('golf') ? 'golf' : null)));
   if(!type) return;
   const score = Math.max(0, Math.min(999, parseInt(p.get(type), 10) || 0));
   const name = (p.get('name') || 'A rival').replace(/[^\w\s'.\-]/g, '').trim().slice(0, 20) || 'A rival';
@@ -1722,7 +1951,7 @@ let nhFloor = null;
 })();
 
 goExterior();
-if(nhChallenge){ if(nhChallenge.type === 'dice'){ goLounge(); goParlour(); } else goLounge(); }
+if(nhChallenge){ if(nhChallenge.type === 'dice'){ goLounge(); goParlour(); } else if(nhChallenge.type === 'golf'){ goLounge(); goGolf(); } else goLounge(); }
 else if(nhFloor !== null){ if(nhFloor === 0) goLobby(); else goFloor(nhFloor); }
 
 /* ============ THE HOUSE SOUND ============ */
