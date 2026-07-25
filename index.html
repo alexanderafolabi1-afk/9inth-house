@@ -356,6 +356,35 @@ footer .fine{text-align:center}
 @media (prefers-reduced-motion:reduce){.die.rolling{animation:none}.pcard-inner{transition:none}}
 @media(max-width:520px){.tw-corridor{grid-template-columns:repeat(2,1fr)}}
 
+/* The Twenty-One Table */
+.t21-table{background:radial-gradient(ellipse at 50% 0%,#1f5c4a,#123b30 72%);border-radius:14px;padding:16px 14px 20px;margin-top:12px;box-shadow:inset 0 0 0 1px rgba(201,165,87,.35),inset 0 2px 22px rgba(0,0,0,.35)}
+.t21-hand{margin-bottom:14px}
+.t21-hand:last-child{margin-bottom:0}
+.t21-hand-label{display:flex;justify-content:space-between;align-items:center;color:#E9CE8C;font-family:'Marcellus',serif;font-size:13px;letter-spacing:.05em;text-transform:uppercase;margin-bottom:7px}
+.t21-row{display:flex;gap:7px;flex-wrap:wrap;min-height:78px}
+.t21-card{width:52px;aspect-ratio:3/4.3;perspective:700px}
+.t21-card-inner{position:relative;width:100%;height:100%;transition:transform .5s cubic-bezier(.3,.7,.3,1);transform-style:preserve-3d}
+.t21-card.flipped .t21-card-inner{transform:rotateY(180deg)}
+.t21-card-back,.t21-card-front{position:absolute;inset:0;-webkit-backface-visibility:hidden;backface-visibility:hidden;border-radius:7px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+.t21-card-back{background:linear-gradient(150deg,#8F7434,#5B4128);border:1px solid #C9A557;box-shadow:inset 0 0 0 3px rgba(201,165,87,.3)}
+.t21-card-back::after{content:"\2643";color:#E9CE8C;font-size:18px;opacity:.85}
+.t21-card-front{transform:rotateY(180deg);background:linear-gradient(#FFFDF8,#F4EDDC);border:1px solid #C9A557;color:#1C2128;font-family:'Marcellus',serif}
+.t21-card-front.red{color:#B5563F}
+.t21-rank{font-size:16px;font-weight:700;line-height:1}
+.t21-suit{font-size:13px;line-height:1}
+.t21-outcome{text-align:center;padding:14px 6px 2px}
+.t21-outcome b{font-family:'Marcellus',serif;font-weight:400;font-size:17px;color:var(--ink)}
+.t21-outcome p{color:var(--muted);font-size:13px;margin:6px 0 0}
+@media (prefers-reduced-motion:reduce){.t21-card-inner{transition:none}}
+
+/* Beat the Principal */
+.principal-faceoff{display:flex;align-items:center;justify-content:center;gap:22px;margin:14px 0}
+.principal-side{display:flex;flex-direction:column;align-items:center;gap:3px}
+.principal-portrait{width:64px;height:64px;border-radius:50%;overflow:hidden;border:2px solid var(--gold);position:relative;background:#F4EDDC;margin-bottom:2px}
+.principal-num{font-family:'Marcellus',serif;font-size:28px;color:var(--ink);line-height:1}
+.principal-label{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.principal-vs{font-family:'Marcellus',serif;font-size:14px;color:var(--faint)}
+
 /* Lift ride overlay */
 #lift-doors-overlay{position:absolute;inset:0;z-index:15;display:flex;pointer-events:none;overflow:hidden}
 #lift-door-l,#lift-door-r{width:50%;height:100%;will-change:transform;position:relative}
@@ -1337,7 +1366,9 @@ const ARCADE_GAMES = [
   { id:'duel', title:'The Duel', glyph:'&#9876;', line:'Two players, one device, no mercy.', go:'goDuel' },
   { id:'exam', title:'The Examination Room', glyph:'&#9874;', line:'Marks awarded without mercy.', go:'goExam' },
   { id:'parlour', title:'The Parlour', glyph:'&#9824;', line:'Fortunes only, never consequences.', go:'goParlour' },
-  { id:'golf', title:'The Nineteenth Hole', glyph:'&#9873;', line:'Practise here. Play him for real upstairs.', go:'goGolf' }
+  { id:'golf', title:'The Nineteenth Hole', glyph:'&#9873;', line:'Practise here. Play him for real upstairs.', go:'goGolf' },
+  { id:'t21', title:'The Twenty-One Table', glyph:'&#9824;', line:'Barnaby deals. Ambition is a fine servant and a poor master.', go:'goTwentyOne' },
+  { id:'principal', title:'Beat the Principal', glyph:'&#9878;', line:'Ten questions. He has already sat the paper.', go:'goPrincipal' }
 ];
 function goLounge(){
   liftPanel(1);
@@ -2045,6 +2076,278 @@ function golfEndRound(){
 
 function golfRestart(){ golfRoundStrokes = 0; golfSetupHole(0); }
 
+/* ============ THE TWENTY-ONE TABLE ============ */
+/* Classic twenty-one against Barnaby as the dealer. No chips, no stakes:
+   the tally counts hands won this sitting only. */
+const T21_SUITS = ['♠','♥','♦','♣'];
+const T21_RANKS = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+const T21_LINES = {
+  natural: ['Twenty one, first two cards. A Natural. Fortune, dressed as skill.', 'Twenty one on the flop. The house tips its hat, once.', 'A Natural. Barnaby notes it and says nothing more.'],
+  win: ['The hand is yours. The house yields it with grace.', 'You take it. Barnaby records the fact, reluctantly.', 'Well played. It happens, rarely, and it happened now.'],
+  dealerBust: ['Barnaby overreaches. The hand is yours.', 'The house draws past twenty one. Your hand, this time.', 'Too greedy by half. Yours.'],
+  bust: ['Twenty two. Ambition is a fine servant and a poor master.', 'Over twenty one. The house regrets nothing.', 'Too many cards, too little restraint.'],
+  lose: ['The house holds. Barnaby permits himself a small smile.', 'The dealer’s hand stands taller. Try again.', 'Not this time. The felt remembers everything.'],
+  push: ['A push. Honour is satisfied, nobody the richer.', 'Even hands. The house calls it a draw and means it.', 'A tie. Barnaby calls it a diplomatic result.']
+};
+const T21_HEADS = { natural:'A Natural.', win:'Yours.', dealerBust:'Yours.', bust:'Bust.', lose:'The house holds.', push:'A push.' };
+let t21Deck = [], t21Player = [], t21Dealer = [], t21HandsTaken = 0, t21Busy = false;
+function t21NewDeck(){ const d = []; for(const s of T21_SUITS) for(const r of T21_RANKS) d.push({ r, s }); return nhShuffle(d); }
+function t21Value(hand){
+  let total = 0, aces = 0;
+  for(const c of hand){
+    if(c.r === 'A'){ total += 11; aces++; }
+    else if(c.r === 'K' || c.r === 'Q' || c.r === 'J') total += 10;
+    else total += parseInt(c.r, 10);
+  }
+  while(total > 21 && aces > 0){ total -= 10; aces--; }
+  return total;
+}
+function t21CardHTML(card, id, hidden){
+  const isRed = card.s === '♥' || card.s === '♦';
+  return `<div class="t21-card" id="${id}" data-hidden="${hidden ? 1 : 0}">
+    <div class="t21-card-inner">
+      <div class="t21-card-back"></div>
+      <div class="t21-card-front${isRed ? ' red' : ''}"><span class="t21-rank">${card.r}</span><span class="t21-suit">${card.s}</span></div>
+    </div>
+  </div>`;
+}
+function t21AppendCard(rowId, card, hidden){
+  const row = document.getElementById(rowId); if(!row) return;
+  const id = rowId + '-c' + row.children.length;
+  row.insertAdjacentHTML('beforeend', t21CardHTML(card, id, hidden));
+  if(!hidden){
+    requestAnimationFrame(() => requestAnimationFrame(() => { const el = document.getElementById(id); if(el) el.classList.add('flipped'); }));
+  }
+}
+function t21ScoreLabel(){ return 'Hands taken: ' + t21HandsTaken; }
+function t21UpdateScore(){ const el = document.getElementById('t21-score'); if(el) el.textContent = t21ScoreLabel(); }
+function t21UpdateTotals(dealerRevealed){
+  const pT = document.getElementById('t21-player-total'); if(pT) pT.textContent = t21Value(t21Player);
+  const dT = document.getElementById('t21-dealer-total'); if(dT) dT.textContent = dealerRevealed ? t21Value(t21Dealer) : (t21Dealer.length ? t21Value(t21Dealer.slice(0, 1)) + ' + ?' : '–');
+}
+function t21Idle(){
+  const t = document.getElementById('t21-table'); if(!t) return;
+  t.innerHTML = '<p style="color:#E9CE8C;text-align:center;font-family:\'Marcellus\',serif;margin:24px 0">The felt is clear. Press Deal.</p>';
+}
+window.t21NewHand = function(){
+  if(t21Busy) return;
+  t21Busy = true;
+  if(t21Deck.length < 15) t21Deck = t21NewDeck();
+  t21Player = []; t21Dealer = [];
+  const go = document.getElementById('t21-go'); if(go) go.disabled = true;
+  const result = document.getElementById('t21-result'); if(result) result.innerHTML = '';
+  const actions = document.getElementById('t21-actions'); if(actions) actions.innerHTML = '';
+  const table = document.getElementById('t21-table'); if(!table) return;
+  table.innerHTML = `<div class="t21-hand"><div class="t21-hand-label"><span>Barnaby</span><span id="t21-dealer-total">–</span></div><div class="t21-row" id="t21-dealer-row"></div></div>
+    <div class="t21-hand"><div class="t21-hand-label"><span>You</span><span id="t21-player-total">0</span></div><div class="t21-row" id="t21-player-row"></div></div>`;
+  const steps = [
+    () => { t21Player.push(t21Deck.pop()); t21AppendCard('t21-player-row', t21Player[t21Player.length - 1], false); },
+    () => { t21Dealer.push(t21Deck.pop()); t21AppendCard('t21-dealer-row', t21Dealer[t21Dealer.length - 1], false); },
+    () => { t21Player.push(t21Deck.pop()); t21AppendCard('t21-player-row', t21Player[t21Player.length - 1], false); },
+    () => { t21Dealer.push(t21Deck.pop()); t21AppendCard('t21-dealer-row', t21Dealer[t21Dealer.length - 1], true); }
+  ];
+  const deal = (i) => {
+    steps[i](); t21UpdateTotals(false);
+    if(i < steps.length - 1) setTimeout(() => deal(i + 1), 300);
+    else setTimeout(t21AfterDeal, 550);
+  };
+  deal(0);
+};
+function t21RevealHole(){
+  const hidden = document.querySelector('#t21-dealer-row .t21-card[data-hidden="1"]');
+  if(hidden){ hidden.dataset.hidden = '0'; requestAnimationFrame(() => requestAnimationFrame(() => hidden.classList.add('flipped'))); }
+  t21UpdateTotals(true);
+}
+function t21AfterDeal(){
+  const pVal = t21Value(t21Player), dVal = t21Value(t21Dealer);
+  if(pVal === 21 || dVal === 21){
+    t21RevealHole();
+    setTimeout(() => {
+      if(pVal === 21 && dVal === 21) t21Resolve('push');
+      else if(pVal === 21) t21Resolve('natural');
+      else t21Resolve('lose');
+    }, 550);
+    return;
+  }
+  const actions = document.getElementById('t21-actions'); if(actions) actions.innerHTML = '<button class="tw-btn gold" onclick="t21Hit()">Hit</button><button class="tw-btn" onclick="t21Stand()">Stand</button>';
+}
+window.t21Hit = function(){
+  t21Player.push(t21Deck.pop());
+  t21AppendCard('t21-player-row', t21Player[t21Player.length - 1], false);
+  t21UpdateTotals(false);
+  const pVal = t21Value(t21Player);
+  if(pVal > 21) setTimeout(() => t21Resolve('bust'), 550);
+  else if(pVal === 21) setTimeout(() => t21Stand(), 550);
+};
+window.t21Stand = function(){
+  const actions = document.getElementById('t21-actions'); if(actions) actions.innerHTML = '';
+  t21RevealHole();
+  setTimeout(t21DealerPlay, 550);
+};
+function t21DealerPlay(){
+  const pVal = t21Value(t21Player);
+  if(pVal > 21){ t21Resolve('bust'); return; }
+  const drawStep = () => {
+    const dVal = t21Value(t21Dealer);
+    if(dVal < 17){
+      t21Dealer.push(t21Deck.pop());
+      t21AppendCard('t21-dealer-row', t21Dealer[t21Dealer.length - 1], false);
+      t21UpdateTotals(true);
+      setTimeout(drawStep, 550);
+    } else {
+      t21Resolve(dVal > 21 ? 'dealerBust' : (dVal > pVal ? 'lose' : dVal < pVal ? 'win' : 'push'));
+    }
+  };
+  setTimeout(drawStep, 300);
+}
+function t21Resolve(outcome){
+  const go = document.getElementById('t21-go'); if(go) go.disabled = false;
+  const actions = document.getElementById('t21-actions'); if(actions) actions.innerHTML = '';
+  const won = outcome === 'natural' || outcome === 'win' || outcome === 'dealerBust';
+  if(won) t21HandsTaken++;
+  t21UpdateScore();
+  const lines = T21_LINES[outcome] || [''];
+  const line = lines[Math.floor(Math.random() * lines.length)];
+  let challengeLine = '';
+  if(nhChallenge && nhChallenge.type === 't21'){
+    challengeLine = t21HandsTaken > nhChallenge.score
+      ? `<p style="font-size:13.5px;color:var(--body);margin-top:6px">${escTxt(nhChallenge.name)} took ${nhChallenge.score}. Consider them dethroned.</p>`
+      : `<p style="font-size:13.5px;color:var(--body);margin-top:6px">${escTxt(nhChallenge.name)}’s ${nhChallenge.score} stands. The house suggests another hand.</p>`;
+  }
+  const result = document.getElementById('t21-result'); if(!result) return;
+  result.innerHTML = `<div class="t21-outcome"><b>${T21_HEADS[outcome] || ''}</b><p>${escTxt(line)}</p>${challengeLine}${arcadeEndActions('t21NewHand()', 'New hand')}${shareRow(t21HandsTaken, 't21')}</div>`;
+  t21Busy = false;
+}
+function goTwentyOne(){
+  liftPanel(1);
+  twStage.innerHTML = `<div class="tw-screen">
+   <div class="tw-top"><b>Floor 1 · The Twenty-One Table</b><button class="tw-back" onclick="goLounge()">Arcade</button></div>
+   ${nhChallenge && nhChallenge.type === 't21' ? `<div class="tw-panel" style="border-color:var(--gold-bright)"><p style="font-size:14px"><strong style="color:var(--gold);font-family:'Marcellus',serif;font-weight:400">A challenge stands.</strong> ${escTxt(nhChallenge.name)} took ${nhChallenge.score} hand${nhChallenge.score === 1 ? '' : 's'} this sitting. Beat it.</p></div>` : ''}
+   <div class="tw-panel">
+     <h3>The Twenty-One Table</h3>
+     <p>Barnaby deals. The dealer stands on seventeen, an ace counts one or eleven, and twenty one on the first two cards is a Natural. No chips, no stakes: only the tally.</p>
+     <div class="tw-actions">
+       <button class="tw-btn gold" id="t21-go" onclick="t21NewHand()">Deal</button>
+       <span style="align-self:center;font-family:'Spline Sans Mono',monospace;font-size:12px;color:var(--muted)" id="t21-score">${t21ScoreLabel()}</span>
+     </div>
+     <div id="t21-table" class="t21-table"></div>
+     <div id="t21-actions" class="tw-actions" style="justify-content:center"></div>
+     <div id="t21-result"></div>
+   </div>
+  </div>`;
+  t21Idle();
+}
+
+/* ============ BEAT THE PRINCIPAL ============ */
+/* Ten questions, the house benchmark. The Principal's par is read from
+   principal-par.json so the keeper can raise it by editing one number. */
+let PRINCIPAL_PAR = 7;
+let principalState = null;
+async function principalLoadPar(){
+  try{
+    const r = await fetch('principal-par.json?nh=' + Date.now(), { cache:'no-store' });
+    if(r.ok){ const d = await r.json(); if(typeof d.par === 'number' && d.par >= 0) PRINCIPAL_PAR = d.par; }
+  }catch(e){ /* keeps the built-in par when the file is unreachable */ }
+}
+window.principalStart = async function(){
+  const arena = document.getElementById('principal-arena'); if(!arena) return;
+  const go = document.getElementById('principal-go'); if(go) go.disabled = true;
+  arena.innerHTML = '<div class="exam-card" style="text-align:center"><div class="exam-q" style="margin:0;font-size:15px">The Principal is already seated…</div></div>';
+  await principalLoadPar();
+  let qs = null;
+  try{
+    const r = await fetch('https://opentdb.com/api.php?amount=10&type=multiple', { signal: AbortSignal.timeout(6000) });
+    if(!r.ok) throw 0;
+    const d = await r.json();
+    if(!d.results || d.results.length < 10) throw 0;
+    qs = d.results.map(x => ({ c: decodeEnt(x.category), q: decodeEnt(x.question), o: nhShuffle(x.incorrect_answers.concat([x.correct_answer]).map(v => decodeEnt(v))), correct: decodeEnt(x.correct_answer) }));
+  }catch(e){
+    qs = nhShuffle(EXAM_BANK).slice(0, 10).map(x => ({ c: x.c, q: x.q, o: nhShuffle(x.o), correct: x.o[x.a] }));
+  }
+  principalState = { qs, i: 0, score: 0 };
+  principalQuestion();
+};
+function principalQuestion(){
+  const arena = document.getElementById('principal-arena'); const st = principalState; if(!arena || !st) return;
+  const q = st.qs[st.i];
+  const sc = document.getElementById('principal-score'); if(sc) sc.textContent = 'Marks ' + st.score + ' of ' + st.i;
+  arena.innerHTML = `<div class="exam-card">
+    <div class="exam-meta"><span>Question ${st.i + 1} of ${st.qs.length}</span><span>The Principal's par: ${PRINCIPAL_PAR}</span></div>
+    <div class="exam-cat">${escTxt(q.c)}</div>
+    <div class="exam-q">${escTxt(q.q)}</div>
+    <div class="exam-opts">${q.o.map((o, k) => `<button class="exam-opt" onclick="principalAnswer(${k})">${escTxt(o)}</button>`).join('')}</div>
+  </div>`;
+}
+window.principalAnswer = function(k){
+  const st = principalState; if(!st) return;
+  const q = st.qs[st.i];
+  const btns = [...document.querySelectorAll('#principal-arena .exam-opt')];
+  btns.forEach(b => b.disabled = true);
+  const right = q.o[k] === q.correct;
+  if(right){ btns[k].classList.add('right'); st.score++; }
+  else { btns[k].classList.add('wrong'); const ci = q.o.indexOf(q.correct); if(btns[ci]) btns[ci].classList.add('right'); }
+  const sc = document.getElementById('principal-score'); if(sc) sc.textContent = 'Marks ' + st.score + ' of ' + (st.i + 1);
+  setTimeout(() => { st.i++; if(st.i < st.qs.length) principalQuestion(); else principalEnd(); }, right ? 750 : 1500);
+};
+function principalEnd(){
+  const arena = document.getElementById('principal-arena'); const st = principalState; if(!arena || !st) return;
+  const go = document.getElementById('principal-go'); if(go) go.disabled = false;
+  const s = st.score, par = PRINCIPAL_PAR;
+  let title, body, extra = '', replayLabel = 'Play again';
+  if(s > par){
+    title = 'You beat the Principal.';
+    body = 'You scored ' + s + ' against his benchmark of ' + par + '.';
+    extra = `<div class="tw-panel" style="margin:14px 0 0;text-align:left"><p style="font-size:14px">The house honours its losses. Quote <strong style="color:var(--gold)">BEATTHEKEEPER</strong> for £10 off The Ninth House Audit.</p><div class="tw-actions"><button class="tw-btn gold" onclick="payOr(PAY.audit, 'Hello Ninth House, I beat the Principal at his own benchmark and would like to commission The Ninth House Audit (from £99), quoting BEATTHEKEEPER.')">The Audit · from £99</button></div></div>`;
+  } else if(s < par){
+    title = 'The Principal remains undefeated.';
+    body = 'He is, after all, a Solicitor. You scored ' + s + ' against his ' + par + '.';
+    replayLabel = 'Try again';
+  } else {
+    title = 'A draw.';
+    body = 'He will want a rematch. You matched his ' + par + ' precisely.';
+  }
+  let challengeLine = '';
+  if(nhChallenge && nhChallenge.type === 'principal'){
+    challengeLine = s > nhChallenge.score
+      ? `<p style="font-size:13.5px;color:var(--body);margin-top:6px">${escTxt(nhChallenge.name)} scored ${nhChallenge.score} against the Principal. Consider them dethroned too.</p>`
+      : `<p style="font-size:13.5px;color:var(--body);margin-top:6px">${escTxt(nhChallenge.name)}’s ${nhChallenge.score} stands. The house suggests revision.</p>`;
+  }
+  arena.innerHTML = `<div class="exam-card" style="text-align:center">
+    <div class="exam-cat">The face-off</div>
+    <div class="principal-faceoff">
+      <div class="principal-side"><span class="principal-num">${s}</span><span class="principal-label">You</span></div>
+      <div class="principal-vs">vs</div>
+      <div class="principal-side">
+        <div class="principal-portrait nh-shimmer"><span class="nh-face">${FACES.ceo || ''}</span><img class="nh-photo" src="avatars/ceo.jpg" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onload="nhPhotoLoad(this)" onerror="nhPhotoFail(this)"></div>
+        <span class="principal-num">${par}</span><span class="principal-label">The Principal</span>
+      </div>
+    </div>
+    <div class="exam-q" style="font-size:22px;margin:6px 0 4px">${title}</div>
+    <p style="font-size:14px;color:var(--muted)">${body}</p>
+    ${challengeLine}
+    ${extra}
+    ${arcadeEndActions('principalStart()', replayLabel)}
+    ${shareRow(s, 'principal')}
+  </div>`;
+  principalState = null;
+}
+function goPrincipal(){
+  liftPanel(1);
+  twStage.innerHTML = `<div class="tw-screen">
+   <div class="tw-top"><b>Floor 1 · Beat the Principal</b><button class="tw-back" onclick="goLounge()">Arcade</button></div>
+   ${nhChallenge && nhChallenge.type === 'principal' ? `<div class="tw-panel" style="border-color:var(--gold-bright)"><p style="font-size:14px"><strong style="color:var(--gold);font-family:'Marcellus',serif;font-weight:400">A challenge stands.</strong> ${escTxt(nhChallenge.name)} scored ${nhChallenge.score} against the Principal. Beat it.</p></div>` : ''}
+   <div class="tw-panel">
+     <h3>Beat the Principal</h3>
+     <p>Ten questions, the house's own benchmark. The Principal has already sat this paper; his mark stands unless you better it.</p>
+     <div class="tw-actions">
+       <button class="tw-btn gold" id="principal-go" onclick="principalStart()">Face the Principal</button>
+       <span style="align-self:center;font-family:'Spline Sans Mono',monospace;font-size:12px;color:var(--muted)" id="principal-score"></span>
+     </div>
+     <div id="principal-arena"></div>
+   </div>
+  </div>`;
+}
+
 window.twSign = function(){
   const v = (document.getElementById('tw-guest-in')||{}).value || '';
   twGuest = v.trim().slice(0,20).replace(/[^a-zA-Z\-\s]/g,'');
@@ -2067,10 +2370,10 @@ setInterval(()=>{
   el.textContent = '\u2643 ' + TICKER[tki = (tki+1)%TICKER.length];
 }, 3800);
 
-/* Challenge links: ?duel / ?quiz open the Lounge, ?dice opens the Parlour, ?golf opens the Nineteenth Hole */
+/* Challenge links: ?duel / ?quiz open the Lounge, ?dice opens the Parlour, ?golf opens the Nineteenth Hole, ?t21 opens the Twenty-One Table, ?principal opens Beat the Principal */
 (function(){
   const p = new URLSearchParams(location.search);
-  const type = p.has('duel') ? 'duel' : (p.has('quiz') ? 'quiz' : (p.has('dice') ? 'dice' : (p.has('golf') ? 'golf' : null)));
+  const type = p.has('duel') ? 'duel' : (p.has('quiz') ? 'quiz' : (p.has('dice') ? 'dice' : (p.has('golf') ? 'golf' : (p.has('t21') ? 't21' : (p.has('principal') ? 'principal' : null)))));
   if(!type) return;
   const score = Math.max(0, Math.min(999, parseInt(p.get(type), 10) || 0));
   const name = (p.get('name') || 'A rival').replace(/[^\w\s'.\-]/g, '').trim().slice(0, 20) || 'A rival';
@@ -2092,6 +2395,8 @@ if(nhChallenge){
   else if(nhChallenge.type === 'golf'){ goLounge(); goGolf(); }
   else if(nhChallenge.type === 'duel'){ goLounge(); goDuel(); }
   else if(nhChallenge.type === 'quiz'){ goLounge(); goExam(); }
+  else if(nhChallenge.type === 't21'){ goLounge(); goTwentyOne(); }
+  else if(nhChallenge.type === 'principal'){ goLounge(); goPrincipal(); }
   else goLounge();
 }
 else if(nhFloor !== null){ if(nhFloor === 0) goLobby(); else goFloor(nhFloor); }
