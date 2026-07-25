@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ninth House | Growth Partners</title>
-<meta name="description" content="Nineteen partners across four continents, one human Chief Executive holding the seal. Strategy, brand, film, performance media, SEO, PR and funding. The output of a funded agency at the payroll of none.">
+<meta name="description" content="Nineteen partners across six continents, one human Chief Executive holding the seal. Strategy, brand, film, performance media, SEO, PR and funding. The output of a funded agency at the payroll of none.">
 <meta name="keywords" content="growth agency UK, marketing agency London, startup marketing, brand strategy agency, performance marketing agency, SEO services, social media marketing, video content agency, global marketing firm">
 <meta property="og:title" content="Ninth House | Growth Partners">
-<meta property="og:description" content="Nineteen partners across four continents, one human Chief Executive holding the seal. The output of a funded agency at the payroll of none.">
+<meta property="og:description" content="Nineteen partners across six continents, one human Chief Executive holding the seal. The output of a funded agency at the payroll of none.">
 <meta property="og:url" content="https://9thpoint.com/">
 <meta property="og:image" content="https://9thpoint.com/art/og.jpg">
 <meta name="twitter:card" content="summary_large_image">
@@ -73,6 +73,7 @@ section{padding:88px 0}
 .sec-eyebrow{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);display:flex;align-items:center;gap:14px;margin-bottom:16px;font-weight:600}
 .sec-eyebrow::after{content:"";flex:1;height:1px;background:var(--line)}
 h2{font-family:'Marcellus',serif;font-weight:400;font-size:clamp(26px,4vw,38px);line-height:1.2;margin-bottom:18px;max-width:700px;color:var(--ink)}
+h2::before{content:"\2643";display:block;text-align:center;color:var(--gold);font-family:'Marcellus',serif;font-size:16px;margin-bottom:10px;opacity:.85}
 .lead{color:var(--muted);font-size:17px;max-width:680px}
 
 /* Manifesto */
@@ -82,8 +83,21 @@ h2{font-family:'Marcellus',serif;font-weight:400;font-size:clamp(26px,4vw,38px);
 .dept-label{font-size:11px;letter-spacing:.26em;text-transform:uppercase;color:var(--gold);margin:44px 0 16px;display:flex;align-items:center;gap:12px;font-weight:600}
 .dept-label::after{content:"";flex:1;height:1px;background:var(--line)}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
-.partner{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;transition:box-shadow .2s,border-color .2s;box-shadow:0 1px 3px rgba(28,33,40,.04)}
-.partner:hover{border-color:var(--gold-bright);box-shadow:0 4px 16px rgba(169,127,47,.12)}
+.partner{position:relative;overflow:hidden;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:0 1px 3px rgba(28,33,40,.04),inset 0 0 0 1px rgba(169,127,47,.14)}
+.partner:hover{border-color:var(--gold-bright);box-shadow:0 18px 40px rgba(28,33,40,.16),inset 0 0 0 1px rgba(169,127,47,.22)}
+.serve,.step,.principal{position:relative;overflow:hidden}
+.serve:hover,.step:hover{box-shadow:0 18px 40px rgba(28,33,40,.16),inset 0 0 0 1px rgba(169,127,47,.22)}
+.principal:hover{box-shadow:0 18px 40px rgba(169,127,47,.2),inset 0 0 0 1px rgba(169,127,47,.28)}
+.serve::after,.step::after,.principal::after,.partner::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 40%,rgba(255,253,248,.55) 50%,transparent 60%);transform:translateX(-130%);pointer-events:none;border-radius:inherit;z-index:2}
+@media (prefers-reduced-motion:no-preference){
+  .partner,.serve,.step,.principal{transition:transform .4s ease,box-shadow .4s ease,border-color .4s ease}
+  .serve::after,.step::after,.principal::after,.partner::after{transition:transform .4s ease}
+  .partner:hover:hover,.serve:hover:hover,.step:hover:hover,.principal:hover:hover{transform:translateY(-2px)}
+  .partner:hover::after,.serve:hover::after,.step:hover::after,.principal:hover::after{transform:translateX(130%)}
+}
+@media (prefers-reduced-motion:reduce){
+  .partner:hover,.serve:hover,.step:hover,.principal:hover{transform:none}
+}
 .phead{display:flex;gap:14px;align-items:center;margin-bottom:10px}
 .avatar{width:56px;height:56px;border-radius:50%;border:1px solid var(--gold-bright);display:flex;align-items:center;justify-content:center;font-family:'Marcellus',serif;font-size:17px;color:var(--gold);background:var(--band);flex-shrink:0;position:relative;overflow:hidden}
 .avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%}
@@ -94,7 +108,7 @@ h2{font-family:'Marcellus',serif;font-weight:400;font-size:clamp(26px,4vw,38px);
 
 /* Serve */
 .serve-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:34px}
-.serve{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:0 1px 3px rgba(28,33,40,.04)}
+.serve{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:0 1px 3px rgba(28,33,40,.04),inset 0 0 0 1px rgba(169,127,47,.14)}
 .serve h3{font-family:'Marcellus',serif;font-weight:400;font-size:18px;margin-bottom:6px;color:var(--ink)}
 .serve .tag{font-family:'Spline Sans Mono',monospace;font-size:11px;color:var(--faint);margin-bottom:10px;display:block}
 .serve p{color:var(--muted);font-size:14px}
@@ -107,7 +121,7 @@ h2{font-family:'Marcellus',serif;font-weight:400;font-size:clamp(26px,4vw,38px);
 
 /* How */
 .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin-top:34px}
-.step{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:0 1px 3px rgba(28,33,40,.04)}
+.step{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:0 1px 3px rgba(28,33,40,.04),inset 0 0 0 1px rgba(169,127,47,.14)}
 .step .n{font-family:'Marcellus',serif;font-size:30px;color:var(--gold);display:block;margin-bottom:8px}
 .step h3{font-family:'Marcellus',serif;font-weight:400;font-size:17px;margin-bottom:6px;color:var(--ink)}
 .step p{color:var(--muted);font-size:13.5px}
@@ -134,7 +148,7 @@ footer .fine{text-align:center}
 @media (prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none}}
 
 /* Principal (CEO) */
-.principal{background:var(--card);border:1px solid var(--gold-bright);border-radius:20px;padding:30px;display:flex;gap:26px;align-items:flex-start;box-shadow:0 6px 24px rgba(169,127,47,.12);margin-top:34px}
+.principal{background:var(--card);border:1px solid var(--gold-bright);border-radius:20px;padding:30px;display:flex;gap:26px;align-items:flex-start;box-shadow:0 6px 24px rgba(169,127,47,.12),inset 0 0 0 1px rgba(169,127,47,.2);margin-top:34px}
 @media(max-width:640px){.principal{flex-direction:column;align-items:center;text-align:center}}
 .principal .avatar{width:120px;height:120px;font-size:34px;border-width:2px}
 .principal h3{font-family:'Marcellus',serif;font-weight:400;font-size:24px;color:var(--ink)}
@@ -157,7 +171,7 @@ footer .fine{text-align:center}
 .tw-top b{font-family:'Marcellus',serif;font-weight:400;letter-spacing:.14em;text-transform:uppercase;font-size:14px;color:var(--ink)}
 .tw-back{margin-left:auto;border:1px solid var(--gold-bright);background:var(--card);color:var(--gold);border-radius:18px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer}
 .tw-scene{width:100%;display:block}
-.tw-panel{background:var(--card);border:1px solid var(--line);border-radius:16px;margin:14px 18px;padding:16px;box-shadow:0 2px 8px rgba(28,33,40,.06)}
+.tw-panel{background:var(--card);border:1px solid var(--line);border-radius:16px;margin:14px 18px;padding:16px;box-shadow:0 2px 8px rgba(28,33,40,.06),inset 0 0 0 1px rgba(169,127,47,.14);position:relative;overflow:hidden}
 .tw-panel h3{font-family:'Marcellus',serif;font-weight:400;font-size:18px;color:var(--ink);margin-bottom:4px}
 .tw-panel p{color:var(--muted);font-size:13.5px}
 .tw-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:12px}
@@ -177,10 +191,21 @@ footer .fine{text-align:center}
 @media(max-width:720px){#tw-hero{height:66vh;min-height:400px}}
 .tw-artwrap{position:relative}
 .tw-art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:0}
+/* Image loading, reversed: the photo is the default layer over an ivory
+   shimmer placeholder; it fades in on load; the illustrated fallback is
+   hidden unless the photo errors. No layout shift: callers set aspect-ratio. */
+.nh-shimmer{background:linear-gradient(100deg,#F4EDDC 0%,#FBF7EE 45%,#F4EDDC 90%);background-size:200% 100%;animation:nhShimmer 1.7s ease-in-out infinite}
+@keyframes nhShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.nh-shimmer.nh-settled{animation:none;background:none}
+.nh-photo{opacity:0;transition:opacity .25s ease}
+.nh-photo.nh-loaded{opacity:1}
+.nh-face{display:none}
+.nh-shimmer.nh-error .nh-face{display:block}
+@media(prefers-reduced-motion:reduce){.nh-shimmer{animation:none}}
 /* Corridor & doors */
 .tw-corridor{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;padding:6px 18px 18px}
 .tw-door{position:relative;background:linear-gradient(#2A2320,#1C1712);border:2px solid #3E2E1E;border-bottom-width:8px;border-radius:8px 8px 2px 2px;aspect-ratio:3/4.6;cursor:pointer;overflow:hidden;transition:transform .15s;box-shadow:0 4px 12px rgba(28,33,40,.18)}
-.tw-door:hover{transform:translateY(-3px)}
+.tw-door:hover{transform:translateY(-2px)}
 .tw-door .glasspane{position:absolute;top:8%;left:8%;right:8%;height:42%;background:rgba(244,237,220,.16);border:1.5px solid #C9A557;border-radius:3px;overflow:hidden}
 .tw-door .glasspane svg{opacity:.5;filter:blur(1px);position:absolute;inset:0;width:100%;height:100%}
 .tw-door .glasspane img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:3px}
@@ -193,8 +218,8 @@ footer .fine{text-align:center}
 .tw-door .lamp.busy{color:#B5563F;background:#B5563F}
 .tw-door .roomtag{position:absolute;bottom:6%;left:0;right:0;text-align:center;color:#C9A557;font-family:'Spline Sans Mono',monospace;font-size:9px;letter-spacing:.14em}
 /* Elevator */
-/* Luxury brass cabin lift panel */
-#tw-lift{position:fixed;bottom:74px;left:18px;z-index:60;background:linear-gradient(158deg,#E9CE8C,#C9A557 42%,#A97F2F);border:1px solid #8F7434;border-radius:15px;padding:9px 8px;display:none;flex-direction:column;gap:6px;box-shadow:0 12px 30px rgba(28,33,40,.32),inset 0 1px 0 rgba(255,253,248,.55),inset 0 -2px 6px rgba(36,27,7,.25)}
+/* Luxury brass cabin lift panel: fixed, vertically centred on the left on desktop */
+#tw-lift{position:fixed;top:50%;left:18px;transform:translateY(-50%);z-index:60;background:linear-gradient(158deg,#E9CE8C,#C9A557 42%,#A97F2F);border:1px solid #8F7434;border-radius:15px;padding:9px 8px;display:none;flex-direction:column;gap:6px;box-shadow:0 16px 40px rgba(28,33,40,.4),inset 0 1px 0 rgba(255,253,248,.55),inset 0 -2px 6px rgba(36,27,7,.25)}
 /* House sound toggle: discreet brass control, bottom-left corner */
 #tw-sound{position:fixed;bottom:18px;left:18px;z-index:61;display:inline-flex;align-items:center;gap:7px;background:linear-gradient(158deg,#E9CE8C,#C9A557 42%,#A97F2F);border:1px solid #8F7434;border-radius:20px;padding:7px 13px 7px 10px;cursor:pointer;font-family:'Spline Sans Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.04em;color:#241B07;box-shadow:0 6px 18px rgba(28,33,40,.26),inset 0 1px 0 rgba(255,253,248,.55)}
 #tw-sound .note{font-size:14px;line-height:1;transition:transform .3s}
@@ -207,6 +232,15 @@ footer .fine{text-align:center}
 .tw-fbtn{width:42px;height:32px;border-radius:8px;border:1px solid #8F7434;background:linear-gradient(#FBF7EE,#EADFC8);color:#3E2E1E;font-family:'Spline Sans Mono',monospace;font-size:12px;font-weight:600;cursor:pointer;box-shadow:inset 0 1px 0 rgba(255,255,255,.65),0 1px 2px rgba(36,27,7,.18);transition:transform .1s}
 .tw-fbtn:hover{transform:translateY(-1px)}
 .tw-fbtn.here{background:radial-gradient(circle at 40% 30%,#3E2E1E,#241B07);color:#E9CE8C;border-color:#241B07;box-shadow:inset 0 0 4px rgba(233,206,140,.4),0 0 6px rgba(201,165,87,.5)}
+/* Reserve room so interior panels never sit under the lift on narrower viewports */
+@media(max-width:960px){ #tower.tw-has-lift #tw-stage{padding-left:92px} }
+@media(max-width:640px){
+  #tw-lift{top:auto;bottom:78px;left:10px;transform:none;padding:6px 5px;gap:4px}
+  #tw-lift b{font-size:7px}
+  .tw-fbtn{width:32px;height:26px;font-size:10.5px}
+  #tw-sound{bottom:16px;left:10px;padding:6px 10px 6px 8px;font-size:10px}
+  #tower.tw-has-lift #tw-stage{padding-left:60px}
+}
 /* availability overlay */
 #tw-avail{position:fixed;inset:0;z-index:80;background:rgba(251,247,238,.9);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;text-align:center;padding:30px}
 #tw-avail.on{display:flex}
@@ -225,6 +259,7 @@ footer .fine{text-align:center}
 .ch-name{border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-family:'Albert Sans',sans-serif;font-size:13px;background:var(--card);color:var(--ink);width:140px;outline:none}
 .ch-name:focus{border-color:var(--gold-bright)}
 /* Examination Room */
+#exam-arena{min-height:280px}
 .exam-card{margin-top:12px;background:var(--band);border:1px solid var(--line);border-radius:14px;padding:18px}
 .exam-meta{display:flex;justify-content:space-between;font-family:'Spline Sans Mono',monospace;font-size:11.5px;color:var(--muted);margin-bottom:10px}
 .exam-cat{font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:6px}
@@ -255,6 +290,30 @@ footer .fine{text-align:center}
 .golf-plaque b{display:block;font-family:'Marcellus',serif;font-weight:400;color:#241B07;font-size:18px}
 .golf-plaque p{color:#3E2E1E;font-size:13.5px;margin-top:8px;line-height:1.5}
 .golf-plaque .price{display:block;font-family:'Spline Sans Mono',monospace;font-size:11.5px;color:#241B07;font-weight:600;margin-top:10px}
+
+/* The Arcade: one engraved cabinet per game, no two games ever share a screen */
+.arcade-head{text-align:center;margin:18px 18px 4px}
+.arcade-head h3{font-family:'Marcellus',serif;font-weight:400;font-size:19px;color:var(--ink)}
+.arcade-head p{color:var(--muted);font-size:13.5px;margin-top:4px}
+.arcade-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin:14px 18px}
+.cabinet{position:relative;overflow:hidden;background:linear-gradient(160deg,#E3C176,#C9A557 45%,#A97F2F);border-radius:14px;padding:4px;box-shadow:0 5px 16px rgba(169,127,47,.28),inset 0 1px 0 rgba(255,253,248,.5);transition:transform .18s,box-shadow .18s;display:flex}
+.cabinet:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(169,127,47,.5),inset 0 1px 0 rgba(255,253,248,.6)}
+/* Card life: gold sheen sweep on hover, CSS only, disabled for reduced motion */
+.tw-panel::after,.tw-door::after,.cabinet::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 40%,rgba(255,253,248,.55) 50%,transparent 60%);transform:translateX(-130%);pointer-events:none;border-radius:inherit;z-index:2}
+@media (prefers-reduced-motion:no-preference){
+  .tw-panel,.tw-door,.cabinet{transition:transform .4s ease,box-shadow .4s ease}
+  .tw-panel::after,.tw-door::after,.cabinet::after{transition:transform .4s ease}
+  .tw-panel:hover::after,.tw-door:hover::after,.cabinet:hover::after{transform:translateX(130%)}
+}
+@media (prefers-reduced-motion:reduce){
+  .tw-panel:hover,.tw-door:hover,.cabinet:hover{transform:none}
+}
+.cabinet .face{border:1px solid rgba(36,27,7,.4);border-radius:11px;padding:18px 14px;background:linear-gradient(#E9CE8C,#C9A557);display:flex;flex-direction:column;align-items:center;text-align:center;flex:1}
+.cabinet .cab-glyph{font-family:'Marcellus',serif;font-size:26px;color:#241B07;margin-bottom:8px;line-height:1}
+.cabinet h3{font-family:'Marcellus',serif;font-weight:400;color:#241B07;font-size:15.5px;margin-bottom:6px}
+.cabinet p{color:#3E2E1E;font-size:12px;line-height:1.5;margin-bottom:14px;flex:1}
+.cabinet .tw-btn.gold{width:100%;justify-content:center}
+@media (prefers-reduced-motion:reduce){.cabinet{transition:none}.cabinet:hover{transform:none}}
 
 /* ============ THE PARLOUR ============ */
 .parlour-room{margin:14px 18px;padding:20px 18px 8px;border-radius:16px;border:1px solid var(--gold-deep);color:#EDE6D4;background:radial-gradient(120% 90% at 50% 0%,#25313F 0%,#161d27 45%,#10151d 100%);box-shadow:inset 0 1px 0 rgba(201,165,87,.18),0 10px 30px rgba(12,16,22,.5)}
@@ -408,7 +467,7 @@ document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
 
 <!-- ============ NINTH HOUSE FRONT DESK ============ -->
 <style>
-#fd-launch{position:fixed;bottom:20px;right:20px;z-index:90;width:62px;height:62px;border-radius:50%;border:2px solid var(--gold);background:var(--card);cursor:pointer;box-shadow:0 6px 22px rgba(28,33,40,.18);padding:0;overflow:hidden;transition:transform .15s}
+#fd-launch{position:fixed;bottom:20px;right:20px;z-index:55;width:62px;height:62px;border-radius:50%;border:2px solid var(--gold);background:var(--card);cursor:pointer;box-shadow:0 6px 22px rgba(28,33,40,.18);padding:0;overflow:hidden;transition:transform .15s}
 #fd-launch:hover{transform:scale(1.06)}
 #fd-launch .ring{position:absolute;inset:-2px;border-radius:50%;border:2px solid var(--gold);animation:fdpulse 2.4s ease-out infinite;pointer-events:none}
 @keyframes fdpulse{0%{transform:scale(1);opacity:.7}100%{transform:scale(1.5);opacity:0}}
@@ -483,6 +542,17 @@ document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
 </div>
 
 <script>
+/* Shared image loading helper: photo fades in over the ivory shimmer on
+   load; the illustrated fallback is only revealed if the photo errors. */
+window.nhPhotoLoad = function(img){
+  img.classList.add('nh-loaded');
+  const wrap = img.closest('.nh-shimmer'); if(wrap) wrap.classList.add('nh-settled');
+};
+window.nhPhotoFail = function(img){
+  const wrap = img.closest('.nh-shimmer');
+  img.remove();
+  if(wrap) wrap.classList.add('nh-error');
+};
 function fdAvatarFallback(img){
   if(img.classList.contains('fd-photo-error')) return;
   img.classList.add('fd-photo-error');
@@ -495,7 +565,7 @@ const WA = 'https://wa.me/447448668350';
 const msgs = document.getElementById('fd-msgs');
 const optsEl = document.getElementById('fd-opts');
 const statusEl = document.getElementById('fd-status');
-let opened = false, started = false;
+let opened = false, started = false, userClosed = false;
 
 const STATUS = [
   'Barnaby Sterling, Front of House',
@@ -590,7 +660,7 @@ function greet(){
 }
 function explain(){
   say([
-    "Ah, the tour. Ninth House is the world's first openly AI-operated growth studio: nineteen partners across six departments and four continents, one human Chief Executive holding the seal.",
+    "Ah, the tour. Ninth House is the world's first openly AI-operated growth studio: nineteen partners across six departments and six continents, one human Chief Executive holding the seal.",
     "Strategy, brand, film, performance media, SEO, PR, finance, research, impact, funding. The whole orchestra, awake at 3am, and not one of them bills for lunch.",
     "Every piece of work is approved by the human before it touches the world. We are transparent about what we are. Refreshing, I'm told."
   ], [['Sounds expensive&hellip;', sell],['Book a meeting', book],['Instant line &#128222;', instant]]);
@@ -683,8 +753,20 @@ window.fdOpen = function(){
 window.fdClose = function(){
   document.getElementById('fd').classList.remove('open');
   document.getElementById('fd-launch').style.display='block';
+  userClosed = true;
 };
-setTimeout(()=>{ if(!opened){ fdOpen(); opened = true; } }, 2600);
+/* Barnaby is a butler, not a nuisance: auto-open at most once per session,
+   only if the visitor is still at the exterior or lobby six seconds in,
+   nothing else has already opened or closed the desk, and no panel is up. */
+setTimeout(()=>{
+  if(opened || userClosed) return;
+  if(document.getElementById('fd').classList.contains('open')) return;
+  const avail = document.getElementById('tw-avail');
+  if(avail && avail.classList.contains('on')) return;
+  if(window.TW_AT_HOME === false) return;
+  fdOpen();
+  opened = true;
+}, 6000);
 })();
 </script>
 
@@ -755,8 +837,8 @@ function officeProps(kind){
 }
 
 function officeScene(p, grand){
-  return '<div class="tw-artwrap">'
-   + '<svg class="tw-scene" viewBox="0 0 400 250" xmlns="http://www.w3.org/2000/svg">'
+  return '<div class="tw-artwrap nh-shimmer" style="aspect-ratio:400/250">'
+   + '<svg class="tw-scene nh-face" viewBox="0 0 400 250" xmlns="http://www.w3.org/2000/svg">'
    +'<rect width="400" height="250" fill="#F4EDDC"/>'
    +'<rect x="0" y="196" width="400" height="54" fill="#EAD6AE"/>'
    +'<rect x="0" y="192" width="400" height="5" fill="#C9A557" opacity=".5"/>'
@@ -768,7 +850,7 @@ function officeScene(p, grand){
    +'<g transform="translate(132,86)"><rect x="8" y="30" width="36" height="44" rx="8" fill="#2A2320"/><foreignObject x="0" y="-14" width="52" height="52"><div xmlns="http://www.w3.org/1999/xhtml" style="position:relative;width:52px;height:52px;border-radius:50%;overflow:hidden;border:2px solid #C9A557">'+(FACES[p.id]||'')+'<img src="avatars/'+p.id+'.jpg" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.remove()"></div></foreignObject></g>'
    +'<rect x="30" y="120" width="16" height="40" rx="8" fill="#5FA98B"/><path d="M38 120 q-8 -14 -2 -22 q8 8 10 20" fill="#5FA98B"/><rect x="32" y="160" width="12" height="14" fill="#8F7434"/>'
    +'</svg>'
-   + '<img class="tw-art" src="art/'+(grand?'ceo-office':'office')+'.jpg" alt="" onerror="this.parentElement.replaceWith(...this.parentElement.childNodes); this.remove()">'
+   + '<img class="tw-art nh-photo" src="art/'+(grand?'ceo-office':'office')+'.jpg" alt="" onload="nhPhotoLoad(this)" onerror="nhPhotoFail(this)">'
    + '</div>';
 }
 
@@ -860,6 +942,8 @@ function svgExterior(){
 let tw3dRenderer = null;
 function goExterior(){
   document.getElementById('tw-lift').classList.remove('on');
+  document.getElementById('tower').classList.remove('tw-has-lift');
+  window.TW_AT_HOME = true;
   twStage.innerHTML = `<div class="tw-screen tw-exterior">
    <div id="tw-hero">
      <img class="tw-hero-img" src="art/exterior.jpg" alt="The Ninth House tower" onerror="twHeroFallback(this)">
@@ -1042,6 +1126,8 @@ function init3D(container){
 function liftPanel(current){
   const lift = document.getElementById('tw-lift');
   lift.classList.add('on');
+  document.getElementById('tower').classList.add('tw-has-lift');
+  window.TW_AT_HOME = (current === 0);
   lift.innerHTML = '<b>LIFT</b>' + [9,8,5,4,3,2,1,0].map(f=>
     `<button class="tw-fbtn ${f===current?'here':''}" onclick="goFloor(${f})">${f===0?'G':f}</button>`).join('');
 }
@@ -1050,7 +1136,7 @@ function goLobby(){
   liftPanel(0);
   twStage.innerHTML = `<div class="tw-screen">
    <div class="tw-top"><b>Ground Floor \u00b7 Lobby</b><button class="tw-back" onclick="goExterior()">Outside</button></div>
-   <div class="tw-artwrap"><svg class="tw-scene" viewBox="0 0 400 220" xmlns="http://www.w3.org/2000/svg">
+   <div class="tw-artwrap nh-shimmer" style="aspect-ratio:400/220"><svg class="tw-scene nh-face" viewBox="0 0 400 220" xmlns="http://www.w3.org/2000/svg">
      <rect width="400" height="220" fill="#F4EDDC"/>
      <rect x="0" y="150" width="400" height="70" fill="#EAD6AE"/>
      <path d="M0 150 L400 150 340 220 60 220 Z" fill="#E3D2AC"/>
@@ -1063,7 +1149,7 @@ function goLobby(){
      <rect x="24" y="96" width="52" height="90" rx="4" fill="#2A2320"/><rect x="49" y="96" width="2" height="90" fill="#C9A557"/><text x="50" y="90" text-anchor="middle" font-size="8" fill="#8F7434" font-family="monospace">LIFT</text>
      <rect x="320" y="100" width="56" height="88" rx="4" fill="#FFFDF8" stroke="#A97F2F"/><text x="348" y="114" text-anchor="middle" font-size="7.5" fill="#A97F2F" font-family="monospace" letter-spacing="1">DIRECTORY</text>
      ${[9,8,5,4,3,2,1].map((f,i)=>'<text x="326" y="'+(128+i*9)+'" font-size="6.5" fill="#5B4128" font-family="monospace">'+(f===0?'G':f)+' \u00b7 '+TW.floors[f].slice(0,14)+'</text>').join('')}
-   </svg><img class="tw-art" src="art/lobby.jpg" alt="" onerror="this.parentElement.replaceWith(...this.parentElement.childNodes); this.remove()"></div>
+   </svg><img class="tw-art nh-photo" src="art/lobby.jpg" alt="" onload="nhPhotoLoad(this)" onerror="nhPhotoFail(this)"></div>
    <div class="tw-panel">
      <h3>Reception</h3>
      <p id="tw-ticker" style="font-family:'Spline Sans Mono',monospace;font-size:11px;color:var(--gold);min-height:16px;margin-bottom:6px"></p>
@@ -1083,7 +1169,7 @@ function goLobby(){
 function doorHTML(p){
   return `<div class="tw-door" data-pid="${p.id}" onclick="knock('${p.id}')">
     <span class="lamp ${twBusyMap[p.id]?'busy':'free'}"></span>
-    <div class="glasspane">${FACES[p.id]||''}<img src="avatars/${p.id}.jpg" alt="" onerror="this.remove()"></div>
+    <div class="glasspane nh-shimmer"><span class="nh-face">${FACES[p.id]||''}</span><img class="nh-photo" src="avatars/${p.id}.jpg" alt="" onload="nhPhotoLoad(this)" onerror="nhPhotoFail(this)"></div>
     <div class="plate"><b>${p.n}</b><span>${p.r}</span></div>
     <span class="knob"></span>
     <span class="roomtag">${p.f}0${(TW.partners.filter(x=>x.f===p.f).indexOf(p)+1)}</span>
@@ -1095,7 +1181,7 @@ function goFloor(f){
     liftPanel(8);
     twStage.innerHTML = `<div class="tw-screen">
      <div class="tw-top"><b>Floor 8 · The Observatory</b><button class="tw-back" onclick="goLobby()">Lobby</button></div>
-     <div class="tw-artwrap"><svg class="tw-scene" viewBox="0 0 400 210" xmlns="http://www.w3.org/2000/svg">
+     <div class="tw-artwrap nh-shimmer" style="aspect-ratio:400/210"><svg class="tw-scene nh-face" viewBox="0 0 400 210" xmlns="http://www.w3.org/2000/svg">
        <rect width="400" height="210" fill="${NIGHT?'#1B2432':'#F4EDDC'}"/>
        ${NIGHT?Array.from({length:26},()=>'<circle cx="'+(Math.random()*400).toFixed(0)+'" cy="'+(Math.random()*120).toFixed(0)+'" r="'+(Math.random()>.8?1.3:0.8)+'" fill="#E9E2D0" opacity="'+(0.3+Math.random()*0.6).toFixed(2)+'"/>').join(''):'<circle cx="330" cy="42" r="18" fill="#C9A557" opacity=".8"/><circle cx="330" cy="42" r="27" fill="#C9A557" opacity=".14"/>'}
        <path d="M60 150 A140 140 0 0 1 340 150 Z" fill="${NIGHT?'#10151D':'#EAD6AE'}" stroke="#C9A557" stroke-width="2"/>
@@ -1106,7 +1192,7 @@ function goFloor(f){
        <rect x="0" y="150" width="400" height="60" fill="${NIGHT?'#171E28':'#E3D2AC'}"/>
        <rect x="120" y="158" width="160" height="10" rx="3" fill="#5B4128"/><rect x="130" y="168" width="10" height="24" fill="#3E2E1E"/><rect x="260" y="168" width="10" height="24" fill="#3E2E1E"/>
        <text x="200" y="204" text-anchor="middle" font-family="Marcellus, serif" font-size="11" fill="#A97F2F" letter-spacing="4">THE OBSERVATORY</text>
-     </svg><img class="tw-art" src="art/observatory.jpg" alt="Observatory dome with brass telescope and glass ceiling" onerror="this.parentElement.replaceWith(...this.parentElement.childNodes); this.remove()"></div>
+     </svg><img class="tw-art nh-photo" src="art/observatory.jpg" alt="Observatory dome with brass telescope and glass ceiling" onload="nhPhotoLoad(this)" onerror="nhPhotoFail(this)"></div>
      <div class="tw-panel">
        <h3>The refurbishment is complete.</h3>
        <p>A dome of brass and glass above the whole city: the weather glass, the currency board, the crypto tape, the technology wire and the scores, with the Wire Brief filed every shift. Barnaby would like it noted that the works finished early, came in under budget, and that he polished the telescope himself.</p>
@@ -1150,9 +1236,9 @@ function goOffice(pid){
    ${officeScene(p)}
    <div class="tw-panel">
      <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:12px">
-       <div style="width:120px;height:120px;border-radius:10px;overflow:hidden;border:1.5px solid #C9A557;flex-shrink:0;position:relative;background:#F4EDDC">
-         ${FACES[p.id]||''}
-         <img src="avatars/${p.id}.jpg" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:9px" onerror="this.remove()">
+       <div class="nh-shimmer" style="width:120px;height:120px;border-radius:10px;overflow:hidden;border:1.5px solid #C9A557;flex-shrink:0;position:relative;background:#F4EDDC">
+         <span class="nh-face">${FACES[p.id]||''}</span>
+         <img class="nh-photo" src="avatars/${p.id}.jpg" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:9px" onload="nhPhotoLoad(this)" onerror="nhPhotoFail(this)">
        </div>
        <div style="flex:1;min-width:0">
          <h3>${p.n}</h3>
@@ -1171,16 +1257,17 @@ function goOffice(pid){
 }
 
 function goBoardroom(){
+  liftPanel(9);
   twStage.innerHTML = `<div class="tw-screen">
    <div class="tw-top"><b>Floor 9 \u00b7 The Boardroom</b><button class="tw-back" onclick="goFloor(9)">Corridor</button></div>
-   <div class="tw-artwrap"><svg class="tw-scene" viewBox="0 0 400 230" xmlns="http://www.w3.org/2000/svg">
+   <div class="tw-artwrap nh-shimmer" style="aspect-ratio:400/230"><svg class="tw-scene nh-face" viewBox="0 0 400 230" xmlns="http://www.w3.org/2000/svg">
      <rect width="400" height="230" fill="#F4EDDC"/><rect y="176" width="400" height="54" fill="#EAD6AE"/>
      <rect x="24" y="30" width="150" height="76" rx="4" fill="#FFFDF8" stroke="#A97F2F" stroke-width="3"/><g transform="translate(27,33) scale(0.9,1.16)">${skyline('london')}</g>
      <rect x="230" y="34" width="140" height="80" rx="4" fill="#12161C"/><text x="300" y="66" text-anchor="middle" font-size="10" fill="#C9A557" font-family="monospace">GROWTH, QUARTER</text><text x="300" y="80" text-anchor="middle" font-size="10" fill="#C9A557" font-family="monospace">BY QUARTER</text><path d="M244 104 l22 -12 22 6 24 -18 26 4" stroke="#5FA98B" stroke-width="2.5" fill="none"/>
      <ellipse cx="200" cy="160" rx="150" ry="34" fill="#5B4128"/><ellipse cx="200" cy="154" rx="150" ry="34" fill="#8F7434"/>
      ${[60,110,160,240,290,340].map(x=>'<rect x="'+(x-10)+'" y="186" width="20" height="26" rx="6" fill="#2A2320"/>').join('')}
      <circle cx="200" cy="150" r="10" fill="#B5563F"/><text x="200" y="155" font-size="10" text-anchor="middle" fill="#E9E2D0" font-family="serif">\u2643</text>
-   </svg><img class="tw-art" src="art/boardroom.jpg" alt="" onerror="this.parentElement.replaceWith(...this.parentElement.childNodes); this.remove()"></div>
+   </svg><img class="tw-art nh-photo" src="art/boardroom.jpg" alt="" onload="nhPhotoLoad(this)" onerror="nhPhotoFail(this)"></div>
    <div class="tw-panel"><h3>Where the minutes are made.</h3><p>Nineteen chairs, one seal, and a screen that has never once shown a boring slide. The boardroom convenes for clients too: strategy sessions chaired by Maren, minutes delivered same day.</p>
    <p style="margin-top:8px;color:var(--muted)">Corporations and governments are received on the ninth floor. <a href="institutions.html" style="color:var(--gold);font-weight:600">The Institutional Floor &rarr;</a></p>
    <p style="margin-top:8px"><span style="font-family:'Spline Sans Mono',monospace;color:var(--gold)">The Boardroom Session · £149</span> · sixty minutes, chaired by Maren, minutes delivered same day, signed by the human.</p>
@@ -1188,16 +1275,17 @@ function goBoardroom(){
 }
 
 function goSuite(){
+  liftPanel(9);
   twStage.innerHTML = `<div class="tw-screen">
    <div class="tw-top"><b>Floor 9 \u00b7 Executive Waiting Room</b><button class="tw-back" onclick="goFloor(9)">Corridor</button></div>
-   <div class="tw-artwrap"><svg class="tw-scene" viewBox="0 0 400 210" xmlns="http://www.w3.org/2000/svg">
+   <div class="tw-artwrap nh-shimmer" style="aspect-ratio:400/210"><svg class="tw-scene nh-face" viewBox="0 0 400 210" xmlns="http://www.w3.org/2000/svg">
      <rect width="400" height="210" fill="#F4EDDC"/><rect y="160" width="400" height="50" fill="#EAD6AE"/>
      <rect x="30" y="112" width="120" height="34" rx="10" fill="#5B4128"/><rect x="36" y="96" width="108" height="22" rx="8" fill="#8F7434"/>
      <rect x="250" y="112" width="120" height="34" rx="10" fill="#5B4128"/><rect x="256" y="96" width="108" height="22" rx="8" fill="#8F7434"/>
      <rect x="172" y="130" width="56" height="18" rx="4" fill="#A97F2F"/><rect x="182" y="122" width="36" height="8" rx="1" fill="#FFFDF8"/><text x="200" y="128" text-anchor="middle" font-size="4.5" fill="#5B4128" font-family="serif">THE NINTH TIMES</text>
      <circle cx="200" cy="46" r="17" fill="#FFFDF8" stroke="#A97F2F" stroke-width="2"/><line x1="200" y1="46" x2="200" y2="34" stroke="#5B4128" stroke-width="2"/><line x1="200" y1="46" x2="208" y2="50" stroke="#5B4128" stroke-width="2"/>
      <rect x="308" y="26" width="70" height="120" rx="4" fill="#2A2320"/><rect x="316" y="70" width="54" height="10" rx="2" fill="#C9A557"/><text x="343" y="78" text-anchor="middle" font-size="5.5" fill="#241B07" font-family="serif" letter-spacing="1">CHIEF EXECUTIVE</text>
-   </svg><img class="tw-art" src="art/waiting.jpg" alt="" onerror="this.parentElement.replaceWith(...this.parentElement.childNodes); this.remove()"></div>
+   </svg><img class="tw-art nh-photo" src="art/waiting.jpg" alt="" onload="nhPhotoLoad(this)" onerror="nhPhotoFail(this)"></div>
    <div class="tw-panel"><h3 id="suite-msg">Please take a seat.</h3><p>The assistant will call you through. The magazines are current, the clock is honest, and the door at the end opens for very few.</p>
    <p style="margin-top:8px;font-size:12.5px;color:var(--muted)">The house plays its own composition. Ask Barnaby for the name of the piece.</p>
    <div class="tw-actions"><button class="tw-btn" onclick="goTimes()">Read The Ninth Times</button></div></div></div>`;
@@ -1205,15 +1293,16 @@ function goSuite(){
 }
 
 function goCEO(){
+  liftPanel(9);
   const ceo = {id:'ceo', n:'Alexander "Q" Afolabi', r:'Chief Executive \u00b7 Keeper of the Seal', sky:'london', props:'lead'};
   twStage.innerHTML = `<div class="tw-screen">
    <div class="tw-top"><b>Floor 9 \u00b7 Office of the Chief Executive</b><button class="tw-back" onclick="goFloor(9)">Corridor</button></div>
    ${officeScene(ceo, true)}
    <div class="tw-panel">
      <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:12px">
-       <div style="width:120px;height:120px;border-radius:10px;overflow:hidden;border:1.5px solid #C9A557;flex-shrink:0;position:relative;background:#F4EDDC">
-         ${FACES.ceo||''}
-         <img src="avatars/ceo.jpg" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:9px" onerror="this.remove()">
+       <div class="nh-shimmer" style="width:120px;height:120px;border-radius:10px;overflow:hidden;border:1.5px solid #C9A557;flex-shrink:0;position:relative;background:#F4EDDC">
+         <span class="nh-face">${FACES.ceo||''}</span>
+         <img class="nh-photo" src="avatars/ceo.jpg" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:9px" onload="nhPhotoLoad(this)" onerror="nhPhotoFail(this)">
        </div>
        <div style="flex:1;min-width:0">
          <h3>Alexander "Q" Afolabi</h3>
@@ -1229,6 +1318,7 @@ function goCEO(){
 }
 
 function goTimes(){
+  liftPanel(9);
   twStage.innerHTML = `<div class="tw-screen">
    <div class="tw-top"><b>The Ninth Times · Waiting Room Edition</b><button class="tw-back" onclick="goSuite()">Waiting room</button></div>
    <div class="tw-panel"><h3>The agency that tells you what it is</h3><p>Most firms guard their methods. This one publishes its constitution. Ninth House operates in the open: illustrated partners, one human seal, and a standing invitation to check the work. The bet is simple: transparency compounds faster than mystique, and the diary suggests the bet is landing.</p></div>
@@ -1242,12 +1332,18 @@ let nhChallenge = null; // {type:'duel'|'quiz', score, name} parsed from a chall
 try{ stampBest = parseInt(localStorage.getItem('nh-stamp-best'), 10) || 0; }catch(e){}
 function escTxt(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
+const ARCADE_GAMES = [
+  { id:'stamprush', title:'Stamp Rush', glyph:'&#9993;', line:'Seal every document before it slips away.', go:'goStampRush' },
+  { id:'duel', title:'The Duel', glyph:'&#9876;', line:'Two players, one device, no mercy.', go:'goDuel' },
+  { id:'exam', title:'The Examination Room', glyph:'&#9874;', line:'Marks awarded without mercy.', go:'goExam' },
+  { id:'parlour', title:'The Parlour', glyph:'&#9824;', line:'Fortunes only, never consequences.', go:'goParlour' },
+  { id:'golf', title:'The Nineteenth Hole', glyph:'&#9873;', line:'Practise here. Play him for real upstairs.', go:'goGolf' }
+];
 function goLounge(){
   liftPanel(1);
-  const streak = examStreakInfo();
   twStage.innerHTML = `<div class="tw-screen">
    <div class="tw-top"><b>Floor 1 \u00b7 The Lounge</b><button class="tw-back" onclick="goLobby()">Lobby</button></div>
-   <div class="tw-artwrap"><svg class="tw-scene" viewBox="0 0 400 190" xmlns="http://www.w3.org/2000/svg">
+   <div class="tw-artwrap nh-shimmer" style="aspect-ratio:400/190"><svg class="tw-scene nh-face" viewBox="0 0 400 190" xmlns="http://www.w3.org/2000/svg">
      <rect width="400" height="190" fill="#F4EDDC"/><rect y="140" width="400" height="50" fill="#EAD6AE"/>
      <rect x="20" y="100" width="130" height="46" rx="10" fill="#5B4128"/><rect x="28" y="86" width="114" height="24" rx="8" fill="#8F7434"/>
      <rect x="250" y="104" width="130" height="42" rx="10" fill="#5B4128"/><rect x="258" y="90" width="114" height="24" rx="8" fill="#8F7434"/>
@@ -1255,23 +1351,62 @@ function goLounge(){
      <circle cx="90" cy="56" r="22" fill="#FFFDF8" stroke="#A97F2F" stroke-width="2"/><text x="90" y="62" font-size="18" text-anchor="middle" fill="#A97F2F" font-family="serif">&#9795;</text>
      <rect x="310" y="30" width="70" height="100" rx="4" fill="#2A2320"/><rect x="318" y="68" width="54" height="8" rx="2" fill="#C9A557"/><text x="345" y="76" text-anchor="middle" font-size="5" fill="#241B07" font-family="serif" letter-spacing="1">THE LOUNGE</text>
      <rect x="0" y="140" width="400" height="50" fill="#EAD6AE"/>
-   </svg><img class="tw-art" src="art/lounge.jpg" alt="The Lounge interior with warm seating" onerror="this.parentElement.replaceWith(...this.parentElement.childNodes); this.remove()"></div>
-   ${nhChallenge && nhChallenge.type !== 'dice' && nhChallenge.type !== 'golf' ? `<div class="tw-panel" style="border-color:var(--gold-bright)"><p style="font-size:14px"><strong style="color:var(--gold);font-family:'Marcellus',serif;font-weight:400">A challenge stands.</strong> ${escTxt(nhChallenge.name)} scored ${nhChallenge.score}${nhChallenge.type === 'quiz' ? ' in the Examination Room' : ' at Stamp Rush'}. Beat it.</p></div>` : ''}
-   <div class="tw-panel" style="border-color:var(--gold-bright)">
-     <h3>The Parlour</h3>
-     <p>A quieter corner of the Lounge, deep ink and brass. The wheel, the cards and the dice deal in fortunes only.</p>
-     <div class="tw-actions"><button class="tw-btn gold" onclick="goParlour()">Enter the Parlour</button></div>
+   </svg><img class="tw-art nh-photo" src="art/lounge.jpg" alt="The Lounge interior with warm seating" onload="nhPhotoLoad(this)" onerror="nhPhotoFail(this)"></div>
+   <div class="arcade-head"><h3>The Arcade</h3><p>Five amusements, no consequence but pride. Pick your table.</p></div>
+   <div class="arcade-grid">
+     ${ARCADE_GAMES.map(g => `<div class="cabinet"><div class="face">
+       <span class="cab-glyph">${g.glyph}</span>
+       <h3>${g.title}</h3>
+       <p>${g.line}</p>
+       <button class="tw-btn gold" onclick="${g.go}()">Play</button>
+     </div></div>`).join('')}
    </div>
+   <p class="tw-sponsor" style="margin-bottom:2px">The house plays its own composition. Ask Barnaby for the name of the piece.</p>
+   <p class="tw-sponsor" style="margin-top:6px">The Lounge is presented by Ninth House. <a href="#engage">This seat could carry your brand.</a></p>
+  </div>`;
+}
+
+function goStampRush(){
+  liftPanel(1);
+  twStage.innerHTML = `<div class="tw-screen">
+   <div class="tw-top"><b>Floor 1 \u00b7 Stamp Rush</b><button class="tw-back" onclick="goLounge()">Arcade</button></div>
    <div class="tw-panel">
      <h3>Stamp Rush</h3>
-     <p>Documents land on the table; seal every one before it slips away. Twenty seconds. Margaret holds the record and will not let anyone forget it.</p>
+     <p>Documents land on the table; seal every one before it slips away. Twenty seconds, solo.</p>
      <div class="tw-actions">
        <button class="tw-btn gold" id="stamp-go" onclick="stampStart('solo')">Play Stamp Rush</button>
-       <button class="tw-btn" id="stamp-duel" onclick="stampDuelStart()">Duel Mode</button>
        <span style="align-self:center;font-family:'Spline Sans Mono',monospace;font-size:12px;color:var(--muted)" id="stamp-score"></span>
      </div>
      <div id="stamp-arena"></div>
    </div>
+  </div>`;
+  updateStamp(); stampIdle();
+}
+
+function goDuel(){
+  liftPanel(1);
+  twStage.innerHTML = `<div class="tw-screen">
+   <div class="tw-top"><b>Floor 1 \u00b7 The Duel</b><button class="tw-back" onclick="goLounge()">Arcade</button></div>
+   ${nhChallenge && nhChallenge.type === 'duel' ? `<div class="tw-panel" style="border-color:var(--gold-bright)"><p style="font-size:14px"><strong style="color:var(--gold);font-family:'Marcellus',serif;font-weight:400">A challenge stands.</strong> ${escTxt(nhChallenge.name)} scored ${nhChallenge.score} at Stamp Rush. Beat it.</p></div>` : ''}
+   <div class="tw-panel">
+     <h3>The Duel</h3>
+     <p>Stamp Rush, two players, one device. Twenty seconds each; the house announces the winner.</p>
+     <div class="tw-actions">
+       <button class="tw-btn gold" id="stamp-duel" onclick="stampDuelStart()">Begin the Duel</button>
+       <span style="align-self:center;font-family:'Spline Sans Mono',monospace;font-size:12px;color:var(--muted)" id="stamp-score"></span>
+     </div>
+     <div id="stamp-arena"></div>
+   </div>
+  </div>`;
+  updateStamp(); stampIdle();
+}
+
+function goExam(){
+  liftPanel(1);
+  const streak = examStreakInfo();
+  twStage.innerHTML = `<div class="tw-screen">
+   <div class="tw-top"><b>Floor 1 \u00b7 The Examination Room</b><button class="tw-back" onclick="goLounge()">Arcade</button></div>
+   ${nhChallenge && nhChallenge.type === 'quiz' ? `<div class="tw-panel" style="border-color:var(--gold-bright)"><p style="font-size:14px"><strong style="color:var(--gold);font-family:'Marcellus',serif;font-weight:400">A challenge stands.</strong> ${escTxt(nhChallenge.name)} scored ${nhChallenge.score} in the Examination Room. Beat it.</p></div>` : ''}
    <div class="tw-panel">
      <h3>The Examination Room</h3>
      <p>Ten questions per sitting, categories mixed, marks awarded without mercy. ${streak.n > 0 ? 'Day ' + streak.n + ' of your attendance at the house.' : 'Your attendance record opens with the first paper.'}</p>
@@ -1281,15 +1416,7 @@ function goLounge(){
      </div>
      <div id="exam-arena"></div>
    </div>
-   <div class="tw-panel">
-     <h3>The Nineteenth Hole</h3>
-     <p>A quiet green in the corner of the Lounge, deep jade felt and a gold flag. Three holes, gentle friction, no consequence but pride.</p>
-     <div class="tw-actions"><button class="tw-btn gold" onclick="goGolf()">The Nineteenth Hole</button></div>
-   </div>
-   <p class="tw-sponsor" style="margin-bottom:2px">The house plays its own composition. Ask Barnaby for the name of the piece.</p>
-   <p class="tw-sponsor" style="margin-top:6px">The Lounge is presented by Ninth House. <a href="#engage">This seat could carry your brand.</a></p>
   </div>`;
-  updateStamp(); stampIdle();
 }
 
 function stampIdle(){
@@ -1522,6 +1649,13 @@ function shareRow(score, type){
   let nm = twGuest || '';
   return `<div class="tw-actions" style="justify-content:center;margin-top:10px"><input class="ch-name" id="ch-name-${type}" placeholder="Your name" value="${escTxt(nm)}" maxlength="20"><button class="tw-btn gold" onclick="copyChallenge(${score},'${type}',this)">Challenge someone</button></div>`;
 }
+/* Every game's end state offers the same two anchors: play again, and a way home. */
+function arcadeEndActions(replayCall, replayLabel){
+  return `<div class="tw-actions" style="justify-content:center;margin-top:10px">
+    <button class="tw-btn gold" onclick="${replayCall}">${replayLabel || 'Play again'}</button>
+    <button class="tw-btn" onclick="goLounge()">Back to the Lounge</button>
+  </div>`;
+}
 window.copyChallenge = function(score, type, btn){
   const inp = document.getElementById('ch-name-' + type);
   const name = ((inp && inp.value.trim()) || 'A rival').slice(0, 20);
@@ -1581,7 +1715,7 @@ function stampEnd(mode){
       : p2 > p1
       ? 'Player Two takes it, ' + p2 + ' to ' + p1 + '. Player One should see Barnaby about lessons.'
       : 'A tie at ' + p1 + ' apiece. The house keeps the crown and everyone buys their own biscuits.';
-    arena.innerHTML = `<div class="stamp-idle"><b>The scoreboard speaks.</b><p>${line}</p>${shareRow(Math.max(p1, p2), 'duel')}</div>`;
+    arena.innerHTML = `<div class="stamp-idle"><b>The scoreboard speaks.</b><p>${line}</p>${arcadeEndActions("stampDuelStart()")}${shareRow(Math.max(p1, p2), 'duel')}</div>`;
     return;
   }
   let line;
@@ -1594,7 +1728,7 @@ function stampEnd(mode){
          : stampScore >= 10 ? 'Sealed ' + stampScore + '. The docket respects you.'
          : 'Sealed ' + stampScore + '. Barnaby says the lift is that way.';
   }
-  arena.innerHTML = `<div class="stamp-idle"><b>Time.</b><p>${line}</p>${shareRow(stampScore, 'duel')}</div>`;
+  arena.innerHTML = `<div class="stamp-idle"><b>Time.</b><p>${line}</p>${arcadeEndActions("stampStart('solo')")}${shareRow(stampScore, 'duel')}</div>`;
 }
 function updateStamp(t){
   const el = document.getElementById('stamp-score'); if(!el) return;
@@ -1698,6 +1832,7 @@ function examEnd(){
     <div class="exam-q" style="font-size:24px;margin-bottom:6px">${grade[0]}</div>
     <p style="font-size:14px;color:var(--muted)">${s} of ${st.qs.length} correct. ${grade[1]} Day ${st.day} of your attendance at the house.</p>
     ${challengeLine}
+    ${arcadeEndActions('examStart()')}
     ${shareRow(s, 'quiz')}
     <p style="margin-top:14px;font-size:12.5px;color:var(--faint)">The firm answers harder questions for a living. <a href="${WA9}?text=${encodeURIComponent('Hello Ninth House, I would like to commission The Ninth House Audit (from \u00a399). My business: ')}" rel="noopener">The Audit, from \u00a399</a>.</p>
   </div>`;
@@ -1722,6 +1857,7 @@ const GOLF_MAX_DRAG = 90, GOLF_MAX_SPEED = 8.5;
 let golfState = null, golfRoundStrokes = 0;
 
 function goGolf(){
+  liftPanel(1);
   golfRoundStrokes = 0;
   twStage.innerHTML = `<div class="tw-screen">
    <div class="tw-top"><b>Floor 1 \u00b7 The Nineteenth Hole</b><button class="tw-back" onclick="goLounge()">Lounge</button></div>
@@ -1902,7 +2038,7 @@ function golfEndRound(){
          : 'A card of ' + total + '. The green forgives, eventually.';
   }
   green.innerHTML = `<div class="golf-msg"><b>The round is complete.</b><p>${line}</p>
-    <div class="tw-actions" style="justify-content:center"><button class="tw-btn" onclick="golfRestart()">Play again</button></div>
+    ${arcadeEndActions('golfRestart()')}
     ${shareRow(total, 'golf')}
   </div>`;
 }
@@ -1951,7 +2087,13 @@ let nhFloor = null;
 })();
 
 goExterior();
-if(nhChallenge){ if(nhChallenge.type === 'dice'){ goLounge(); goParlour(); } else if(nhChallenge.type === 'golf'){ goLounge(); goGolf(); } else goLounge(); }
+if(nhChallenge){
+  if(nhChallenge.type === 'dice'){ goLounge(); goParlour(); }
+  else if(nhChallenge.type === 'golf'){ goLounge(); goGolf(); }
+  else if(nhChallenge.type === 'duel'){ goLounge(); goDuel(); }
+  else if(nhChallenge.type === 'quiz'){ goLounge(); goExam(); }
+  else goLounge();
+}
 else if(nhFloor !== null){ if(nhFloor === 0) goLobby(); else goFloor(nhFloor); }
 
 /* ============ THE HOUSE SOUND ============ */

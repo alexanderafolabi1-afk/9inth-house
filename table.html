@@ -45,15 +45,28 @@ nav .links a:hover{color:var(--gold)}
 section{padding:60px 0}
 .sec-eyebrow{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);display:flex;align-items:center;gap:14px;margin-bottom:16px;font-weight:600}
 .sec-eyebrow::after{content:"";flex:1;height:1px;background:var(--line)}
+.sec-jupiter{text-align:center;color:var(--gold);font-family:'Marcellus',serif;font-size:16px;margin-bottom:10px;opacity:.85}
 h1{font-family:'Marcellus',serif;font-weight:400;font-size:clamp(30px,5vw,46px);line-height:1.15;color:var(--ink);margin-bottom:14px}
 h2{font-family:'Marcellus',serif;font-weight:400;font-size:clamp(22px,3.4vw,30px);line-height:1.2;margin-bottom:14px;color:var(--ink)}
 .lead{color:var(--muted);font-size:16.5px;max-width:680px}
 
 /* Register of engraved plaques */
 .register{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;margin-top:30px}
-.plaque{display:block;background:linear-gradient(160deg,#E3C176,#C9A557 45%,#A97F2F);border-radius:10px;padding:4px;box-shadow:0 5px 16px rgba(169,127,47,.28),inset 0 1px 0 rgba(255,253,248,.5);transition:transform .18s,box-shadow .18s}
-.plaque:hover{transform:translateY(-4px);box-shadow:0 12px 30px rgba(169,127,47,.5),inset 0 1px 0 rgba(255,253,248,.6)}
+.plaque{display:block;background:linear-gradient(160deg,#E3C176,#C9A557 45%,#A97F2F);border-radius:10px;padding:4px;box-shadow:0 5px 16px rgba(169,127,47,.28),inset 0 1px 0 rgba(255,253,248,.5)}
+.plaque:hover{box-shadow:0 12px 30px rgba(169,127,47,.5),inset 0 1px 0 rgba(255,253,248,.6)}
 .plaque .face{border:1px solid rgba(36,27,7,.4);border-radius:7px;padding:20px 18px;background:linear-gradient(#E9CE8C,#C9A557);height:100%}
+.plaque{position:relative;overflow:hidden}
+.plaque::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 40%,rgba(255,253,248,.55) 50%,transparent 60%);transform:translateX(-130%);pointer-events:none;border-radius:inherit;z-index:2}
+@media (prefers-reduced-motion:no-preference){
+  .plaque{transition:transform .4s ease,box-shadow .4s ease}
+  .plaque:hover:hover{transform:translateY(-2px)}
+  .plaque::after{transition:transform .4s ease}
+  .plaque:hover::after{transform:translateX(130%)}
+}
+@media (prefers-reduced-motion:reduce){
+  .plaque{transition:none}
+  .plaque:hover{transform:none}
+}
 .plaque b{display:block;font-family:'Marcellus',serif;font-weight:400;color:#241B07;font-size:17px;letter-spacing:.06em;line-height:1.2;text-shadow:0 1px 0 rgba(255,253,248,.4)}
 .plaque .city{display:block;font-family:'Spline Sans Mono',monospace;font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:rgba(36,27,7,.62);margin:7px 0 10px}
 .plaque i{display:block;width:26px;height:1px;background:rgba(36,27,7,.35);margin:0 0 10px}
@@ -61,7 +74,7 @@ h2{font-family:'Marcellus',serif;font-weight:400;font-size:clamp(22px,3.4vw,30px
 .plaque small{display:block;font-family:'Spline Sans Mono',monospace;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:rgba(36,27,7,.55);margin-top:11px}
 
 /* Restaurateur card */
-.reserve{margin-top:36px;background:var(--card);border:1px solid var(--gold-bright);border-radius:16px;padding:26px;box-shadow:0 4px 16px rgba(169,127,47,.12);max-width:680px}
+.reserve{margin-top:36px;background:var(--card);border:1px solid var(--gold-bright);border-radius:16px;padding:26px;box-shadow:0 4px 16px rgba(169,127,47,.12),inset 0 0 0 1px rgba(169,127,47,.2);max-width:680px}
 .reserve h3{font-family:'Marcellus',serif;font-weight:400;font-size:20px;color:var(--ink);margin-bottom:8px}
 .reserve p{color:var(--muted);font-size:14.5px;margin-bottom:16px}
 .btn{display:inline-flex;align-items:center;gap:8px;border-radius:12px;padding:12px 22px;font-weight:700;font-size:14px;border:1px solid var(--gold);color:#FFFDF8;background:var(--gold)}
@@ -98,6 +111,7 @@ footer .fine{text-align:center}
 
 <section style="padding-bottom:24px">
   <div class="wrap">
+    <div class="sec-jupiter">&#9795;</div>
     <div class="sec-eyebrow">The Concierge Desk</div>
     <h1>The House Table</h1>
     <p class="lead">Where the firm sends its guests. A short register, kept deliberately short.</p>
@@ -106,6 +120,7 @@ footer .fine{text-align:center}
 
 <section style="padding-top:0">
   <div class="wrap">
+    <div class="sec-jupiter">&#9795;</div>
     <div class="sec-eyebrow">The Register, First Sitting</div>
     <div class="register" id="register"></div>
   </div>

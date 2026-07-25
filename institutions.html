@@ -51,6 +51,7 @@ nav .links a:hover{color:var(--gold)}
 .hero::before{content:"\2643";position:absolute;font-family:'Marcellus',serif;font-size:440px;color:rgba(169,127,47,.06);top:-40px;right:-80px;pointer-events:none;line-height:1}
 .eyebrow,.sec-eyebrow{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);margin-bottom:16px;font-weight:600;display:flex;align-items:center;gap:14px}
 .sec-eyebrow::after{content:"";flex:1;height:1px;background:var(--line)}
+.sec-jupiter{text-align:center;color:var(--gold);font-family:'Marcellus',serif;font-size:16px;margin-bottom:10px;opacity:.85}
 h1{font-family:'Marcellus',serif;font-weight:400;font-size:clamp(32px,5.6vw,54px);line-height:1.14;max-width:800px;color:var(--ink);margin-bottom:22px}
 h2{font-family:'Marcellus',serif;font-weight:400;font-size:clamp(24px,3.6vw,32px);line-height:1.2;margin-bottom:14px;color:var(--ink)}
 .lead{color:var(--muted);font-size:17px;max-width:680px;margin-bottom:14px}
@@ -64,9 +65,21 @@ section{padding:60px 0}
 
 /* Engraved offer plaques */
 .offer-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px;margin-top:30px}
-.plaque{background:linear-gradient(160deg,#E3C176,#C9A557 45%,#A97F2F);border-radius:14px;padding:4px;box-shadow:0 5px 16px rgba(169,127,47,.28),inset 0 1px 0 rgba(255,253,248,.5);transition:transform .18s,box-shadow .18s;display:flex}
-.plaque:hover{transform:translateY(-4px);box-shadow:0 12px 30px rgba(169,127,47,.5),inset 0 1px 0 rgba(255,253,248,.6)}
+.plaque{background:linear-gradient(160deg,#E3C176,#C9A557 45%,#A97F2F);border-radius:14px;padding:4px;box-shadow:0 5px 16px rgba(169,127,47,.28),inset 0 1px 0 rgba(255,253,248,.5);display:flex}
+.plaque:hover{box-shadow:0 12px 30px rgba(169,127,47,.5),inset 0 1px 0 rgba(255,253,248,.6)}
 .plaque .face{border:1px solid rgba(36,27,7,.4);border-radius:11px;padding:24px 22px;background:linear-gradient(#E9CE8C,#C9A557);display:flex;flex-direction:column;flex:1}
+.plaque{position:relative;overflow:hidden}
+.plaque::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 40%,rgba(255,253,248,.55) 50%,transparent 60%);transform:translateX(-130%);pointer-events:none;border-radius:inherit;z-index:2}
+@media (prefers-reduced-motion:no-preference){
+  .plaque{transition:transform .4s ease,box-shadow .4s ease}
+  .plaque:hover:hover{transform:translateY(-2px)}
+  .plaque::after{transition:transform .4s ease}
+  .plaque:hover::after{transform:translateX(130%)}
+}
+@media (prefers-reduced-motion:reduce){
+  .plaque{transition:none}
+  .plaque:hover{transform:none}
+}
 .plaque b{display:block;font-family:'Marcellus',serif;font-weight:400;color:#241B07;font-size:19px;letter-spacing:.02em;line-height:1.25;text-shadow:0 1px 0 rgba(255,253,248,.4)}
 .plaque .oline{display:block;color:#3E2E1E;font-size:13.5px;line-height:1.5;margin-top:8px}
 .plaque i.rule{display:block;width:26px;height:1px;background:rgba(36,27,7,.35);margin:14px 0 12px}
@@ -118,6 +131,7 @@ footer .fine{text-align:center}
 
 <section style="padding-top:0">
   <div class="wrap">
+    <div class="sec-jupiter">&#9795;</div>
     <div class="sec-eyebrow">The Institutional Catalogue</div>
     <div class="offer-grid">
       <div class="plaque reveal">
