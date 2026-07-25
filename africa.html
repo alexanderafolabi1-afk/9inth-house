@@ -51,6 +51,7 @@ nav .links a:hover{color:var(--gold)}
 .hero::before{content:"\2643";position:absolute;font-family:'Marcellus',serif;font-size:440px;color:rgba(169,127,47,.06);top:-40px;right:-80px;pointer-events:none;line-height:1}
 .eyebrow,.sec-eyebrow{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);margin-bottom:16px;font-weight:600;display:flex;align-items:center;gap:14px}
 .sec-eyebrow::after{content:"";flex:1;height:1px;background:var(--line)}
+.sec-jupiter{text-align:center;color:var(--gold);font-family:'Marcellus',serif;font-size:16px;margin-bottom:10px;opacity:.85}
 h1{font-family:'Marcellus',serif;font-weight:400;font-size:clamp(30px,5.2vw,50px);line-height:1.16;max-width:800px;color:var(--ink);margin-bottom:22px}
 h2{font-family:'Marcellus',serif;font-weight:400;font-size:clamp(24px,3.6vw,32px);line-height:1.2;margin-bottom:14px;color:var(--ink)}
 .lead{color:var(--muted);font-size:17px;max-width:680px;margin-bottom:14px}
@@ -63,19 +64,42 @@ h2{font-family:'Marcellus',serif;font-weight:400;font-size:clamp(24px,3.6vw,32px
 section{padding:52px 0}
 
 /* Head of Desk */
-.desk-head{background:var(--card);border:1px solid var(--gold-bright);border-radius:20px;padding:26px;display:flex;gap:22px;align-items:flex-start;box-shadow:0 6px 24px rgba(169,127,47,.12);max-width:720px}
+.desk-head{background:var(--card);border:1px solid var(--gold-bright);border-radius:20px;padding:26px;display:flex;gap:22px;align-items:flex-start;box-shadow:0 6px 24px rgba(169,127,47,.12),inset 0 0 0 1px rgba(169,127,47,.2);max-width:720px}
 @media(max-width:560px){.desk-head{flex-direction:column;align-items:center;text-align:center}}
 .desk-head .avatar{width:110px;height:110px;border-radius:12px;border:1.5px solid var(--gold-bright);flex-shrink:0;position:relative;overflow:hidden;background:var(--band)}
 .desk-head .avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:11px}
+/* Image loading, reversed: the photo is the default layer over an ivory
+   shimmer placeholder; it fades in on load; the illustrated fallback is
+   hidden unless the photo errors. */
+.nh-shimmer{background:linear-gradient(100deg,#F4EDDC 0%,#FFFDF8 45%,#F4EDDC 90%);background-size:200% 100%;animation:nhShimmer 1.7s ease-in-out infinite}
+@keyframes nhShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.nh-shimmer.nh-settled{animation:none;background:none}
+.nh-photo{opacity:0;transition:opacity .25s ease}
+.nh-photo.nh-loaded{opacity:1}
+.nh-face{display:none}
+.nh-shimmer.nh-error .nh-face{display:block}
+@media(prefers-reduced-motion:reduce){.nh-shimmer{animation:none}}
 .desk-head h3{font-family:'Marcellus',serif;font-weight:400;font-size:22px;color:var(--ink)}
 .desk-head .role{color:var(--gold);font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;margin:4px 0 10px}
 .desk-head p{color:var(--muted);font-size:14.5px}
 
 /* Engraved offer plaques */
 .offer-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px;margin-top:30px}
-.plaque{background:linear-gradient(160deg,#E3C176,#C9A557 45%,#A97F2F);border-radius:14px;padding:4px;box-shadow:0 5px 16px rgba(169,127,47,.28),inset 0 1px 0 rgba(255,253,248,.5);transition:transform .18s,box-shadow .18s;display:flex}
-.plaque:hover{transform:translateY(-4px);box-shadow:0 12px 30px rgba(169,127,47,.5),inset 0 1px 0 rgba(255,253,248,.6)}
+.plaque{background:linear-gradient(160deg,#E3C176,#C9A557 45%,#A97F2F);border-radius:14px;padding:4px;box-shadow:0 5px 16px rgba(169,127,47,.28),inset 0 1px 0 rgba(255,253,248,.5);display:flex}
+.plaque:hover{box-shadow:0 12px 30px rgba(169,127,47,.5),inset 0 1px 0 rgba(255,253,248,.6)}
 .plaque .face{border:1px solid rgba(36,27,7,.4);border-radius:11px;padding:24px 22px;background:linear-gradient(#E9CE8C,#C9A557);display:flex;flex-direction:column;flex:1}
+.plaque{position:relative;overflow:hidden}
+.plaque::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 40%,rgba(255,253,248,.55) 50%,transparent 60%);transform:translateX(-130%);pointer-events:none;border-radius:inherit;z-index:2}
+@media (prefers-reduced-motion:no-preference){
+  .plaque{transition:transform .4s ease,box-shadow .4s ease}
+  .plaque:hover:hover{transform:translateY(-2px)}
+  .plaque::after{transition:transform .4s ease}
+  .plaque:hover::after{transform:translateX(130%)}
+}
+@media (prefers-reduced-motion:reduce){
+  .plaque{transition:none}
+  .plaque:hover{transform:none}
+}
 .plaque b{display:block;font-family:'Marcellus',serif;font-weight:400;color:#241B07;font-size:19px;letter-spacing:.02em;line-height:1.25;text-shadow:0 1px 0 rgba(255,253,248,.4)}
 .plaque .oline{display:block;color:#3E2E1E;font-size:13.5px;line-height:1.5;margin-top:8px}
 .plaque i.rule{display:block;width:26px;height:1px;background:rgba(36,27,7,.35);margin:14px 0 12px}
@@ -99,6 +123,17 @@ footer .fine{text-align:center}
 </style>
 </head>
 <body>
+<script>
+function nhPhotoLoad(img){
+  img.classList.add('nh-loaded');
+  const wrap = img.closest('.nh-shimmer'); if(wrap) wrap.classList.add('nh-settled');
+}
+function nhPhotoFail(img){
+  const wrap = img.closest('.nh-shimmer');
+  img.remove();
+  if(wrap) wrap.classList.add('nh-error');
+}
+</script>
 <nav>
   <div class="wrap">
     <a href="./" style="display:flex;align-items:center;gap:12px"><div class="glyph">&#9795;</div><b>Ninth House</b></a>
@@ -127,9 +162,10 @@ footer .fine{text-align:center}
 
 <section style="padding-top:0">
   <div class="wrap">
+    <div class="sec-jupiter">&#9795;</div>
     <div class="sec-eyebrow">Head of Desk</div>
     <div class="desk-head reveal">
-      <div class="avatar"><svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%"><circle cx="60" cy="60" r="60" fill="#F4EDDC"/><circle cx="60" cy="60" r="55" fill="none" stroke="#C9A557" stroke-width="1.4" stroke-dasharray="1 3" opacity=".8"/><path d="M26 118 Q30 86 60 84 Q90 86 94 118 Z" fill="#A97F2F"/><path d="M50 92 L60 104 L70 92 Q60 88 50 92 Z" fill="#FBF7EE"/><circle cx="60" cy="52" r="23" fill="#7C4A21"/><circle cx="60" cy="24" r="9" fill="#2A2320"/><path d="M37 52 Q37 26 60 26 Q83 26 83 52 Q80 34 60 33 Q40 34 37 52 Z" fill="#2A2320"/><circle cx="51" cy="50" r="2.6" fill="#1C2128"/><circle cx="69" cy="50" r="2.6" fill="#1C2128"/><path d="M50 60 Q60 70 70 60" fill="none" stroke="#1C2128" stroke-width="2.6" stroke-linecap="round"/><circle cx="44" cy="58" r="3.4" fill="#E8A98F" opacity=".55"/><circle cx="76" cy="58" r="3.4" fill="#E8A98F" opacity=".55"/><circle cx="37" cy="58" r="3" fill="#C9A557"/><circle cx="83" cy="58" r="3" fill="#C9A557"/></svg><img src="avatars/adaeze.jpg" alt="Portrait of Adaeze Nwosu" onerror="this.remove()"></div>
+      <div class="avatar nh-shimmer"><span class="nh-face"><svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%"><circle cx="60" cy="60" r="60" fill="#F4EDDC"/><circle cx="60" cy="60" r="55" fill="none" stroke="#C9A557" stroke-width="1.4" stroke-dasharray="1 3" opacity=".8"/><path d="M26 118 Q30 86 60 84 Q90 86 94 118 Z" fill="#A97F2F"/><path d="M50 92 L60 104 L70 92 Q60 88 50 92 Z" fill="#FBF7EE"/><circle cx="60" cy="52" r="23" fill="#7C4A21"/><circle cx="60" cy="24" r="9" fill="#2A2320"/><path d="M37 52 Q37 26 60 26 Q83 26 83 52 Q80 34 60 33 Q40 34 37 52 Z" fill="#2A2320"/><circle cx="51" cy="50" r="2.6" fill="#1C2128"/><circle cx="69" cy="50" r="2.6" fill="#1C2128"/><path d="M50 60 Q60 70 70 60" fill="none" stroke="#1C2128" stroke-width="2.6" stroke-linecap="round"/><circle cx="44" cy="58" r="3.4" fill="#E8A98F" opacity=".55"/><circle cx="76" cy="58" r="3.4" fill="#E8A98F" opacity=".55"/><circle cx="37" cy="58" r="3" fill="#C9A557"/><circle cx="83" cy="58" r="3" fill="#C9A557"/></svg></span><img class="nh-photo" src="avatars/adaeze.jpg" alt="Portrait of Adaeze Nwosu" onload="nhPhotoLoad(this)" onerror="nhPhotoFail(this)"></div>
       <div>
         <h3>Adaeze Nwosu</h3>
         <div class="role">Head of Growth, African Markets &middot; Head of Desk</div>
@@ -141,6 +177,7 @@ footer .fine{text-align:center}
 
 <section style="padding-top:0">
   <div class="wrap">
+    <div class="sec-jupiter">&#9795;</div>
     <div class="sec-eyebrow">The Desk's Offers</div>
     <div class="offer-grid">
       <div class="plaque reveal">
