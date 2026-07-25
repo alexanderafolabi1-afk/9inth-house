@@ -24,7 +24,34 @@ nav b{font-family:'Marcellus',serif;font-weight:400;letter-spacing:.14em;text-tr
 nav .links{margin-left:auto;display:flex;gap:22px;font-size:13px;align-items:center}
 nav .links a{color:var(--muted);font-weight:500;text-decoration:none}
 nav .links a:hover{color:var(--gold)}
-@media(max-width:640px){nav .links a:not(.cta){display:none}}
+.nav-drop{position:relative;display:flex;align-items:center}
+.nav-drop-btn{background:none;border:none;color:var(--muted);font-weight:500;font-size:13px;font-family:'Albert Sans',sans-serif;cursor:pointer;padding:4px 0;display:flex;align-items:center;gap:5px;text-decoration:none}
+.nav-drop-btn:hover,.nav-drop.open>.nav-drop-btn{color:var(--gold)}
+.nav-drop-btn::after{content:"";width:6px;height:6px;border-right:1.4px solid currentColor;border-bottom:1.4px solid currentColor;transform:rotate(45deg);margin-top:-3px}
+.nav-drop-panel{position:absolute;top:calc(100% + 14px);left:50%;transform:translateX(-50%) translateY(6px);min-width:236px;background:var(--card);border:1px solid var(--gold-bright);border-radius:14px;padding:10px;box-shadow:0 14px 34px rgba(28,33,40,.16),inset 0 0 0 1px rgba(169,127,47,.14);display:flex;flex-direction:column;gap:1px;opacity:0;visibility:hidden;transition:opacity .16s ease,transform .16s ease;z-index:60}
+.nav-drop-panel a{display:block;color:#3A4048 !important;font-weight:500;font-size:13.5px;padding:9px 12px;border-radius:8px;text-decoration:none}
+.nav-drop-panel a:hover{background:var(--band);color:var(--gold) !important}
+.nav-drop-rule{height:1px;background:var(--line);margin:6px 4px}
+@media(hover:hover){.nav-drop:hover .nav-drop-panel{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0)}}
+.nav-drop.open .nav-drop-panel{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0)}
+.nav-toggle{display:none;background:none;border:none;width:38px;height:38px;border-radius:10px;cursor:pointer;flex-direction:column;align-items:center;justify-content:center;gap:5px}
+.nav-toggle span{display:block;width:20px;height:2px;background:var(--ink);border-radius:2px;transition:transform .2s,opacity .2s}
+.nav-toggle.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+.nav-toggle.open span:nth-child(2){opacity:0}
+.nav-toggle.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+@media(max-width:640px){
+  .nav-toggle{display:flex;margin-left:auto}
+  nav .links{position:fixed;inset:0;margin:0;background:var(--bg);flex-direction:column;align-items:stretch;justify-content:flex-start;gap:0;padding:90px 26px 40px;overflow-y:auto;opacity:0;visibility:hidden;transform:translateY(-8px);transition:opacity .2s ease,transform .2s ease}
+  nav .links.open{opacity:1;visibility:visible;transform:none}
+  nav .links>a,.nav-drop-btn{font-size:19px;padding:15px 2px;border-bottom:1px solid var(--line);width:100%;text-align:left;justify-content:space-between}
+  nav .links>a.cta-btn{border-bottom:none;justify-content:center;text-align:center;margin-top:20px}
+  .nav-drop{flex-direction:column;align-items:stretch;display:block}
+  .nav-drop-panel{position:static;opacity:1;visibility:visible;transform:none;box-shadow:none;border:none;background:none;padding:0 0 4px 10px;min-width:0;display:none}
+  .nav-drop.open .nav-drop-panel{display:flex}
+  .nav-drop-panel a{font-size:16px;padding:12px 4px;color:var(--muted) !important}
+  .nav-drop-rule{margin:4px 0 4px 4px}
+}
+@media (prefers-reduced-motion:reduce){nav .links,.nav-toggle span,.nav-drop-panel{transition:none}}
 .cta-btn{background:#A97F2F;color:#FFFDF8 !important;font-weight:700;padding:10px 20px;border-radius:10px;font-size:13px;text-decoration:none}
 .cta-btn:hover{background:#8F7434;color:#FFFDF8 !important}
 h1{font-family:'Marcellus',serif;font-weight:400;font-size:32px;line-height:1.2;color:#1C2128}
@@ -42,19 +69,60 @@ footer .fine{text-align:center}
 <nav>
   <div class="nav-wrap">
     <a href="../" style="display:flex;align-items:center;gap:12px;text-decoration:none"><div class="glyph">&#9795;</div><b>Ninth House</b></a>
-    <div class="links">
+    <button class="nav-toggle" id="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-menu" aria-label="Open menu"><span></span><span></span><span></span></button>
+    <div class="links" id="nav-menu">
       <a href="../firm.html">The Firm</a>
       <a href="../clientele.html">Clientele</a>
+      <div class="nav-drop" id="nav-drop-desks">
+        <button class="nav-drop-btn" type="button" aria-haspopup="true" aria-expanded="false">The Desks</button>
+        <div class="nav-drop-panel">
+          <a href="../africa.html">The Africa Desk</a>
+          <a href="../americas.html">The Americas Desk</a>
+          <a href="../emea.html">The Europe and Middle East Desk</a>
+          <a href="../apac.html">The Asia Pacific Desk</a>
+          <div class="nav-drop-rule"></div>
+          <a href="../institutions.html">Institutions</a>
+          <a href="../table.html">The House Table</a>
+        </div>
+      </div>
       <a href="./" style="color:var(--gold)">Journal</a>
       <a href="../observatory.html">Observatory</a>
-      <a href="../institutions.html">Institutions</a>
-      <a href="../africa.html">Africa Desk</a>
-      <a href="../table.html">The Table</a>
       <a href="../charter.html">The Charter</a>
       <a class="cta-btn cta" href="../#engage">Engage Us</a>
     </div>
   </div>
 </nav>
+<script>
+(function(){
+  var toggle = document.getElementById('nav-toggle');
+  var menu = document.getElementById('nav-menu');
+  var drop = document.getElementById('nav-drop-desks');
+  var dropBtn = drop ? drop.querySelector('.nav-drop-btn') : null;
+  function closeAll(){
+    if(menu) menu.classList.remove('open');
+    if(toggle){ toggle.classList.remove('open'); toggle.setAttribute('aria-expanded','false'); }
+    if(drop) drop.classList.remove('open');
+    if(dropBtn) dropBtn.setAttribute('aria-expanded','false');
+  }
+  if(toggle && menu){
+    toggle.addEventListener('click', function(){
+      var open = menu.classList.toggle('open');
+      toggle.classList.toggle('open', open);
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    Array.prototype.forEach.call(menu.querySelectorAll('a'), function(a){ a.addEventListener('click', closeAll); });
+  }
+  if(drop && dropBtn){
+    dropBtn.addEventListener('click', function(e){
+      e.stopPropagation();
+      var open = drop.classList.toggle('open');
+      dropBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    document.addEventListener('click', function(e){ if(!drop.contains(e.target)){ drop.classList.remove('open'); dropBtn.setAttribute('aria-expanded','false'); } });
+    document.addEventListener('keydown', function(e){ if(e.key === 'Escape') closeAll(); });
+  }
+})();
+</script>
 <div class="wrap">
 <h1>One Person Business Marketing Systems That Actually Work</h1>
 <div class="date">2026-07-21 · The Ninth Times</div>
