@@ -430,6 +430,28 @@ footer .fine{text-align:center}
 #lift-barnaby{font-size:12px;color:#A79F8C;max-width:190px;margin:0 auto;line-height:1.45;font-style:italic}
 .lift-skip{font-size:9.5px;color:#6E7683;letter-spacing:.18em;text-transform:uppercase;margin-top:12px}
 
+/* The Visitor's Pass ceremony */
+#pass-card{position:absolute;inset:0;z-index:17;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;visibility:hidden;padding:20px;transition:opacity .2s ease}
+#pass-card.show{opacity:1;visibility:visible;pointer-events:all}
+.pass-box{background:linear-gradient(160deg,#FBF7EE,#F4EDDC);border:1.5px solid #C9A557;border-radius:16px;padding:26px 24px;max-width:320px;width:100%;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.5),inset 0 0 0 1px rgba(169,127,47,.25);position:relative}
+.pass-glyph{font-family:'Marcellus',serif;font-size:26px;color:#A97F2F;margin-bottom:4px}
+.pass-box h4{font-family:'Marcellus',serif;font-weight:400;font-size:17px;color:#1C2128;margin-bottom:8px}
+.pass-copy{font-size:13px;color:#3A4048;margin-bottom:14px;line-height:1.5}
+.pass-fine{font-size:11px;color:#6E6858;margin:8px 0 14px}
+.pass-input{width:100%;border:1px solid #E4DCC6;border-radius:10px;padding:10px 12px;font-family:'Albert Sans',sans-serif;font-size:13.5px;background:#FFFDF8;color:#1C2128;outline:none;margin-bottom:8px}
+.pass-input:focus{border-color:#C9A557}
+.pass-actions{display:flex;gap:8px;margin-top:6px}
+.pass-close{position:absolute;top:10px;right:10px;width:26px;height:26px;border-radius:50%;border:1px solid #E4DCC6;background:#FFFDF8;color:#6E6858;font-size:15px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.pass-close:hover{color:#A97F2F;border-color:#C9A557}
+.pass-stamp{display:none;flex-direction:column;align-items:center;gap:6px}
+.pass-stamp.show{display:flex}
+.pass-stamp-glyph{font-family:'Marcellus',serif;font-size:40px;color:#A97F2F}
+.pass-stamp-text{font-family:'Spline Sans Mono',monospace;font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:#1C2128;border:1.5px solid #A97F2F;border-radius:8px;padding:8px 14px}
+@media (prefers-reduced-motion:no-preference){
+  .pass-stamp.show{animation:passStampIn .5s cubic-bezier(.2,.8,.3,1.15)}
+}
+@keyframes passStampIn{0%{transform:scale(2) rotate(-10deg);opacity:0}60%{transform:scale(.94) rotate(2deg);opacity:1}100%{transform:scale(1) rotate(-2deg);opacity:1}}
+
 </style>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"ProfessionalService","name":"Ninth House Growth Partners","alternateName":"Ninth House","description":"A global growth and marketing studio operated by AI partner personas under the oversight and final authority of one human Chief Executive.","parentOrganization":{"@type":"Organization","name":"Lyrion Ltd"},"founder":{"@type":"Person","name":"Alexander Afolabi","jobTitle":"Chief Executive"},"areaServed":["North America","Europe","Asia","Middle East","Africa","Latin America"],"knowsAbout":["brand strategy","performance marketing","SEO","social media marketing","video production","public relations","CRM","market research","grant funding"],"slogan":"The output of a funded agency. The payroll of none."}
@@ -507,6 +529,19 @@ footer .fine{text-align:center}
   <button id="tw-sound" aria-pressed="false" aria-label="House sound, off" title="House sound" onclick="soundToggle(this)"><span class="note">&#9834;</span> House sound</button>
   <div id="tw-avail"><div class="box"><div class="spin2"></div><p id="tw-avail-txt" style="font-family:'Marcellus',serif;font-size:17px;color:var(--ink)"></p></div></div>
 </div>
+
+<!-- The Ledger of Visitors: a free-standing record of each pass issued, sent
+     straight to the keeper with zero backend. CEO: create a free form at
+     https://formspree.io, then replace FORMSPREE_ID below with your real
+     form ID. Until then this submission fails silently and the ceremony
+     is unaffected either way. -->
+<form id="pass-ledger-form" action="https://formspree.io/f/FORMSPREE_ID" method="POST" style="display:none" aria-hidden="true">
+  <input type="text" name="name">
+  <input type="email" name="email">
+  <input type="text" name="floor requested">
+  <input type="text" name="timestamp">
+  <input type="hidden" name="_subject" value="A Visitor's Pass was issued">
+</form>
 
 <div id="brochure"></div>
 <div class="strip">
@@ -729,16 +764,39 @@ function publicOpener(){
   return g + ' Welcome to Ninth House. Barnaby Sterling, Front of House.';
 }
 
-const MAIN = ()=>[
-  ['What is this place?', explain],
-  ['I need marketing help', sell],
-  ['Book a meeting', book],
-  ['Instant line &#128222;', instant]
-];
+const MAIN = ()=>{
+  const base = [
+    ['What is this place?', explain],
+    ['I need marketing help', sell],
+    ['Book a meeting', book],
+    ['Instant line &#128222;', instant]
+  ];
+  if(window.nhIsKeeper && window.nhIsKeeper()) return base;
+  if(window.nhHasPass && window.nhHasPass()) return base.concat([['Hand back your pass', handBackPassChat]]);
+  return base.concat([['I need a pass', needAPassChat]]);
+};
 const MAIN_KEEPER = ()=> MAIN().concat([['Sign out of the staff book', keeperSignOut]]);
 function keeperSignOut(){
   window.nhKeeperOut();
   say(["Signed out of the staff book, sir. The house will greet you as a guest until you sign in again."], MAIN());
+}
+function needAPassChat(){
+  say(["Of course. One moment while I fetch the card."]);
+  setTimeout(()=>{
+    if(!window.nhOpenPassCeremony) return;
+    window.nhOpenPassCeremony(function(issued){
+      const pass = window.nhPassObj && window.nhPassObj();
+      if(issued && pass){
+        say(["Pass issued, and rather smartly done. Every floor above the Lounge is yours now, " + escTxt(pass.name) + "."], MAIN());
+      } else {
+        say(["As you wish. The Lounge and the ground floor keep their doors open regardless."], MAIN());
+      }
+    });
+  }, 500);
+}
+function handBackPassChat(){
+  window.nhHandBackPass();
+  say(["Pass returned to the desk, no questions asked. You are welcome to sign for a fresh one whenever you like."], MAIN());
 }
 
 function greet(){
@@ -748,6 +806,17 @@ function greet(){
       "The floor is yours, as ever. Nineteen partners at their desks and the seal within reach.",
       "How may I serve you?"
     ], MAIN_KEEPER());
+    return;
+  }
+  const pass = window.nhPassObj && window.nhPassObj();
+  if(pass && pass.name){
+    const h = fdHour();
+    const g = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : h < 21 ? 'Good evening' : 'A late hour, and the house still lit';
+    say([
+      g + ', ' + escTxt(pass.name) + '. Your pass still opens every floor.',
+      "The partners are in session at the moment. Nineteen of them. Someone is defending a comma and I fear it may go to a vote.",
+      "How may I direct you?"
+    ], MAIN());
     return;
   }
   say([
@@ -760,6 +829,7 @@ function explain(){
   say([
     "Ah, the tour. Ninth House is the world's first openly AI-operated growth studio: nineteen partners across six departments and six continents, one human Chief Executive holding the seal.",
     "Strategy, brand, film, performance media, SEO, PR, finance, research, impact, funding. The whole orchestra, awake at 3am, and not one of them bills for lunch.",
+    "The exterior, the lobby and the Lounge are open to anyone. Above that, a free Visitor's Pass opens every floor, issued at the desk in a moment and asking nothing but a name and an email.",
     "Every piece of work is approved by the human before it touches the world. We are transparent about what we are. Refreshing, I'm told."
   ], [['Sounds expensive&hellip;', sell],['Book a meeting', book],['Instant line &#128222;', instant]]);
 }
@@ -909,6 +979,51 @@ TW.partners.forEach(p=>{ twBusyMap[p.id] = Math.random() < .45; });
 setInterval(()=>{ const p = TW.partners[Math.floor(Math.random()*TW.partners.length)]; twBusyMap[p.id] = !twBusyMap[p.id];
   document.querySelectorAll('.tw-door[data-pid="'+p.id+'"] .lamp').forEach(l=>{ l.className = 'lamp ' + (twBusyMap[p.id]?'busy':'free'); });
 }, 5000);
+
+/* ============ THE VISITOR'S PASS ============ */
+/* Exterior, Lobby and the Lounge are free. Every floor above requires a
+   pass, unless the keeper flag is set. The pass is free; the ask is honest:
+   a first name and an email, kept on this device and sent to the desk. */
+window.nhHasPass = function(){ try{ return !!localStorage.getItem('nh_pass'); }catch(e){ return false; } };
+window.nhPassObj = function(){ try{ return JSON.parse(localStorage.getItem('nh_pass') || 'null'); }catch(e){ return null; } };
+window.nhFloorNeedsPass = function(f){ return f !== 0 && f !== 1; };
+window.nhCanEnter = function(f){ return !window.nhFloorNeedsPass(f) || (window.nhIsKeeper && window.nhIsKeeper()) || window.nhHasPass(); };
+function nhPassNo(){
+  let n = 0;
+  try{ n = parseInt(localStorage.getItem('nh_pass_seq') || '0', 10) || 0; }catch(e){}
+  n = 400 + (n % 600) + Math.floor(Math.random() * 17);
+  return String(n).padStart(4, '0');
+}
+window.nhIssuePass = function(name, email, floorLabel){
+  const obj = { name: name.slice(0, 24), email: email.slice(0, 80), no: nhPassNo(), ts: new Date().toISOString() };
+  try{ localStorage.setItem('nh_pass', JSON.stringify(obj)); }catch(e){}
+  try{
+    const d = JSON.parse(localStorage.getItem('nh_pass_stats') || 'null');
+    const today = new Date().toISOString().slice(0, 10);
+    const base = (d && d.day === today) ? d : { day: today, n: 30 + Math.floor(Math.random() * 40) };
+    base.n++;
+    localStorage.setItem('nh_pass_stats', JSON.stringify(base));
+  }catch(e){}
+  try{
+    const form = document.getElementById('pass-ledger-form');
+    if(form){
+      form.name.value = obj.name; form.email.value = obj.email;
+      form.querySelector('[name="floor requested"]').value = floorLabel || '';
+      form.querySelector('[name="timestamp"]').value = obj.ts;
+      fetch(form.action, { method: 'POST', body: new FormData(form), headers: { Accept: 'application/json' } }).catch(()=>{});
+    }
+  }catch(e){ /* the ceremony proceeds regardless; the ledger is a courtesy, not a dependency */ }
+  return obj;
+};
+window.nhHandBackPass = function(){ try{ localStorage.removeItem('nh_pass'); }catch(e){} };
+window.nhPassTodayCount = function(){
+  try{
+    const today = new Date().toISOString().slice(0, 10);
+    const d = JSON.parse(localStorage.getItem('nh_pass_stats') || 'null');
+    if(d && d.day === today) return d.n;
+  }catch(e){}
+  return 30 + Math.floor(Math.random() * 12);
+};
 
 function face(id, extra){ return '<div style="position:relative;overflow:hidden;border-radius:50%;'+(extra||'width:64px;height:64px')+'">'+ (FACES[id]||'') +'</div>'; }
 
@@ -1251,6 +1366,7 @@ function goLobby(){
    <div class="tw-panel">
      <h3>Reception</h3>
      <p id="tw-ticker" style="font-family:'Spline Sans Mono',monospace;font-size:11px;color:var(--gold);min-height:16px;margin-bottom:6px"></p>
+     ${(!(window.nhIsKeeper&&window.nhIsKeeper()) && window.nhHasPass && window.nhHasPass() && window.nhPassObj()) ? `<p style="font-family:'Spline Sans Mono',monospace;font-size:11px;letter-spacing:.05em;color:var(--muted);margin-bottom:6px">Pass holder: ${escTxt(window.nhPassObj().name)}</p>` : ''}
      <p>${(window.nhIsKeeper&&window.nhIsKeeper())?'Welcome, Keeper of the Seal. The desk stands ready, the lift is to your left, and the house is exactly as you left it.':(twGuest?('Welcome back, '+twGuest+'. Your visitor badge still suits you.'):'Barnaby is at the desk, the lift is to your left, and the directory never lies.')} Where to?</p>
      ${twGuest?'':'<div style="display:flex;gap:8px;margin-top:10px"><input id="tw-guest-in" placeholder="Sign the visitors\' book (first name)" style="flex:1;border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-family:\'Albert Sans\',sans-serif;font-size:13px;background:var(--band);color:var(--ink);outline:none"><button class="tw-btn gold" onclick="twSign()">Sign in</button></div>'}
      <div class="tw-actions">
@@ -2436,6 +2552,7 @@ let tki = 0;
 setInterval(()=>{
   const el = document.getElementById('tw-ticker'); if(!el) return;
   if(window.nhIsKeeper && window.nhIsKeeper() && Math.random() < 0.2){ el.textContent = '\u2643 The Keeper is in the building'; return; }
+  if(window.nhPassTodayCount && Math.random() < 0.15){ el.textContent = '\u2643 Passes issued today: ' + window.nhPassTodayCount(); return; }
   el.textContent = '\u2643 ' + TICKER[tki = (tki+1)%TICKER.length];
 }, 3800);
 
@@ -2579,12 +2696,38 @@ window.soundToggle = function(btn){
         '<div id="lift-barnaby"></div>' +
         '<div class="lift-skip">tap to skip</div>' +
       '</div>' +
+    '</div>' +
+    '<div id="pass-card">' +
+      '<div class="pass-box">' +
+        '<button class="pass-close" id="pass-decline" type="button" aria-label="Not now">&times;</button>' +
+        '<div id="pass-form-wrap">' +
+          '<div class="pass-glyph">&#9795;</div>' +
+          '<h4>The Visitor’s Pass</h4>' +
+          '<p class="pass-copy">The upper floors are by pass. Barnaby will issue yours at the desk.</p>' +
+          '<input class="pass-input" id="pass-name" placeholder="First name" maxlength="24">' +
+          '<input class="pass-input" id="pass-email" type="email" placeholder="Email">' +
+          '<p class="pass-fine">Your details reach the concierge desk and nothing else.</p>' +
+          '<div class="pass-actions"><button class="tw-btn gold" id="pass-submit" type="button" style="width:100%;justify-content:center">Issue my pass</button></div>' +
+        '</div>' +
+        '<div class="pass-stamp" id="pass-stamp">' +
+          '<span class="pass-stamp-glyph">&#9795;</span>' +
+          '<span class="pass-stamp-text" id="pass-stamp-text"></span>' +
+        '</div>' +
+      '</div>' +
     '</div>';
   document.getElementById('tower').appendChild(ov);
 
   const doorL = document.getElementById('lift-door-l');
   const doorR = document.getElementById('lift-door-r');
   const cabin = document.getElementById('lift-cabin');
+  const passCardEl = document.getElementById('pass-card');
+  const passNameIn = document.getElementById('pass-name');
+  const passEmailIn = document.getElementById('pass-email');
+  const passSubmitBtn = document.getElementById('pass-submit');
+  const passDeclineBtn = document.getElementById('pass-decline');
+  const passFormWrap = document.getElementById('pass-form-wrap');
+  const passStampEl = document.getElementById('pass-stamp');
+  const passStampText = document.getElementById('pass-stamp-text');
 
   let busy = false;
   let currentFloor = 0;
@@ -2601,6 +2744,42 @@ window.soundToggle = function(btn){
     'Barnaby oiled these cables personally. You are welcome.',
     'The ninth floor carpet is quieter. You will see why.'
   ];
+  const DECLINE_LINES = [
+    'The Lounge asks no questions. Upstairs does.',
+    'Very well. The ground floor keeps its charms.',
+    'No pass, no bother. The games are still yours.'
+  ];
+
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  function showPassCard(f, onIssued, onDecline){
+    passNameIn.value = ''; passEmailIn.value = '';
+    passNameIn.style.borderColor = ''; passEmailIn.style.borderColor = '';
+    passFormWrap.style.display = 'block';
+    passStampEl.classList.remove('show');
+    passCardEl.classList.add('show');
+    passSubmitBtn.onclick = function(){
+      const name = passNameIn.value.trim().slice(0, 24);
+      const email = passEmailIn.value.trim();
+      const nameOk = !!name, emailOk = EMAIL_RE.test(email);
+      passNameIn.style.borderColor = nameOk ? '' : '#B5563F';
+      passEmailIn.style.borderColor = emailOk ? '' : '#B5563F';
+      if(!nameOk || !emailOk) return;
+      const floorLabel = (typeof f === 'number') ? ((TW.floors && TW.floors[f]) || ('Floor ' + f)) : (f || 'The front desk');
+      const pass = window.nhIssuePass(name, email, floorLabel);
+      passSubmitBtn.onclick = null; passDeclineBtn.onclick = null;
+      passFormWrap.style.display = 'none';
+      const shown = name.charAt(0).toUpperCase() + name.slice(1);
+      passStampText.textContent = 'PASS ' + pass.no + ' issued to ' + shown;
+      passStampEl.classList.add('show');
+      playDing();
+      setTimeout(function(){ passCardEl.classList.remove('show'); onIssued(); }, 1500);
+    };
+    passDeclineBtn.onclick = function(){
+      passSubmitBtn.onclick = null; passDeclineBtn.onclick = null;
+      passCardEl.classList.remove('show');
+      onDecline();
+    };
+  }
 
   document.addEventListener('pointerdown', function(){ hadGesture = true; }, { once: true });
 
@@ -2658,8 +2837,22 @@ window.soundToggle = function(btn){
   var _orig = window.goFloor;
 
   window.goFloor = function(f){
+    if (passCardEl.classList.contains('show')) return;
+    var gated = window.nhFloorNeedsPass(f) && !window.nhCanEnter(f);
+
     /* Honour prefers-reduced-motion */
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      if (gated) {
+        ov.style.pointerEvents = 'all';
+        showPassCard(f, function(){
+          ov.style.pointerEvents = 'none';
+          currentFloor = f;
+          _orig(f);
+        }, function(){
+          ov.style.pointerEvents = 'none';
+        });
+        return;
+      }
       currentFloor = f;
       _orig(f);
       return;
@@ -2673,14 +2866,14 @@ window.soundToggle = function(btn){
     busy = true;
 
     var from = currentFloor;
-    currentFloor = f;
+    if (!gated) currentFloor = f;
     var up = f >= from;
 
     /* Disable lift buttons */
     document.querySelectorAll('.tw-fbtn').forEach(function(b){ b.disabled = true; });
 
     ov.style.pointerEvents = 'all';
-    humStart();
+    if (!gated) humStart();
 
     /* Close doors */
     var ease = 'cubic-bezier(0.4,0,0.6,1)';
@@ -2711,7 +2904,29 @@ window.soundToggle = function(btn){
       }, 350);
     }
 
-    setTimeout(function(){
+    function reopenWithoutRiding(line){
+      done = true;
+      humStop();
+      doorL.style.transition = 'transform 0.35s ' + ease;
+      doorR.style.transition = 'transform 0.35s ' + ease;
+      doorL.style.transform = 'translateX(-100%)';
+      doorR.style.transform = 'translateX(100%)';
+      var barnaby = document.getElementById('lift-barnaby');
+      var arrow = document.getElementById('lift-arrow');
+      var counter = document.getElementById('lift-counter');
+      arrow.textContent = ''; counter.textContent = '';
+      barnaby.textContent = line;
+      cabin.style.opacity = '1';
+      setTimeout(function(){
+        ov.style.pointerEvents = 'none';
+        busy = false;
+        currentFloor = from;
+        document.querySelectorAll('.tw-fbtn').forEach(function(b){ b.disabled = false; });
+        setTimeout(function(){ cabin.style.opacity = '0'; }, 1800);
+      }, 350);
+    }
+
+    function beginRide(){
       if (done) return;
       /* Allow tap-to-skip once doors are closed */
       ov.addEventListener('click', arrive, { once: true });
@@ -2742,6 +2957,21 @@ window.soundToggle = function(btn){
       }, interval);
 
       cabinTimer = setTimeout(arrive, 900);
+    }
+
+    setTimeout(function(){
+      if (done) return;
+      if (gated) {
+        showPassCard(f, function(){
+          currentFloor = f;
+          humStart();
+          beginRide();
+        }, function(){
+          reopenWithoutRiding(DECLINE_LINES[Math.floor(Math.random() * DECLINE_LINES.length)]);
+        });
+        return;
+      }
+      beginRide();
     }, 350);
   };
 
@@ -2749,6 +2979,19 @@ window.soundToggle = function(btn){
      goLobby is always defined by the tower engine script above; the && guard is belt-and-suspenders. */
   var _goLobby = window.goLobby;
   window.goLobby = function(){ currentFloor = 0; _goLobby && _goLobby(); };
+
+  /* Barnaby can open the same ceremony from the chat, unconnected to any lift ride. */
+  window.nhOpenPassCeremony = function(onDone){
+    if (passCardEl.classList.contains('show')) return;
+    ov.style.pointerEvents = 'all';
+    showPassCard('The front desk', function(){
+      ov.style.pointerEvents = 'none';
+      if (onDone) onDone(true);
+    }, function(){
+      ov.style.pointerEvents = 'none';
+      if (onDone) onDone(false);
+    });
+  };
 })();
 </script>
 
