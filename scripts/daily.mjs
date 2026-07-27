@@ -314,6 +314,9 @@ const PRESS_NAV = `<nav>
           <a href="../institutions.html">Institutions</a>
           <a href="../table.html">The House Table</a>
           <a href="../success.html">The Portfolio</a>
+        <div class="nav-drop-rule"></div>
+        <a href="../start.html">Before You Engage</a>
+        <a href="../method.html">The Docket System</a>
         </div>
       </div>
       <a href="./" style="color:var(--gold)">Journal</a>

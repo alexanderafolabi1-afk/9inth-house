@@ -120,6 +120,14 @@ h2::before{content:"\2643";display:block;text-align:center;color:var(--gold);fon
 .brief p.wl{padding-left:20px;position:relative}
 .brief p.wl::before{content:"\2643";position:absolute;left:0;color:var(--gold-bright);font-size:12px}
 
+/* Docket Archive */
+.docket-log{margin-top:26px;display:flex;flex-direction:column;gap:2px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:6px 22px}
+.docket-item{padding:14px 0;border-bottom:1px dashed var(--line);display:flex;gap:16px;align-items:baseline;flex-wrap:wrap}
+.docket-item:last-child{border-bottom:none}
+.docket-shift{font-family:'Spline Sans Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);font-weight:700;flex-shrink:0;min-width:108px}
+.docket-date{font-family:'Spline Sans Mono',monospace;font-size:10.5px;color:var(--faint);flex-shrink:0}
+.docket-note{color:var(--body);font-size:14px;line-height:1.5;flex:1 1 260px}
+
 /* Estate plaques */
 .estate-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(195px,1fr));gap:14px;margin-top:30px}
 .plaque{display:block;cursor:pointer;background:linear-gradient(160deg,#E3C176,#C9A557 45%,#A97F2F);border-radius:10px;padding:4px;box-shadow:0 5px 16px rgba(169,127,47,.28),inset 0 1px 0 rgba(255,253,248,.5)}
@@ -263,6 +271,9 @@ footer .fine{text-align:center}
           <a href="institutions.html">Institutions</a>
           <a href="table.html">The House Table</a>
           <a href="success.html">The Portfolio</a>
+        <div class="nav-drop-rule"></div>
+        <a href="start.html">Before You Engage</a>
+        <a href="method.html">The Docket System</a>
         </div>
       </div>
       <a href="press/">Journal</a>
@@ -378,6 +389,15 @@ footer .fine{text-align:center}
     <h2>Filed by the Observatory Desk, every shift.</h2>
     <p class="lead" style="margin-bottom:26px">World, markets, technology and sport in five lines apiece. Read with UK eyes, written for the whole map.</p>
     <div id="wire-body"><p class="recal">The wire is warming up. The first brief lands with the next shift.</p></div>
+  </div>
+</section>
+
+<section style="padding-top:20px">
+  <div class="wrap">
+    <div class="sec-eyebrow">The Docket Archive</div>
+    <h2>The firm runs whether you are watching or not.</h2>
+    <p class="lead" style="margin-bottom:26px">A running log of recent cycles, pulled straight from the operating record. No client names, nothing invented: just the cadence the house keeps on its own.</p>
+    <div class="docket-log" id="docket-log"><p class="recal">The archive is warming up. The first cycle log lands with the next shift.</p></div>
   </div>
 </section>
 
@@ -717,6 +737,68 @@ function mdLite(t){
       </div>`).join('');
     observeReveals();
   }catch(e){ el('wire-body').innerHTML = '<p class="recal">The wire is warming up. The first brief lands with the next shift.</p>'; }
+})();
+
+/* ============ DOCKET ARCHIVE (autopilot.json) ============ */
+function docketShift(item){
+  var m = /Dawn|Midday|Evening|Night/.exec(item.title || '');
+  if(m) return m[0];
+  var hour = parseInt((item.id || '').split('-')[3], 10);
+  if(isNaN(hour)) return 'Cycle';
+  if(hour < 9) return 'Dawn';
+  if(hour < 15) return 'Midday';
+  if(hour < 21) return 'Evening';
+  return 'Night';
+}
+function docketRunKey(item){
+  var parts = (item.id || '').split('-');
+  return parts.slice(0, 5).join('-');
+}
+function docketSummary(items){
+  var n = { standup:0, selfDirected:0, contentPack:0, press:0, incident:0, other:0 };
+  items.forEach(function(i){
+    var t = i.title || '';
+    if(i.type === 'standup') n.standup++;
+    else if(/incident/i.test(t)) n.incident++;
+    else if(/content pack/i.test(t)) n.contentPack++;
+    else if(/night press published/i.test(t)) n.press++;
+    else if(/own initiative/i.test(t)) n.selfDirected++;
+    else n.other++;
+  });
+  var frags = [];
+  if(n.standup) frags.push('Standup convened.');
+  if(n.selfDirected) frags.push(n.selfDirected + (n.selfDirected > 1 ? ' self-directed briefs delivered.' : ' self-directed brief delivered.'));
+  if(n.contentPack) frags.push('Content pack filed for all three brands.');
+  if(n.press) frags.push((n.press > 1 ? n.press + ' articles' : 'One article') + ' filed to the Night Press.');
+  if(n.incident) frags.push('Estate incident logged and resolved.');
+  if(n.other) frags.push(n.other + (n.other > 1 ? ' further items delivered.' : ' further item delivered.'));
+  return frags.length ? frags.join(' ') : 'Cycle completed, no items logged.';
+}
+(async () => {
+  try{
+    const r = await fetch('autopilot.json?nh=' + Date.now(), { cache:'no-store' });
+    if(!r.ok) throw 0;
+    const d = await r.json();
+    const items = d.items || [];
+    if(!items.length) throw 0;
+    const runs = {};
+    const order = [];
+    items.forEach(function(i){
+      var key = docketRunKey(i);
+      if(!runs[key]){ runs[key] = { date: i.date, shift: docketShift(i), items: [] }; order.push(key); }
+      runs[key].items.push(i);
+    });
+    const recent = order.slice(-6).reverse();
+    el('docket-log').innerHTML = recent.map(function(key){
+      var run = runs[key];
+      return `<div class="docket-item reveal">
+        <span class="docket-shift">${run.shift} shift</span>
+        <span class="docket-date">${run.date || ''}</span>
+        <span class="docket-note">${docketSummary(run.items)}</span>
+      </div>`;
+    }).join('');
+    observeReveals();
+  }catch(e){ el('docket-log').innerHTML = '<p class="recal">The archive is warming up. The first cycle log lands with the next shift.</p>'; }
 })();
 
 /* ============ REVEALS ============ */
