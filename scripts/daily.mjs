@@ -313,7 +313,7 @@ const PRESS_NAV = `<nav>
           <div class="nav-drop-rule"></div>
           <a href="../institutions.html">Institutions</a>
           <a href="../table.html">The House Table</a>
-          <a href="../success.html">Founding Clients</a>
+          <a href="../success.html">The Portfolio</a>
         </div>
       </div>
       <a href="./" style="color:var(--gold)">Journal</a>

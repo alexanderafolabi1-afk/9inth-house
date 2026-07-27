@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Founding Clients | Ninth House Growth Partners</title>
-<meta name="description" content="The engagements Ninth House is proud to have sealed: private founders, diaspora entrepreneurs, corporations and governments, chosen from every direction.">
-<meta property="og:title" content="Founding Clients | Ninth House Growth Partners">
-<meta property="og:description" content="Chosen from every direction. The engagements Ninth House is proud to have sealed.">
+<title>The Founding Portfolio | Ninth House Growth Partners</title>
+<meta name="description" content="Ninth House does not ask you to trust the pitch. It shows the ventures it has built: SetPostGo, NAGORI, RenviaIT, WallWishes and iwriteyouread, built by the same nineteen partners you would be hiring.">
+<meta property="og:title" content="The Founding Portfolio | Ninth House Growth Partners">
+<meta property="og:description" content="We do not ask you to trust the pitch. We show you the work.">
 <meta property="og:url" content="https://9thpoint.com/success.html">
 <meta property="og:image" content="https://9thpoint.com/art/og.jpg">
 <meta name="twitter:card" content="summary_large_image">
@@ -78,25 +78,40 @@ section{padding:60px 0}
 .sec-eyebrow::after{content:"";flex:1;height:1px;background:var(--line)}
 .sec-jupiter{text-align:center;color:var(--gold);font-family:'Marcellus',serif;font-size:16px;margin-bottom:10px;opacity:.85}
 h1{font-family:'Marcellus',serif;font-weight:400;font-size:clamp(30px,5vw,46px);line-height:1.15;color:var(--ink);margin-bottom:14px}
-.lead{color:var(--muted);font-size:16.5px;max-width:680px;margin-bottom:14px}
+.lead{color:var(--muted);font-size:16.5px;max-width:700px;margin-bottom:10px}
 
-/* Case cards */
-.case-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-top:30px}
-.case-card{position:relative;overflow:hidden;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:0 1px 3px rgba(28,33,40,.04),inset 0 0 0 1px rgba(169,127,47,.14)}
-.case-card::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 40%,rgba(255,253,248,.55) 50%,transparent 60%);transform:translateX(-130%);pointer-events:none;border-radius:inherit;z-index:2}
+/* Portfolio: engraved plate header, ivory body */
+.portfolio-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:22px;margin-top:34px}
+.portfolio-card{position:relative;overflow:hidden;background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:0 1px 3px rgba(28,33,40,.04),inset 0 0 0 1px rgba(169,127,47,.14);display:flex;flex-direction:column}
+.portfolio-card::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 40%,rgba(255,253,248,.5) 50%,transparent 60%);transform:translateX(-130%);pointer-events:none;border-radius:inherit;z-index:2}
 @media (prefers-reduced-motion:no-preference){
-  .case-card{transition:transform .4s ease,box-shadow .4s ease,border-color .4s ease}
-  .case-card::after{transition:transform .4s ease}
-  .case-card:hover:hover{transform:translateY(-2px);border-color:var(--gold-bright);box-shadow:0 18px 40px rgba(28,33,40,.16),inset 0 0 0 1px rgba(169,127,47,.22)}
-  .case-card:hover::after{transform:translateX(130%)}
+  .portfolio-card{transition:transform .4s ease,box-shadow .4s ease,border-color .4s ease}
+  .portfolio-card::after{transition:transform .4s ease}
+  .portfolio-card:hover:hover{transform:translateY(-3px);border-color:var(--gold-bright);box-shadow:0 20px 44px rgba(28,33,40,.16),inset 0 0 0 1px rgba(169,127,47,.22)}
+  .portfolio-card:hover::after{transform:translateX(130%)}
 }
 @media (prefers-reduced-motion:reduce){
-  .case-card{transition:none}
-  .case-card:hover{transform:none}
+  .portfolio-card{transition:none}
+  .portfolio-card:hover{transform:none}
 }
-.case-type{display:block;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:10px}
-.case-engagement{display:block;font-family:'Marcellus',serif;font-weight:400;font-size:19px;color:var(--ink);margin-bottom:10px}
-.case-outcome{color:var(--muted);font-size:14px;line-height:1.6}
+.plate{margin:4px 4px 0;border-radius:14px 14px 4px 4px;padding:3px;background:linear-gradient(160deg,#E3C176,#C9A557 45%,#A97F2F)}
+.plate-face{border:1px solid rgba(36,27,7,.4);border-radius:11px 11px 3px 3px;padding:20px 22px 16px;background:linear-gradient(#E9CE8C,#C9A557)}
+.plate-name{display:block;font-family:'Marcellus',serif;font-weight:400;color:#241B07;font-size:21px;letter-spacing:.02em;line-height:1.2;text-shadow:0 1px 0 rgba(255,253,248,.4)}
+.plate-domain{display:block;font-family:'Spline Sans Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:rgba(36,27,7,.62);margin-top:7px}
+.plate-domain a{color:rgba(36,27,7,.72);font-weight:600}
+.portfolio-body{padding:20px 22px 24px;display:flex;flex-direction:column;gap:14px;flex:1}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;padding:5px 12px;border-radius:100px;width:fit-content}
+.chip-live{background:var(--gold);color:#FFFDF8}
+.chip-progress{border:1px solid var(--gold);color:var(--gold-deep);background:transparent}
+.portfolio-body p{color:var(--muted);font-size:14.5px;line-height:1.65}
+.portfolio-link{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:13px;color:var(--gold-deep);margin-top:auto}
+
+/* Closing panel */
+.closing-panel{margin-top:46px;background:var(--band);border:1px solid var(--gold-bright);border-radius:22px;padding:46px 32px;text-align:center;box-shadow:inset 0 0 0 1px rgba(169,127,47,.14)}
+.closing-panel p{font-family:'Marcellus',serif;font-weight:400;font-size:clamp(19px,2.6vw,24px);line-height:1.4;color:var(--ink);max-width:720px;margin:0 auto 28px}
+.btn-row{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:8px;border-radius:12px;padding:14px 26px;font-weight:700;font-size:14.5px;border:1px solid var(--gold);color:#FFFDF8;background:var(--gold);cursor:pointer;font-family:'Albert Sans',sans-serif}
+.btn:hover{background:var(--gold-deep);border-color:var(--gold-deep)}
 
 footer{border-top:1px solid var(--line);padding:36px 0 46px;color:var(--faint);font-size:12.5px;background:var(--band)}
 footer .disc{max-width:760px;margin:0 auto 14px;text-align:center;color:var(--muted)}
@@ -125,7 +140,7 @@ footer .fine{text-align:center}
           <div class="nav-drop-rule"></div>
           <a href="institutions.html">Institutions</a>
           <a href="table.html">The House Table</a>
-          <a href="success.html" style="color:var(--gold)!important">Founding Clients</a>
+          <a href="success.html" style="color:var(--gold)!important">The Portfolio</a>
         </div>
       </div>
       <a href="press/">Journal</a>
@@ -170,40 +185,80 @@ footer .fine{text-align:center}
 <section style="padding-bottom:24px">
   <div class="wrap">
     <div class="sec-jupiter">&#9795;</div>
-    <div class="eyebrow">Founding Clients</div>
-    <h1>Chosen from every direction.</h1>
-    <p class="lead">The house was built to serve whoever is building something real: private founders, diaspora entrepreneurs, corporations, and government. What follows are the engagements we are proud to have sealed.</p>
+    <div class="eyebrow">The Founding Portfolio</div>
+    <h1>We do not ask you to trust the pitch. We show you the work.</h1>
+    <p class="lead">Every agency claims results. This one shows its own ventures, built under the same roof, to the same standard, by the same nineteen partners you would be hiring.</p>
+    <p class="lead">Judge the house by what it has already built, not by what it promises to build for you.</p>
   </div>
 </section>
 
 <section style="padding-top:0">
   <div class="wrap">
-    <div class="case-grid" id="case-grid"></div>
-    <p style="text-align:center;margin-top:26px;font-size:13px;color:var(--faint)">Every client here chose the house for a different reason. That is rather the point.</p>
+    <div class="portfolio-grid" id="portfolio-grid"></div>
+
+    <div class="closing-panel">
+      <p>This is not a portfolio of clients we hope to keep. It is the machine that keeps them, running in daylight.</p>
+      <div class="btn-row">
+        <a class="btn" href="charter.html">Read the Charter</a>
+        <button class="btn" type="button" onclick="payOr(PAY.audit, 'Hello Ninth House, I would like to commission The Ninth House Audit (from £99). My business: ')">Commission the Audit</button>
+      </div>
+    </div>
   </div>
 </section>
 
 <footer>
   <div class="wrap">
-    <p style="text-align:center;font-size:12.5px;margin:0 auto 14px"><a href="https://setpostgo.xyz" target="_blank" rel="noopener">SetPostGo</a><span style="color:var(--faint);padding:0 7px;font-size:11px">&#9795;</span><a href="https://nagori.xyz" target="_blank" rel="noopener">NAGORI</a><span style="color:var(--faint);padding:0 7px;font-size:11px">&#9795;</span><a href="https://renviait.co.uk" target="_blank" rel="noopener">RenviaIT</a><span style="color:var(--faint);padding:0 7px;font-size:11px">&#9795;</span><a href="https://lyrion.co.uk" target="_blank" rel="noopener">Lyrion Atelier</a><span style="color:var(--faint);padding:0 7px;font-size:11px">&#9795;</span><a href="https://iwriteyouread.org" target="_blank" rel="noopener">iwriteyouread</a><span style="color:var(--faint);padding:0 7px;font-size:11px">&#9795;</span><a href="#" data-pending title="Opening soon" onclick="return false">ChurchOS</a><span style="color:var(--faint);padding:0 7px;font-size:11px">&#9795;</span><a href="#" data-pending title="Opening soon" onclick="return false">WishWall</a></p>
+    <p style="text-align:center;font-size:12.5px;margin:0 auto 14px"><a href="https://setpostgo.xyz" target="_blank" rel="noopener">SetPostGo</a><span style="color:var(--faint);padding:0 7px;font-size:11px">&#9795;</span><a href="https://nagori.xyz" target="_blank" rel="noopener">NAGORI</a><span style="color:var(--faint);padding:0 7px;font-size:11px">&#9795;</span><a href="https://renviait.co.uk" target="_blank" rel="noopener">RenviaIT</a><span style="color:var(--faint);padding:0 7px;font-size:11px">&#9795;</span><a href="https://lyrion.co.uk" target="_blank" rel="noopener">Lyrion Atelier</a><span style="color:var(--faint);padding:0 7px;font-size:11px">&#9795;</span><a href="https://iwriteyouread.org" target="_blank" rel="noopener">iwriteyouread</a><span style="color:var(--faint);padding:0 7px;font-size:11px">&#9795;</span><a href="#" data-pending title="Opening soon" onclick="return false">ChurchOS</a><span style="color:var(--faint);padding:0 7px;font-size:11px">&#9795;</span><a href="https://wallwishes.xyz" target="_blank" rel="noopener">WallWishes</a></p>
     <p class="disc"><strong>Openly built:</strong> Ninth House&rsquo;s partners are personas of the house, not human beings; their portraits are engravings, not photographs. Every piece of work is produced under the oversight and final authority of one human Chief Executive. The full governance is in <a href="charter.html">the Charter</a>.</p>
     <p class="fine">&#9795; Ninth House Growth Partners &middot; A Lyr&#299;on Ltd venture &middot; United Kingdom &middot; &copy; 2026</p>
   </div>
 </footer>
 
 <script>
-/* The Founding Clients register. Add a new entry here as each real engagement
-   is sealed; the grid and its data attributes are already built to hold it. */
-const CASES = [
-  { type: 'Founding Engagement', engagement: 'The Ninth House Audit', outcome: "Commissioned by the house's own network to prove the model." }
+const WA9 = 'https://wa.me/447448668350';
+const PAY = { audit:'https://buy.stripe.com/cNi4gA4hJ3fqa1Q9hC0Jq04' };
+function payOr(link, waText){ if(link){ window.open(link,'_blank'); } else { window.open(WA9+'?text='+encodeURIComponent(waText),'_blank'); } }
+
+/* The Founding Portfolio register. Add a new entry here as each venture
+   ships or changes status; the grid and its data attributes are already built to hold it. */
+const PORTFOLIO = [
+  {
+    name: 'SetPostGo', domain: 'setpostgo.xyz', url: 'https://setpostgo.xyz', status: 'live',
+    body: "SetPostGo is a social content generation platform built for eighty-nine distinct professions, so a plumber and a paediatrician are never handed the same template dressed up in different colours. The house built its market positioning, its content generation systems, and the launch sequence that carried it from a concept to a working product businesses can subscribe to today. It stands as proof the house does not just advise on a go-to-market strategy: it builds the product that executes one."
+  },
+  {
+    name: 'NAGORI', domain: 'nagori.xyz', url: 'https://nagori.xyz', status: 'live',
+    body: "NAGORI is a permanent digital letter archive built on an unusual discipline: capped at exactly one million letters, priced from £1.99, and closed forever once full. Most digital products chase infinite scale; NAGORI does the opposite, on purpose. The house shaped its brand voice, its visual language, and the public story explaining why a hard limit makes a digital product more valuable, not less. It is proof the house can write a scarcity narrative that holds up under scrutiny, not just under a brief."
+  },
+  {
+    name: 'RenviaIT', domain: 'renviait.co.uk', url: 'https://renviait.co.uk', status: 'live',
+    body: "RenviaIT is an IT asset disposal business giving retired laptops, servers and business technology a second life through secure data wiping and resale. Before the house arrived, disposal was filed under compliance, a box to tick and forget. The house built the market positioning that reframes it as a sustainability story: something businesses want their own clients to see them doing, not something their IT department quietly handles alone. It is proof the house can find the commercial angle inside a chore."
+  },
+  {
+    name: 'WallWishes', domain: 'wallwishes.xyz', url: 'https://wallwishes.xyz', status: 'progress',
+    body: "WallWishes is a wish-granting community platform where members post ambitions, large and small, and the community itself helps fulfil them. Unlike the ventures above, this one is still under construction, and that is precisely why it belongs here. The house is building its brand foundation, its visual identity and its growth strategy from the ground up, in real time, using the same process any new client receives on day one. Watching it happen is the honest alternative to only ever seeing the finished result."
+  },
+  {
+    name: 'iwriteyouread', domain: 'iwriteyouread.org', url: 'https://iwriteyouread.org', status: 'live',
+    body: "iwriteyouread is the platform and readership built for a published author, proof that the house's discipline is not reserved for companies with a boardroom. The house handles positioning, voice and audience growth for it, treating a single writer's platform with the same rigour it would bring to a corporate brand with nineteen partners behind it. It is the smallest venture on this page and, in some ways, the most telling: the standard does not change because the client is one person rather than an institution."
+  }
 ];
 const esc = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-document.getElementById('case-grid').innerHTML = CASES.map(c =>
-  `<div class="case-card reveal" data-client-type="${esc(c.type)}" data-engagement="${esc(c.engagement)}">
-     <span class="case-type">${esc(c.type)}</span>
-     <b class="case-engagement">${esc(c.engagement)}</b>
-     <p class="case-outcome">${esc(c.outcome)}</p>
-   </div>`).join('');
+document.getElementById('portfolio-grid').innerHTML = PORTFOLIO.map(p => {
+  const chip = p.status === 'live'
+    ? '<span class="chip chip-live">Live</span>'
+    : '<span class="chip chip-progress">In Progress</span>';
+  return `<div class="portfolio-card reveal" data-venture="${esc(p.name)}" data-status="${esc(p.status)}">
+     <div class="plate"><div class="plate-face">
+       <b class="plate-name">${esc(p.name)}</b>
+       <span class="plate-domain"><a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.domain)} &#8599;</a></span>
+     </div></div>
+     <div class="portfolio-body">
+       ${chip}
+       <p>${esc(p.body)}</p>
+     </div>
+   </div>`;
+}).join('');
 
 const io = new IntersectionObserver(es => es.forEach(e => { if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } }), { threshold:.12 });
 document.querySelectorAll('.reveal').forEach(el => io.observe(el));
