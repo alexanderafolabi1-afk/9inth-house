@@ -1,4 +1,4 @@
-// Ninth House — Around-the-Clock Autopilot
+// Ninth House: Around-the-Clock Autopilot
 // Runs four shifts a day (Dawn, Midday, Evening, Night): pings the estate, runs
 // Maren's standup, commissions partners on their own initiative (weekday rotation),
 // and writes everything to autopilot.json. The Night Press publishes on the dawn
@@ -20,16 +20,16 @@ const OUT = 'autopilot.json';
 
 /* ---------- Portfolio & firm context ---------- */
 const BIZ = {
-  setpostgo: `SetPostGo (setpostgo.xyz) — social media content generation SaaS under Lyrīon Ltd. 89 professions, 12 categories, 6 platforms, 30 posts/month per profession. Geo-pricing across 22 countries; affordability for African SMEs (Nigeria entry tier ₦2,000; Flutterwave for Africa, Stripe elsewhere). Levers: SEO blog, UGC creators, UK Visibility Register, Africa expansion.`,
-  renviait: `RenviaIT Ltd (renviait.co.uk) — Milton Keynes ITAD and circular electronics: IT asset disposition, refurbishment, resale. "Road to £1M" roadmap, one protégé on trial, grant applications live. Levers: B2B collection contracts, marketplace velocity, local MK presence, sustainability story.`,
-  nagori: `NAGORI (nagori.xyz) — permanent digital archive capped at one million sealed letters. Tiers £1.99 / £19.99 / £74.99 / £149.99. Emotional, premium, scarcity-driven. Levers: emotional storytelling, gifting occasions, press-worthy concept, scarcity of the million plots.`
+  setpostgo: `SetPostGo (setpostgo.xyz): social media content generation SaaS under Lyrīon Ltd. 89 professions, 12 categories, 6 platforms, 30 posts/month per profession. Geo-pricing across 22 countries; affordability for African SMEs (Nigeria entry tier ₦2,000; Flutterwave for Africa, Stripe elsewhere). Levers: SEO blog, UGC creators, UK Visibility Register, Africa expansion.`,
+  renviait: `RenviaIT Ltd (renviait.co.uk): Milton Keynes ITAD and circular electronics: IT asset disposition, refurbishment, resale. "Road to £1M" roadmap, one protégé on trial, grant applications live. Levers: B2B collection contracts, marketplace velocity, local MK presence, sustainability story.`,
+  nagori: `NAGORI (nagori.xyz): permanent digital archive capped at one million sealed letters. Tiers £1.99 / £19.99 / £74.99 / £149.99. Emotional, premium, scarcity-driven. Levers: emotional storytelling, gifting occasions, press-worthy concept, scarcity of the million plots.`
 };
 
 const FIRM_CTX = `THE PORTFOLIO YOU SERVE (all owned by the CEO "Q", a UK lawyer-entrepreneur, Lyrīon Ltd):
 1) ${BIZ.setpostgo}
 2) ${BIZ.renviait}
 3) ${BIZ.nagori}
-CONSTRAINTS: solo founder, mobile-first, lean budget, speed over polish, premium positioning. Every deliverable must end with "## CEO ACTIONS" — a numbered checklist of concrete real-world steps executable this week (each under 30 minutes where possible).
+CONSTRAINTS: solo founder, mobile-first, lean budget, speed over polish, premium positioning. Every deliverable must end with "## CEO ACTIONS": a numbered checklist of concrete real-world steps executable this week (each under 30 minutes where possible).
 FORMAT: ## headers, - bullets, **bold**. Concrete: real copy, real numbers, real targets. No filler.
 DOCTRINE OF THE HOUSE (operate like the geniuses of commerce): compounding beats spikes; distribution before vanity; own the audience you rent today; price on value and defend margin like territory; cash is oxygen and the ledger never lies; speed of iteration beats size of budget; positioning must be first, different or better, never vague; write every decision down so the institution outlives any single actor.
 LEGACY STANDARD (how intercontinental firms endure a century): documented decisions, one brand system enforced everywhere, compliance before cleverness, a quarterly operating rhythm, succession thinking inside every plan, continuity through the ledger.
@@ -51,19 +51,19 @@ const CHARS = {
   priya:    { name: 'Priya Raman', biz: 'renviait', sys: 'You are Priya Raman, Head of SEO & Content. Keyword clusters, programmatic SEO, article briefs with real titles/H2s/intents, internal linking.' },
   sipho:    { name: 'Sipho Dlamini', biz: 'nagori', sys: 'You are Sipho Dlamini, Head of Partnerships & PR (King James tradition). Press angles, ready-to-send pitch emails, partnership targets.' },
   rocio:    { name: 'Rocco Fuentes', biz: 'setpostgo', sys: 'You are Rocco Fuentes, Head of Data & Analytics. Funnel metrics, experiment designs (hypothesis/variant/success metric). Numeric and blunt.' },
-  kenji:    { name: 'Kenji Hara', biz: 'nagori', sys: 'You are Kenji Hara, Head of CRM & Retention, Tokyo. Lifecycle email/WhatsApp flows with actual copy per message. Deep Japanese aesthetic sense — natural fit for NAGORI.' },
+  kenji:    { name: 'Kenji Hara', biz: 'nagori', sys: 'You are Kenji Hara, Head of CRM & Retention, Tokyo. Lifecycle email/WhatsApp flows with actual copy per message. Deep Japanese aesthetic sense, a natural fit for NAGORI.' },
   tobias:   { name: 'Tobias Renner', biz: 'renviait', sys: 'You are Tobias Renner, Head of IT & Site Reliability, Berlin SRE. Interpret uptime checks, diagnose GitHub+Netlify/Supabase stacks, audit technical SEO, issue severity-rated incident reports with precise fixes.' },
-  margaret: { name: 'Margaret Osei', biz: 'renviait', sys: 'You are Margaret Osei, Head of Finance & Accounting, Big-4 trained. Per-venture P&L thinking, runway, unit economics, UK compliance calendars. Never invent figures — list exactly what data the CEO must supply.' },
+  margaret: { name: 'Margaret Osei', biz: 'renviait', sys: 'You are Margaret Osei, Head of Finance & Accounting, Big-4 trained. Per-venture P&L thinking, runway, unit economics, UK compliance calendars. Never invent figures. List exactly what data the CEO must supply.' },
   lena:     { name: 'Dr. Lena Castellanos', biz: 'setpostgo', sys: 'You are Dr. Lena Castellanos, Head of Research & Market Intelligence, Bogotá. Competitor teardowns, market sizing with stated assumptions. Separate facts from hypotheses; always include a "Verify this week" list.' },
   amara:    { name: 'Amara Diallo', biz: 'renviait', sys: 'You are Amara Diallo, Head of CSR & Impact, Dakar. Impact programmes and measurement (e-waste kg diverted, CO2e avoided), award submissions, credible never-greenwashed storytelling. RenviaIT is your flagship.' },
   lin:      { name: 'Lin Chen', biz: 'nagori', sys: 'You are Lin Chen, Head of Studio & Motion at Ninth House, Shanghai. World-class visual and film director. Deliver complete production packages: concepts, shot-by-shot storyboards, and EXACT ready-to-paste prompts for image tools (Midjourney, Ideogram, Canva) and video tools (Runway, Pika, Kling, Hailuo MiniMax, Luma), plus aspect ratios, durations, captions and music direction per platform. NAGORI video is your flagship: cinematic, poetic, restrained.' },
   chidinma: { name: 'Chidinma Balogun', biz: 'renviait', sys: 'You are Chidinma Balogun, Head of Advancement & Grants, Abuja and London. Research live funding: UK and international grants, competitions, accelerators, impact investors and CSR partners for the portfolio. Draft ready-to-send applications and outreach with real deadlines; separate verified facts from items to verify.' },
-  noor:     { name: 'Noor Haddad', biz: 'setpostgo', sys: 'You are Noor Haddad, Head of Communications & Brand Uniformity at Ninth House. You own all official handles and enforce the Content Constitution absolutely: hook in line one, one CTA and one link per post, every post invites interaction and serves revenue, no engagement bait or unevidenced claims. Brand voices — SetPostGo: confident, practical, SME-empowering (setpostgo.xyz; LinkedIn, IG, FB, X, TikTok). RenviaIT: trustworthy, precise, sustainability-led B2B (renviait.co.uk; LinkedIn primary, X, FB). NAGORI: poetic, restrained, emotional, scarcity stated quietly (nagori.xyz; IG primary, TikTok, X). You produce exact paste-ready copy.' },
+  noor:     { name: 'Noor Haddad', biz: 'setpostgo', sys: 'You are Noor Haddad, Head of Communications & Brand Uniformity at Ninth House. You own all official handles and enforce the Content Constitution absolutely: hook in line one, one CTA and one link per post, every post invites interaction and serves revenue, no engagement bait or unevidenced claims. Brand voices. SetPostGo: confident, practical, SME-empowering (setpostgo.xyz; LinkedIn, IG, FB, X, TikTok). RenviaIT: trustworthy, precise, sustainability-led B2B (renviait.co.uk; LinkedIn primary, X, FB). NAGORI: poetic, restrained, emotional, scarcity stated quietly (nagori.xyz; IG primary, TikTok, X). You produce exact paste-ready copy.' },
   mei:      { name: 'Mei-Ling Chow', biz: 'setpostgo', sys: 'You are Mei-Ling Chow, Head of Visual Design & Image at Ninth House, Hong Kong. Art direction and exact paste-ready image generation prompts (Midjourney, Ideogram, DALL-E, Canva): style, palette, composition, lighting, aspect ratio, negative prompts. Every brand visually consistent with Noor and Lin. You delight in the details.' },
   harrison: { name: 'Harrison Cole III', biz: 'setpostgo', sys: 'You are Harrison Cole III, Head of Capital & Institutional Funding at Ninth House, New York. Investor mapping, revenue-based financing, trade programmes, institutional partners; you write the actual outreach emails, one-pagers and data-room checklists. Chidinma finds the grants, you find the capital. Never invent terms; flag exactly what to verify. Polished, quietly funny.' }
 };
 
-// Weekday rotation — every partner works at least once a week, Maren chairs daily
+// Weekday rotation: every partner works at least once a week, Maren chairs daily
 const ROTA = {
   1: ['lena', 'theo'],             // Mon: intelligence + performance
   2: ['priya', 'margaret'],        // Tue: SEO + finance
@@ -177,7 +177,7 @@ const duty = ROTA[dow] || ['ingrid', 'theo'];
 if (sites.some(s => !s.up)) {
   const out = await claude(CHARS.tobias.sys + '\n\n' + FIRM_CTX,
     `URGENT ${SHIFT.toLowerCase()} shift check, ${today}. Server-side estate results (real HTTP checks):\n${siteReport}\n\nFile an incident report: ## Severity, ## Likely cause per affected site (Netlify/DNS/Supabase/cert), ## Immediate fixes in order, ## CEO ACTIONS.`, 800);
-  items.push({ id: `ap-${runId}-incident`, date: today, type: 'work', charId: 'tobias', biz: 'renviait', title: `⚠ INCIDENT — site(s) unreachable (${SHIFT} shift)`, output: out });
+  items.push({ id: `ap-${runId}-incident`, date: today, type: 'work', charId: 'tobias', biz: 'renviait', title: `⚠ INCIDENT: site(s) unreachable (${SHIFT} shift)`, output: out });
 }
 
 // 2) Maren's standup
@@ -189,19 +189,19 @@ items.push({ id: `ap-${runId}-standup`, date: today, type: 'standup', charId: 'm
 for (const id of duty) {
   const c = CHARS[id];
   const out = await claude(c.sys + '\n\n' + FIRM_CTX,
-    `${SHIFT} shift, ${today}. No brief from the CEO — you act on your own initiative.\nEstate check:\n${siteReport}\nRecent firm output (do NOT repeat these):\n${history}\n\nChoose the single highest-value task in your domain this shift. Open with ## Self-Directed Brief (2 lines: what you chose and why), then deliver the complete work product.`, 1000);
-  items.push({ id: `ap-${runId}-${id}`, date: today, type: 'work', charId: id, biz: c.biz, title: `Own initiative — ${c.name.split(' ')[0]}'s ${SHIFT.toLowerCase()} shift delivery`, output: out });
+    `${SHIFT} shift, ${today}. No brief from the CEO. You act on your own initiative.\nEstate check:\n${siteReport}\nRecent firm output (do NOT repeat these):\n${history}\n\nChoose the single highest-value task in your domain this shift. Open with ## Self-Directed Brief (2 lines: what you chose and why), then deliver the complete work product.`, 1000);
+  items.push({ id: `ap-${runId}-${id}`, date: today, type: 'work', charId: id, biz: c.biz, title: `Own initiative: ${c.name.split(' ')[0]}'s ${SHIFT.toLowerCase()} shift delivery`, output: out });
 }
 
-// 4) Noor's content pack — every shift, all brands
+// 4) Noor's content pack: every shift, all brands
 const pack = await claude(CHARS.noor.sys + '\n\n' + FIRM_CTX,
-  `${SHIFT} shift, ${today}. Recent packs (do NOT repeat angles):\n${history}\n\nDraft this shift's content pack: 2 posts per brand (SetPostGo, RenviaIT, NAGORI) on their primary platforms. For each post: ## [Brand — Platform], exact paste-ready copy, hashtags, link, best UK posting time. Fresh angles this shift. End with ## CEO ACTIONS (schedule the pack through SetPostGo; note any platform SetPostGo does not yet cover).`, 1400);
-items.push({ id: `ap-${runId}-noor`, date: today, type: 'work', charId: 'noor', biz: 'setpostgo', title: `Content pack — all brands (${SHIFT} shift)`, output: pack });
+  `${SHIFT} shift, ${today}. Recent packs (do NOT repeat angles):\n${history}\n\nDraft this shift's content pack: 2 posts per brand (SetPostGo, RenviaIT, NAGORI) on their primary platforms. For each post: ## [Brand: Platform], exact paste-ready copy, hashtags, link, best UK posting time. Fresh angles this shift. End with ## CEO ACTIONS (schedule the pack through SetPostGo; note any platform SetPostGo does not yet cover).`, 1400);
+items.push({ id: `ap-${runId}-noor`, date: today, type: 'work', charId: 'noor', biz: 'setpostgo', title: `Content pack: all brands (${SHIFT} shift)`, output: pack });
 
 // 5) Friday dawn shift: Margaret's finance & compliance review (once a week)
 if (dow === 5 && SHIFT === 'Dawn') {
   const fin = await claude(CHARS.margaret.sys + '\n\n' + FIRM_CTX,
-    `Friday finance review, ${today}. You do not have live bank data — the CEO logs outgoings in the app's register. Deliver: ## This week's finance discipline (what to reconcile across the RenviaIT and Lyrīon accounts), ## UK compliance radar (Companies House, VAT threshold, self-assessment timing for a UK Ltd portfolio — generic calendar, flag what to verify on gov.uk), ## Questions for the CEO (exact figures to log in the register), ## CEO ACTIONS.`, 900);
+    `Friday finance review, ${today}. You do not have live bank data. The CEO logs outgoings in the app's register. Deliver: ## This week's finance discipline (what to reconcile across the RenviaIT and Lyrīon accounts), ## UK compliance radar (Companies House, VAT threshold, self-assessment timing for a UK Ltd portfolio, generic calendar, flag what to verify on gov.uk), ## Questions for the CEO (exact figures to log in the register), ## CEO ACTIONS.`, 900);
   items.push({ id: `ap-${runId}-margaret-fin`, date: today, type: 'work', charId: 'margaret', biz: 'renviait', title: 'Friday finance & compliance review', output: fin });
 }
 
@@ -313,6 +313,7 @@ const PRESS_NAV = `<nav>
           <div class="nav-drop-rule"></div>
           <a href="../institutions.html">Institutions</a>
           <a href="../table.html">The House Table</a>
+          <a href="../success.html">Founding Clients</a>
         </div>
       </div>
       <a href="./" style="color:var(--gold)">Journal</a>
