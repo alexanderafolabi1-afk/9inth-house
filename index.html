@@ -599,19 +599,19 @@ footer .fine{text-align:center}
         <b>The 48-Hour Campaign Audit</b>
         <span class="price" id="sprint-price-audit48">&pound;297</span>
         <p>A written audit and sealed recommendation document, delivered within two working days.</p>
-        <button class="btn gold" type="button" onclick="payOr(PAY.sprints.campaignAudit, 'Hello Ninth House, I would like to request The 48-Hour Campaign Audit (£297).')">Request this Sprint</button>
+        <button class="btn gold" type="button" onclick="payOr(PAY.sprint48, 'Hello Ninth House, I would like to request The 48-Hour Campaign Audit (£297).')">Request this Sprint</button>
       </div></div>
       <div class="sprint-plaque reveal"><div class="face">
         <b>The Sealed Content Pack</b>
         <span class="price" id="sprint-price-content497">&pound;497</span>
         <p>Three to five ready-to-use assets with distribution notes, human-sealed before delivery.</p>
-        <button class="btn gold" type="button" onclick="payOr(PAY.sprints.contentPack, 'Hello Ninth House, I would like to request The Sealed Content Pack (£497).')">Request this Sprint</button>
+        <button class="btn gold" type="button" onclick="payOr(PAY.sprintContent, 'Hello Ninth House, I would like to request The Sealed Content Pack (£497).')">Request this Sprint</button>
       </div></div>
       <div class="sprint-plaque reveal"><div class="face">
         <b>The Founder War Room Brief</b>
         <span class="price" id="sprint-price-warroom597">&pound;597</span>
         <p>A ninety-minute strategy session, written docket notes, and the seal, for founders who need the room, not just the advice.</p>
-        <button class="btn gold" type="button" onclick="payOr(PAY.sprints.warRoomBrief, 'Hello Ninth House, I would like to request The Founder War Room Brief (£597).')">Request this Sprint</button>
+        <button class="btn gold" type="button" onclick="payOr(PAY.sprintWarRoom, 'Hello Ninth House, I would like to request The Founder War Room Brief (£597).')">Request this Sprint</button>
       </div></div>
     </div>
   </div>
@@ -1081,15 +1081,17 @@ const TW = {
 const twStage = document.getElementById('tw-stage');
 const WA9 = 'https://wa.me/447448668350';
 const PAY = { boardroom:'https://buy.stripe.com/aFaeVe01tdU4ei6alG0Jq01', audit:'https://buy.stripe.com/cNi4gA4hJ3fqa1Q9hC0Jq04', golf:'https://buy.stripe.com/dRm4gA6pRbLW1vkgK4OJq02', foundingAudit:'https://buy.stripe.com/aFa00k29BcQ06PE65qOJq03', packs:{},
-  // CEO: create a Stripe Payment Link for each product below, then paste it in; empty falls back to WhatsApp.
-  //   sprints.campaignAudit -> "The 48-Hour Campaign Audit", £297
-  //   sprints.contentPack   -> "The Sealed Content Pack", £497
-  //   sprints.warRoomBrief  -> "The Founder War Room Brief", £597
-  //   brochure              -> "The Brochure", £29
-  //   floorWalk             -> "Floor Walk" diagnostic call, £150
-  sprints:{ campaignAudit:'', contentPack:'', warRoomBrief:'' },
-  brochure:'',
-  floorWalk:''
+  // Stripe Payment Links for the newer offers:
+  //   sprint48        -> "The 48-Hour Campaign Audit", £297
+  //   sprintContent   -> "The Sealed Content Pack", £497
+  //   sprintWarRoom   -> "The Founder War Room Brief", £597
+  //   brochure        -> "The Brochure", £29
+  //   floorWalk       -> "Floor Walk" diagnostic call, £150
+  brochure:'https://buy.stripe.com/9B67sM4hJdU4b5UgK40Jq09',
+  sprintWarRoom:'https://buy.stripe.com/eVq7sM01taHSgqe1Pa0Jq08',
+  sprintContent:'https://buy.stripe.com/aFa00k8xZ7vG8XM3Xi0Jq07',
+  sprint48:'https://buy.stripe.com/4gMdRa15x17i3DsbpK0Jq06',
+  floorWalk:'https://buy.stripe.com/5kQ7sMg0r7vGc9YctO0Jq05'
 }; // Stripe Payment Links; empty falls back to WhatsApp
 const PACKS = { maren:['The Boardroom Session','£149'], jonah:['Brand Platform Sprint','£220'], ingrid:['Positioning Sprint','£220'], valentina:['30 Day Social Series','£160'], adaeze:['Africa Market Entry Map','£180'], theo:['Paid Media Test Plan','£150'], priya:['SEO Sprint','£250'], sipho:['Press Pitch Pack','£140'], kenji:['Lifecycle Flow Pack','£180'], noor:['Brand Voice Bible','£160'], lin:['The Film Pack','£180'], mei:['Brand Image Pack','£120'], rocio:['Funnel Diagnosis','£140'], lena:['Competitor Teardown','£160'], amara:['Impact Report','£180'], tobias:['Site Health Audit','£120'], margaret:['Finance Health Check','£160'], chidinma:['Grant Scan','£140'], harrison:['Funding Readiness Pack','£220'] };
 function payOr(link, waText){ if(link){ window.open(link,'_blank'); } else { window.open(WA9+'?text='+encodeURIComponent(waText),'_blank'); } }
