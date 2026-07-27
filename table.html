@@ -187,7 +187,7 @@ footer .fine{text-align:center}
     <div class="sec-jupiter">&#9795;</div>
     <div class="sec-eyebrow">The Concierge Desk</div>
     <h1>The House Table</h1>
-    <p class="lead">Where the firm sends its guests. A short register, kept deliberately short.</p>
+    <p class="lead">This is not a list assembled from reviews. Every room on it, the CEO has sat in himself.</p>
   </div>
 </section>
 
@@ -221,19 +221,19 @@ footer .fine{text-align:center}
 <script>
 /* The Register. The house's own recommendations, kept deliberately short. */
 const TABLE = [
-  { name:'Core by Clare Smyth',        city:'London',      line:"Clare Smyth's Notting Hill room, British produce at its most refined.", url:'https://www.corebyclaresmyth.com' },
-  { name:'The Ledbury',                city:'London',      line:'A Notting Hill institution, precise and quietly daring.',              url:'https://www.theledbury.com' },
-  { name:'Restaurant Gordon Ramsay',   city:'London',      line:"Chelsea's enduring temple of classical technique.",                    url:'https://www.gordonramsayrestaurants.com/restaurant-gordon-ramsay' },
-  { name:'Moor Hall',                  city:'Lancashire',  line:'A Lancashire farmhouse turned destination of the season.',             url:'https://www.moorhall.com' },
-  { name:"L'Enclume",                  city:'Cumbria',     line:"Simon Rogan's Cartmel kitchen, the Lake District on a plate.",          url:'https://lenclume.co.uk' },
-  { name:'Ynyshir',                    city:'Wales',       line:'A Welsh farmhouse of fire, umami and no half measures.',               url:'https://www.ynyshir.co.uk' },
-  { name:'The Ritz Restaurant',        city:'London',      line:'Piccadilly gilt and grand hotel dining, done properly.',               url:'https://www.theritzlondon.com/dine-with-us/the-ritz-restaurant' },
-  { name:'Gymkhana',                   city:'London',      line:"Mayfair's Raj-era club and some of London's finest Indian cooking.",   url:'https://www.gymkhanalondon.com' }
+  { name:'Core by Clare Smyth',        city:'London',      line:"I have watched a carrot get more respect at Core than most kitchens give a fillet of beef. The tasting menu builds slowly and lands hard. Book the counter seats if you want to watch the kitchen work.", url:'https://www.corebyclaresmyth.com' },
+  { name:'The Ledbury',                city:'London',      line:"I go back to The Ledbury for the game, cooked with more patience than most kitchens can afford. The room is Notting Hill quiet, the kind of quiet that makes you lower your own voice without being told to. It earned its place by never once wasting a single ingredient in front of me.", url:'https://www.theledbury.com' },
+  { name:'Restaurant Gordon Ramsay',   city:'London',      line:"Restaurant Gordon Ramsay still does the classical things properly, which is rarer than it should be. The lobster ravioli is the reason I keep a table here on the books. Chelsea gets the formality right without ever making you feel like a guest in someone else's dining room.", url:'https://www.gordonramsayrestaurants.com/restaurant-gordon-ramsay' },
+  { name:'Moor Hall',                  city:'Lancashire',  line:"Moor Hall turned a Lancashire farmhouse into somewhere I would drive two hours for on a weeknight. The tasting menu leans on the kitchen garden outside the window, and you can taste the difference. It earned its place the day I stopped comparing it to London.", url:'https://www.moorhall.com' },
+  { name:"L'Enclume",                  city:'Cumbria',     line:"Simon Rogan's kitchen at L'Enclume runs on produce grown an hour from the plate, and it shows in every course. The dining room is unshowy, almost domestic, which makes the precision on the plate land harder. I have never left hungry or unimpressed, and that is a rarer combination than it sounds.", url:'https://lenclume.co.uk' },
+  { name:'Ynyshir',                    city:'Wales',       line:"Ynyshir does not do polite portions or polite volume, and I would not want it any other way. The fire-cooked courses arrive fast and loud, which suits a Welsh farmhouse better than white tablecloths ever could. It earned its place by refusing to apologise for any of it.", url:'https://www.ynyshir.co.uk' },
+  { name:'The Ritz Restaurant',        city:'London',      line:"The Ritz Restaurant is the one room on this register built for occasion rather than discovery, and it still delivers both. The souffle is theatre done properly, gilt ceiling included. Some tables need the formality, and this is where I take them.", url:'https://www.theritzlondon.com/dine-with-us/the-ritz-restaurant' },
+  { name:'Gymkhana',                   city:'London',      line:"Gymkhana runs the best Indian kitchen I have sat down to in Mayfair, full stop. The wild muntjac biryani is the dish I order for people who think they have already had the best biryani in London. The Raj-era club room does the confidence no harm either.", url:'https://www.gymkhanalondon.com' }
 ];
 const esc = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 document.getElementById('register').innerHTML = TABLE.map(t =>
   `<a class="plaque reveal" href="${esc(t.url)}" target="_blank" rel="noopener">
-     <span class="face"><b>${esc(t.name)}</b><span class="city">${esc(t.city)}</span><i></i><span>${esc(t.line)}</span><small>House recommendation</small></span>
+     <span class="face"><b>${esc(t.name)}</b><span class="city">${esc(t.city)}</span><i></i><span>${esc(t.line)}</span><small>The CEO's own table</small></span>
    </a>`).join('');
 
 /* Slim registry of house properties, names separated by the Jupiter glyph */
