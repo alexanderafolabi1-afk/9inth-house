@@ -322,6 +322,15 @@ footer .fine{text-align:center}
 .golf-plaque p{color:#3E2E1E;font-size:13.5px;margin-top:8px;line-height:1.5}
 .golf-plaque .price{display:block;font-family:'Spline Sans Mono',monospace;font-size:11.5px;color:#241B07;font-weight:600;margin-top:10px}
 
+/* The Seal Sprints */
+.sprint-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin-top:30px}
+.sprint-plaque{background:linear-gradient(160deg,#E3C176,#C9A557 45%,#A97F2F);border-radius:14px;padding:4px;box-shadow:0 5px 16px rgba(169,127,47,.28),inset 0 1px 0 rgba(255,253,248,.5)}
+.sprint-plaque .face{border:1px solid rgba(36,27,7,.4);border-radius:11px;padding:22px;background:linear-gradient(#E9CE8C,#C9A557);display:flex;flex-direction:column;height:100%}
+.sprint-plaque b{display:block;font-family:'Marcellus',serif;font-weight:400;color:#241B07;font-size:18px;line-height:1.25}
+.sprint-plaque .price{display:block;font-family:'Spline Sans Mono',monospace;font-size:13px;color:#241B07;font-weight:700;margin-top:8px}
+.sprint-plaque p{color:#3E2E1E;font-size:13.5px;margin-top:12px;line-height:1.55;flex:1}
+.sprint-plaque button{margin-top:16px}
+
 /* The Arcade: one engraved cabinet per game, no two games ever share a screen */
 .arcade-head{text-align:center;margin:18px 18px 4px}
 .arcade-head h3{font-family:'Marcellus',serif;font-weight:400;font-size:19px;color:var(--ink)}
@@ -580,6 +589,34 @@ footer .fine{text-align:center}
   </div>
 </section>
 
+<section id="sprints">
+  <div class="wrap">
+    <div class="sec-eyebrow">The Seal Sprints</div>
+    <h2>Beyond the Audit.</h2>
+    <p class="lead">For founders who already know what they need and want it built.</p>
+    <div class="sprint-grid">
+      <div class="sprint-plaque reveal"><div class="face">
+        <b>The 48-Hour Campaign Audit</b>
+        <span class="price" id="sprint-price-audit48">&pound;297</span>
+        <p>A written audit and sealed recommendation document, delivered within two working days.</p>
+        <button class="btn gold" type="button" onclick="payOr(PAY.sprints.campaignAudit, 'Hello Ninth House, I would like to request The 48-Hour Campaign Audit (£297).')">Request this Sprint</button>
+      </div></div>
+      <div class="sprint-plaque reveal"><div class="face">
+        <b>The Sealed Content Pack</b>
+        <span class="price" id="sprint-price-content497">&pound;497</span>
+        <p>Three to five ready-to-use assets with distribution notes, human-sealed before delivery.</p>
+        <button class="btn gold" type="button" onclick="payOr(PAY.sprints.contentPack, 'Hello Ninth House, I would like to request The Sealed Content Pack (£497).')">Request this Sprint</button>
+      </div></div>
+      <div class="sprint-plaque reveal"><div class="face">
+        <b>The Founder War Room Brief</b>
+        <span class="price" id="sprint-price-warroom597">&pound;597</span>
+        <p>A ninety-minute strategy session, written docket notes, and the seal, for founders who need the room, not just the advice.</p>
+        <button class="btn gold" type="button" onclick="payOr(PAY.sprints.warRoomBrief, 'Hello Ninth House, I would like to request The Founder War Room Brief (£597).')">Request this Sprint</button>
+      </div></div>
+    </div>
+  </div>
+</section>
+
 <section id="how">
   <div class="wrap">
     <div class="sec-eyebrow">How It Works</div>
@@ -600,8 +637,10 @@ footer .fine{text-align:center}
     <div class="btnrow">
       <a class="btn gold" href="https://wa.me/447448668350" rel="noopener">Message the Firm on WhatsApp</a>
       <a class="btn" href="mailto:hello@9thpoint.com">hello@9thpoint.com</a>
+      <button class="btn" type="button" onclick="bookFloorWalk()">Book a Floor Walk &middot; <span id="floorwalk-price">&pound;150</span></button>
     </div>
     <p class="contact-note">Concierge line &middot; 07448 668 350</p>
+    <p class="contact-note">A Floor Walk is a thirty minute paid diagnostic call, the first human seal interaction, before any retainer.</p>
   </div>
 </section><footer>
   <div class="wrap">
@@ -993,9 +1032,25 @@ const TW = {
 };
 const twStage = document.getElementById('tw-stage');
 const WA9 = 'https://wa.me/447448668350';
-const PAY = { boardroom:'https://buy.stripe.com/aFaeVe01tdU4ei6alG0Jq01', audit:'https://buy.stripe.com/cNi4gA4hJ3fqa1Q9hC0Jq04', golf:'https://buy.stripe.com/dRm4gA6pRbLW1vkgK4OJq02', foundingAudit:'https://buy.stripe.com/aFa00k29BcQ06PE65qOJq03', packs:{} }; // Stripe Payment Links; empty falls back to WhatsApp
+const PAY = { boardroom:'https://buy.stripe.com/aFaeVe01tdU4ei6alG0Jq01', audit:'https://buy.stripe.com/cNi4gA4hJ3fqa1Q9hC0Jq04', golf:'https://buy.stripe.com/dRm4gA6pRbLW1vkgK4OJq02', foundingAudit:'https://buy.stripe.com/aFa00k29BcQ06PE65qOJq03', packs:{},
+  // CEO: create Stripe Payment Links for each Sprint and the Brochure, then paste them below; empty falls back to WhatsApp
+  sprints:{ campaignAudit:'', contentPack:'', warRoomBrief:'' },
+  brochure:''
+}; // Stripe Payment Links; empty falls back to WhatsApp
 const PACKS = { maren:['The Boardroom Session','£149'], jonah:['Brand Platform Sprint','£220'], ingrid:['Positioning Sprint','£220'], valentina:['30 Day Social Series','£160'], adaeze:['Africa Market Entry Map','£180'], theo:['Paid Media Test Plan','£150'], priya:['SEO Sprint','£250'], sipho:['Press Pitch Pack','£140'], kenji:['Lifecycle Flow Pack','£180'], noor:['Brand Voice Bible','£160'], lin:['The Film Pack','£180'], mei:['Brand Image Pack','£120'], rocio:['Funnel Diagnosis','£140'], lena:['Competitor Teardown','£160'], amara:['Impact Report','£180'], tobias:['Site Health Audit','£120'], margaret:['Finance Health Check','£160'], chidinma:['Grant Scan','£140'], harrison:['Funding Readiness Pack','£220'] };
 function payOr(link, waText){ if(link){ window.open(link,'_blank'); } else { window.open(WA9+'?text='+encodeURIComponent(waText),'_blank'); } }
+
+// CEO: create a free Calendly account and paste your real scheduling link below,
+// replacing the CALENDLY-HANDLE placeholder. Until then, Book a Floor Walk falls
+// back to the WhatsApp instant line.
+const CALENDLY_URL = 'https://calendly.com/CALENDLY-HANDLE';
+function bookFloorWalk(){
+  if(CALENDLY_URL.indexOf('CALENDLY-HANDLE') !== -1){
+    payOr('', 'Hello Ninth House, I would like to book a Floor Walk call (30 minutes, £150), the first human seal interaction before any retainer.');
+  } else {
+    window.open(CALENDLY_URL, '_blank');
+  }
+}
 
 /* ============ CURRENCY AWARENESS (comprehension only; Stripe checkout stays GBP) ============ */
 const GBP_TO_USD = 1.27; // CEO: update this monthly to the current GBP-to-USD rate
@@ -1017,6 +1072,10 @@ function priceUSD(gbpText){
   if(!n) return gbpText;
   return gbpText + ' (approx $' + Math.round(n * GBP_TO_USD) + ')';
 }
+['sprint-price-audit48','sprint-price-content497','sprint-price-warroom597','floorwalk-price'].forEach(function(id){
+  const el = document.getElementById(id);
+  if(el) el.textContent = priceUSD(el.textContent);
+});
 const HOURNOW = new Date().getHours();
 const NIGHT = (HOURNOW < 6 || HOURNOW >= 19);
 let twGuest = '';
@@ -1212,7 +1271,7 @@ function goExterior(){
        <p>${NIGHT?'The city sleeps. The house does not.':'Nineteen partners. Six floors. One human at the top.'} The doors are open.</p>
        <div class="tw-actions" style="justify-content:center">
          <button class="tw-btn gold" onclick="goLobby()">Enter the building</button>
-         <button class="tw-btn" onclick="document.getElementById('brochure').scrollIntoView({behavior:'smooth'})">Prefer the brochure?</button>
+         <button class="tw-btn" onclick="payOr(PAY.brochure, 'Hello Ninth House, I would like to purchase The Brochure (£29): the full manifesto, one sample operating cycle, and one framework I can use today.')">Prefer the brochure? &middot; ${priceUSD('£29')}</button>
        </div>
      </div>
    </div></div>`;
