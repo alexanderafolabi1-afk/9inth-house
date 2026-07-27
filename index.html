@@ -766,7 +766,13 @@ const STATUS = [
   'Priya: whispering to search engines',
   'Noor: rejecting an exclamation mark',
   'Harrison: on with New York',
-  'Chidinma: chasing a grant deadline'
+  'Chidinma: chasing a grant deadline',
+  'Ingrid: redrawing a proposition on the whiteboard',
+  'Theo: shaving a penny off a cost per click',
+  'Sipho: rehearsing a pitch email out loud',
+  'Kenji: proofing a lifecycle email at 2am, Tokyo time',
+  'Amara: turning kilograms of e-waste into a headline',
+  'Rocío: interrogating a graph until it confesses'
 ];
 let si = 0;
 setInterval(()=>{ statusEl.textContent = STATUS[si = (si+1)%STATUS.length]; }, 4200);
@@ -815,10 +821,25 @@ function keeperOpener(){
   if(h < 21) return 'Good evening, sir. The lamps are lit.';
   return 'Working late, sir? The night shift has it covered. Do rest.';
 }
+const GREETING_VARIANTS = [
+  'Welcome to Ninth House. Barnaby Sterling, Front of House.',
+  'Do come in. Barnaby Sterling, at the desk as ever.',
+  'Ninth House, at your service. Barnaby Sterling, Front of House.',
+  'You have found the front door. Barnaby Sterling, here to open the rest.',
+  'Welcome. The house is awake, and so, it turns out, am I.',
+  'Barnaby Sterling speaking. The nineteen are already at their desks.',
+  'Good of you to call. Barnaby Sterling, Front of House.',
+  'Ninth House. Come in before the weather changes its mind.',
+  'Welcome to the house that never quite sleeps. Barnaby Sterling, Front of House.',
+  'You have reached the front desk. Barnaby Sterling, delighted to have you.',
+  'Ninth House, nineteen partners, one door. Barnaby Sterling holds it open.',
+  'Welcome in. Barnaby Sterling, and the house is rather pleased to see you.'
+];
 function publicOpener(){
   const h = fdHour();
   const g = h < 12 ? 'Good morning.' : h < 17 ? 'Good afternoon.' : h < 21 ? 'Good evening.' : 'A late hour, and the house still lit.';
-  return g + ' Welcome to Ninth House. Barnaby Sterling, Front of House.';
+  const variant = GREETING_VARIANTS[Math.floor(Math.random() * GREETING_VARIANTS.length)];
+  return g + ' ' + variant;
 }
 function usReachLine(){
   const h = fdHour();
@@ -897,9 +918,24 @@ function explain(){
   if(SHOW_USD) lines.unshift(usReachLine());
   say(lines, [['Sounds expensive&hellip;', sell],['Book a meeting', book],['Instant line &#128222;', instant]]);
 }
+const SELL_NUDGES = [
+  "Marketing help is rather the house specialty. We grow brands: campaigns, content, search, film, funding introductions, the lot.",
+  "Growth is the whole trade here. Strategy, content, search, film, funding introductions, delivered at a pace most departments cannot match.",
+  "You have come to the right desk. Campaigns, content, search, film, funding introductions, nineteen partners deep.",
+  "Ask any of the nineteen and they will tell you the same thing: growth is the entire point of this house.",
+  "This is precisely the sort of question Barnaby was built to redirect. Campaigns, content, search, film, funding introductions, the full orchestra.",
+  "Marketing is our one and only trade. Strategy, brand, film, performance, SEO, PR, all under one seal.",
+  "The house exists for exactly this. Campaigns, content, search, film, funding introductions, and a human who signs off on every last one.",
+  "Splendid question. The nineteen partners have been waiting all morning for someone to ask it.",
+  "You have found the growth department, which is to say all of it. Campaigns, content, search, film, funding introductions.",
+  "This is the house specialty, in fact the only one. Strategy, content, search, film, funding introductions, delivered around the clock.",
+  "Marketing help, arriving promptly. Campaigns, content, search, film, funding introductions, whichever the brief demands.",
+  "Now we are talking. Growth is the house's entire reason for existing, and the nineteen take it rather seriously."
+];
 function sell(){
+  const hook = SELL_NUDGES[Math.floor(Math.random() * SELL_NUDGES.length)];
   say([
-    "Marketing help is rather the house specialty. We grow brands: campaigns, content, search, film, funding introductions, the lot.",
+    hook,
     "The output of a funded agency at a fraction of the invoice, because our partners don't need salaries, holidays, or emotional support plants.",
     "Founders past initial traction who can't yet justify agency payroll, SMEs that need real marketing infrastructure, diaspora founders building across two markets, institutions that want AI powered marketing without losing governance. If that's you, we're already interested."
   ], [['The ' + priceUSD('£99') + ' Audit', fdAudit],['Book a meeting', book],['Instant line &#128222;', instant],['Back', greet]]);
@@ -987,6 +1023,18 @@ window.fdClose = function(){
   document.getElementById('fd-launch').style.display='block';
   userClosed = true;
 };
+/* A direct request to speak to the desk (e.g. "Speak to the concierge" on
+   table.html) opens Barnaby immediately, bypassing the ambient auto-open logic.
+   Deferred to the next tick so it runs after the rest of the page's script
+   (including the currency-awareness constants further down this file) has
+   finished initialising. */
+if(new URLSearchParams(location.search).get('barnaby') === 'open'){
+  setTimeout(()=>{
+    fdOpen();
+    opened = true;
+    try{ history.replaceState(null, '', location.pathname + location.hash); }catch(e){}
+  }, 0);
+}
 /* Barnaby is a butler, not a nuisance: auto-open at most once per session,
    only if the visitor is still at the exterior or lobby six seconds in,
    nothing else has already opened or closed the desk, and no panel is up. */
@@ -1033,9 +1081,15 @@ const TW = {
 const twStage = document.getElementById('tw-stage');
 const WA9 = 'https://wa.me/447448668350';
 const PAY = { boardroom:'https://buy.stripe.com/aFaeVe01tdU4ei6alG0Jq01', audit:'https://buy.stripe.com/cNi4gA4hJ3fqa1Q9hC0Jq04', golf:'https://buy.stripe.com/dRm4gA6pRbLW1vkgK4OJq02', foundingAudit:'https://buy.stripe.com/aFa00k29BcQ06PE65qOJq03', packs:{},
-  // CEO: create Stripe Payment Links for each Sprint and the Brochure, then paste them below; empty falls back to WhatsApp
+  // CEO: create a Stripe Payment Link for each product below, then paste it in; empty falls back to WhatsApp.
+  //   sprints.campaignAudit -> "The 48-Hour Campaign Audit", £297
+  //   sprints.contentPack   -> "The Sealed Content Pack", £497
+  //   sprints.warRoomBrief  -> "The Founder War Room Brief", £597
+  //   brochure              -> "The Brochure", £29
+  //   floorWalk             -> "Floor Walk" diagnostic call, £150
   sprints:{ campaignAudit:'', contentPack:'', warRoomBrief:'' },
-  brochure:''
+  brochure:'',
+  floorWalk:''
 }; // Stripe Payment Links; empty falls back to WhatsApp
 const PACKS = { maren:['The Boardroom Session','£149'], jonah:['Brand Platform Sprint','£220'], ingrid:['Positioning Sprint','£220'], valentina:['30 Day Social Series','£160'], adaeze:['Africa Market Entry Map','£180'], theo:['Paid Media Test Plan','£150'], priya:['SEO Sprint','£250'], sipho:['Press Pitch Pack','£140'], kenji:['Lifecycle Flow Pack','£180'], noor:['Brand Voice Bible','£160'], lin:['The Film Pack','£180'], mei:['Brand Image Pack','£120'], rocio:['Funnel Diagnosis','£140'], lena:['Competitor Teardown','£160'], amara:['Impact Report','£180'], tobias:['Site Health Audit','£120'], margaret:['Finance Health Check','£160'], chidinma:['Grant Scan','£140'], harrison:['Funding Readiness Pack','£220'] };
 function payOr(link, waText){ if(link){ window.open(link,'_blank'); } else { window.open(WA9+'?text='+encodeURIComponent(waText),'_blank'); } }
@@ -1045,11 +1099,9 @@ function payOr(link, waText){ if(link){ window.open(link,'_blank'); } else { win
 // back to the WhatsApp instant line.
 const CALENDLY_URL = 'https://calendly.com/CALENDLY-HANDLE';
 function bookFloorWalk(){
-  if(CALENDLY_URL.indexOf('CALENDLY-HANDLE') !== -1){
-    payOr('', 'Hello Ninth House, I would like to book a Floor Walk call (30 minutes, £150), the first human seal interaction before any retainer.');
-  } else {
-    window.open(CALENDLY_URL, '_blank');
-  }
+  if(PAY.floorWalk){ window.open(PAY.floorWalk, '_blank'); return; }
+  if(CALENDLY_URL.indexOf('CALENDLY-HANDLE') === -1){ window.open(CALENDLY_URL, '_blank'); return; }
+  payOr('', 'Hello Ninth House, I would like to book a Floor Walk call (30 minutes, £150), the first human seal interaction before any retainer.');
 }
 
 /* ============ CURRENCY AWARENESS (comprehension only; Stripe checkout stays GBP) ============ */
@@ -2652,7 +2704,14 @@ const TICKER = [
   'Priya moved a keyword two places up the mountain',
   'The seal was used four times before nine',
   'Harrison is on with New York. Still.',
-  'Tobias reports all three estates green'
+  'Tobias reports all three estates green',
+  'Ingrid rewrote a headline down to nine words',
+  'Theo trimmed a campaign budget by eleven percent',
+  'Sipho landed a reply from an actual journalist',
+  'Kenji shipped a lifecycle flow before breakfast',
+  'Amara logged another kilogram diverted from landfill',
+  'Rocío found the leak nobody wanted to see',
+  'Maren closed the standup two minutes early. Unheard of.'
 ];
 let tki = 0;
 setInterval(()=>{
@@ -2848,12 +2907,29 @@ window.soundToggle = function(btn){
     'This lift runs faster than a committee.',
     'Floor change in progress. Hold your ambitions.',
     'Barnaby oiled these cables personally. You are welcome.',
-    'The ninth floor carpet is quieter. You will see why.'
+    'The ninth floor carpet is quieter. You will see why.',
+    'No music in this lift. The house prefers you think.',
+    'Some firms have mood lighting. We have moving floors.',
+    'The cables are older than the company. Do not mention it to them.',
+    'A brief pause between ambitions. Normal service resumes shortly.',
+    'This is the only committee in the building with no agenda.',
+    'Somewhere above you, a wax seal is being warmed.',
+    'The building settles differently on this floor. Nobody knows why.',
+    'Fewer windows up here. More decisions.'
   ];
   const DECLINE_LINES = [
     'The Lounge asks no questions. Upstairs does.',
     'Very well. The ground floor keeps its charms.',
-    'No pass, no bother. The games are still yours.'
+    'No pass, no bother. The games are still yours.',
+    'Understood. The lift will remember you fondly.',
+    'The floors above will wait. They are patient that way.',
+    'A perfectly respectable decision. The Lounge approves.',
+    'Noted. The pass office never closes, should you change your mind.',
+    'The ground floor has never once complained about the company.',
+    'Quite right. Some visitors prefer to keep both feet on the lobby floor.',
+    'No harm done. The house is just as pleased to see you down here.',
+    'A reasonable line to draw. The desk will be here when you cross it.',
+    'Fair enough. The Lounge has never needed a pass to be worth visiting.'
   ];
 
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
