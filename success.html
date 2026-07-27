@@ -5,11 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The Founding Portfolio | Ninth House Growth Partners</title>
 <meta name="description" content="Ninth House does not ask you to trust the pitch. It shows the ventures it has built: SetPostGo, NAGORI, RenviaIT, WallWishes and iwriteyouread, built by the same nineteen partners you would be hiring.">
-<meta property="og:title" content="The Founding Portfolio | Ninth House Growth Partners">
-<meta property="og:description" content="We do not ask you to trust the pitch. We show you the work.">
+<meta property="og:site_name" content="Ninth House Growth Partners">
+<meta property="og:title" content="We don't ask you to trust the pitch. We show you the work.">
+<meta property="og:description" content="Five real ventures, built by an AI-operated growth firm under one human's seal. Live products, not case study fluff.">
 <meta property="og:url" content="https://9thpoint.com/success.html">
 <meta property="og:image" content="https://9thpoint.com/art/og.jpg">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="We don't ask you to trust the pitch. We show you the work.">
+<meta name="twitter:description" content="Five real ventures, built by an AI-operated growth firm under one human's seal. Live products, not case study fluff.">
 <meta name="theme-color" content="#FBF7EE">
 <!-- Cloudflare Web Analytics. CEO: replace CFTOKEN with your real site token from dash.cloudflare.com > Analytics & Logs > Web Analytics > (your site) > Manage site > JS snippet. -->
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "CFTOKEN"}'></script>
@@ -221,6 +224,29 @@ footer .fine{text-align:center}
 const WA9 = 'https://wa.me/447448668350';
 const PAY = { audit:'https://buy.stripe.com/cNi4gA4hJ3fqa1Q9hC0Jq04' };
 function payOr(link, waText){ if(link){ window.open(link,'_blank'); } else { window.open(WA9+'?text='+encodeURIComponent(waText),'_blank'); } }
+
+/* Currency awareness (comprehension only; Stripe checkout stays GBP) */
+const GBP_TO_USD = 1.27; // CEO: update this monthly to the current GBP-to-USD rate
+function isUSVisitor(){
+  try{
+    const lang = (navigator.language || '').toLowerCase();
+    if(lang === 'en-us') return true;
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+    if(tz.indexOf('America/') === 0) return true;
+  }catch(e){}
+  return false;
+}
+const SHOW_USD = isUSVisitor();
+function priceUSD(gbpText){
+  if(!SHOW_USD) return gbpText;
+  const m = String(gbpText).match(/[\d,]+\.?\d*/);
+  if(!m) return gbpText;
+  const n = parseFloat(m[0].replace(/,/g,''));
+  if(!n) return gbpText;
+  return gbpText + ' (approx $' + Math.round(n * GBP_TO_USD) + ')';
+}
+const auditBtn = document.querySelector('.closing-panel button.btn');
+if(auditBtn) auditBtn.textContent = 'Commission the Audit · from ' + priceUSD('£99');
 
 /* The Founding Portfolio register. Add a new entry here as each venture
    ships or changes status; the grid and its data attributes are already built to hold it. */

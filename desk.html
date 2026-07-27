@@ -215,6 +215,7 @@ const defaultState = () => ({
   minutes: [],           // {day, text}
   execDone: {},          // id -> true when executed IRL
   shipped: {},           // id -> true when a Morning Tray item was actually published or sent
+  backers: [],           // {id, name, amount, tier, date, code, quarterlyUpdateSent} the CEO's fundraiser
   weeklyTarget: '',      // plain text, CEO-edited, no API call
   kpis: {
     setpostgo: { 'Active subscribers': 0, 'Trials started (wk)': 0, 'MRR £': 0 },
@@ -228,6 +229,32 @@ function load(){ try{ const r = localStorage.getItem(LS_KEY); if(r) return Objec
 function save(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }catch(e){} }
 const uid = () => Math.random().toString(36).slice(2,9);
 const esc = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+/* ============ THE BACKERS LEDGER. Bea Whitmore ============ */
+const BACKER_TIERS = [
+  { label:'Under £50', min:0, perk:'A personal thank you from the CEO and a name on the Wall of Backers.' },
+  { label:'£50 and above', min:50, perk:'Named on the Wall of Backers, plus a lifetime 20% discount code across every house product.' },
+  { label:'£250 and above', min:250, perk:'All of the above, plus a seat at The House Table: priority access to future ventures and one free Boardroom Session.' },
+  { label:'£1,000 and above', min:1000, perk:'All of the above, plus a personal quarterly update from the CEO on where the funds went and what they built.' }
+];
+function tierFor(amount){
+  let t = BACKER_TIERS[0];
+  for(const tier of BACKER_TIERS){ if(amount >= tier.min) t = tier; }
+  return t.label;
+}
+function tierPerk(label){ return (BACKER_TIERS.find(t=>t.label===label) || BACKER_TIERS[0]).perk; }
+function genBackerCode(){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let s = '';
+  for(let i=0;i<4;i++) s += chars[Math.floor(Math.random()*chars.length)];
+  return 'BACKER-' + s;
+}
+function sortedBackers(){ return [...(S.backers||[])].sort((a,b)=> (b.date||'').localeCompare(a.date||'')); }
+function backersSummary(){
+  const list = S.backers||[];
+  const total = list.reduce((s,b)=>s+b.amount,0);
+  return `Total raised: &pound;${total.toFixed(2)} across ${list.length} backer${list.length===1?'':'s'}.`;
+}
 
 /* ============ THE PORTFOLIO ============ */
 const BIZ = {
@@ -512,6 +539,30 @@ function vDesk(){
       <button class="btn gold" id="beacredit" onclick="beaCredit()">Credit rebuild plan</button>
       <button class="btn" id="beaweek" onclick="beaWeek()">Plan my week</button>
     </div>
+  </div>
+
+  <div class="card">
+    <h3>Backers Ledger</h3>
+    <p class="sub" style="margin-bottom:10px">Bea keeps the record of everyone who backed the fundraiser, their tier, and their thank you.</p>
+    <p class="tiny" style="color:var(--paper);margin-bottom:10px">${backersSummary()}</p>
+    ${sortedBackers().length ? sortedBackers().map(b=>`
+      <div style="border-top:1px solid var(--line);padding:10px 0">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+          <b style="font-size:14px">${esc(b.name)}</b>
+          <span class="mono" style="font-size:13px;color:var(--gold)">&pound;${b.amount.toFixed(2)}</span>
+        </div>
+        <div class="tiny" style="margin:2px 0 8px">${esc(b.tier)} &middot; ${esc(b.date)} &middot; code <span class="mono">${esc(b.code)}</span></div>
+        ${b.tier === BACKER_TIERS[BACKER_TIERS.length-1].label ? `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <input type="checkbox" ${b.quarterlyUpdateSent?'checked':''} onchange="toggleQuarterly('${b.id}')" style="width:18px;height:18px;accent-color:var(--jade)">
+          <span class="tiny" style="color:var(--paper)">Quarterly update sent</span>
+        </div>` : ''}
+        <div class="btnrow">
+          <button class="btn sm" id="thanks-${b.id}" onclick="draftThankYou('${b.id}')">Draft thank you email</button>
+          <button class="btn sm ghost" style="color:var(--rust)" onclick="delBacker('${b.id}')">Remove</button>
+        </div>
+      </div>`).join('') : `<p class="tiny" style="color:var(--faint)">No backers logged yet. Add the first as they come in.</p>`}
+    <div class="btnrow"><button class="btn sm gold" onclick="openAddBacker()">+ Log a backer</button></div>
   </div>
 
   <div class="card">
@@ -875,6 +926,38 @@ async function beaWeek(){
     S.docket.push({ id:uid(), day:S.day, charId:'bea', biz:'renviait', brief:'Private Office: the week, structured', output:out, status:'pending' });
     save(); btn.disabled=false; btn.textContent='Plan my week'; go('docket');
   }catch(e){ btn.disabled=false; btn.textContent='Retry'; alert(errMsg(e)); }
+}
+
+/* Backers Ledger */
+function openAddBacker(){
+  modal(`<h2>Log a backer</h2>
+    <label>Name</label><input type="text" id="bk-name" placeholder="e.g. J. Alabi">
+    <label>Amount (&pound;)</label><input type="number" id="bk-amount" placeholder="0.00">
+    <label>Date</label><input type="date" id="bk-date" value="${new Date().toISOString().slice(0,10)}">
+    <div class="btnrow"><button class="btn gold wide" onclick="addBacker()">Add to ledger</button></div>`);
+}
+function addBacker(){
+  const name = document.getElementById('bk-name').value.trim();
+  const amount = Number(document.getElementById('bk-amount').value)||0;
+  const date = document.getElementById('bk-date').value || new Date().toISOString().slice(0,10);
+  if(!name||!amount) return;
+  S.backers.push({ id:uid(), name, amount, tier: tierFor(amount), date, code: genBackerCode(), quarterlyUpdateSent:false });
+  save(); closeModal(); render();
+}
+function delBacker(id){ S.backers = S.backers.filter(b=>b.id!==id); save(); render(); }
+function toggleQuarterly(id){ const b = S.backers.find(x=>x.id===id); if(b){ b.quarterlyUpdateSent = !b.quarterlyUpdateSent; save(); render(); } }
+async function draftThankYou(id){
+  const b = S.backers.find(x=>x.id===id); if(!b) return;
+  const btn = document.getElementById('thanks-'+id);
+  if(btn){ btn.innerHTML = '<i class="spin"></i> Bea drafting…'; btn.disabled = true; }
+  const mentionCode = b.tier !== BACKER_TIERS[0].label;
+  try{
+    const out = await callClaude(
+      charById('bea').sys + '\n\n' + FIRM_CTX,
+      `Day ${S.day}. Private and confidential. A backer has just supported the CEO's personal fundraiser (separate from any client work, and no equity, shares or ownership is involved). Backer name: ${b.name}. Amount: £${b.amount.toFixed(2)}. Tier: ${b.tier}. Tier benefit: ${tierPerk(b.tier)}. Discount code on file: ${b.code}.\nDraft a warm, personal thank you email from the CEO, in Bea's polished and discreet voice, ready to copy and send as is. ${mentionCode ? 'Mention the discount code naturally, since this tier includes it.' : 'Do not mention any discount code: this tier does not include one.'} Under 150 words, genuine gratitude, no corporate stiffness. Sign off as the CEO.`, 500);
+    S.docket.push({ id:uid(), day:S.day, charId:'bea', biz:'renviait', brief:'Backers Ledger: thank you note for '+b.name, output:out, status:'pending' });
+    save(); go('docket');
+  }catch(e){ if(btn){ btn.disabled=false; btn.textContent='Draft thank you email'; } alert(errMsg(e)); }
 }
 
 /* Studio media pack */

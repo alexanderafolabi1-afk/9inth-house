@@ -6,11 +6,14 @@
 <title>Ninth House | Growth Partners</title>
 <meta name="description" content="Nineteen partners across six continents, one human Chief Executive holding the seal. Strategy, brand, film, performance media, SEO, PR and funding. The output of a funded agency at the payroll of none.">
 <meta name="keywords" content="growth agency UK, marketing agency London, startup marketing, brand strategy agency, performance marketing agency, SEO services, social media marketing, video content agency, global marketing firm">
-<meta property="og:title" content="Ninth House | Growth Partners">
-<meta property="og:description" content="Nineteen partners across six continents, one human Chief Executive holding the seal. The output of a funded agency at the payroll of none.">
+<meta property="og:site_name" content="Ninth House Growth Partners">
+<meta property="og:title" content="Nineteen AI partners. One human seal.">
+<meta property="og:description" content="A growth firm that runs while founders sleep. Real campaigns, a real docket, nothing ships without one human's signature.">
 <meta property="og:url" content="https://9thpoint.com/">
 <meta property="og:image" content="https://9thpoint.com/art/og.jpg">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Nineteen AI partners. One human seal.">
+<meta name="twitter:description" content="A growth firm that runs while founders sleep. Real campaigns, a real docket, nothing ships without one human's signature.">
 <meta name="theme-color" content="#FBF7EE">
 <!-- Cloudflare Web Analytics. CEO: replace CFTOKEN with your real site token from dash.cloudflare.com > Analytics & Logs > Web Analytics > (your site) > Manage site > JS snippet. -->
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "CFTOKEN"}'></script>
@@ -555,6 +558,7 @@ footer .fine{text-align:center}
     <div><b>365</b><span>Cycles a year, no holidays</span></div>
     <div><b>1</b><span>Human seal on everything</span></div>
   </div>
+  <p style="text-align:center;font-family:'Marcellus',serif;font-size:14.5px;color:var(--muted);padding:0 22px 20px">Built in London. Working with founders on both sides of the Atlantic.</p>
 </div>
 
 <section class="manifesto">
@@ -777,6 +781,11 @@ function publicOpener(){
   const g = h < 12 ? 'Good morning.' : h < 17 ? 'Good afternoon.' : h < 21 ? 'Good evening.' : 'A late hour, and the house still lit.';
   return g + ' Welcome to Ninth House. Barnaby Sterling, Front of House.';
 }
+function usReachLine(){
+  const h = fdHour();
+  const tod = h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening';
+  return 'Good ' + tod + '. Ninth House works with founders and brands well beyond London, including a growing number across the United States.';
+}
 
 const MAIN = ()=>{
   const base = [
@@ -834,30 +843,32 @@ function greet(){
     return;
   }
   say([
-    publicOpener(),
+    SHOW_USD ? usReachLine() : publicOpener(),
     "The partners are in session at the moment. Nineteen of them. Someone is defending a comma and I fear it may go to a vote.",
     "How may I direct you?"
   ], MAIN());
 }
 function explain(){
-  say([
+  const lines = [
     "Ah, the tour. Ninth House is the world's first openly AI-operated growth studio: nineteen partners across six departments and six continents, one human Chief Executive holding the seal.",
     "Strategy, brand, film, performance media, SEO, PR, finance, research, impact, funding. The whole orchestra, awake at 3am, and not one of them bills for lunch.",
     "The exterior, the lobby and the Lounge are open to anyone. Above that, a free Visitor's Pass opens every floor, issued at the desk in a moment and asking nothing but a name and an email.",
     "Every piece of work is approved by the human before it touches the world. We are transparent about what we are. Refreshing, I'm told."
-  ], [['Sounds expensive&hellip;', sell],['Book a meeting', book],['Instant line &#128222;', instant]]);
+  ];
+  if(SHOW_USD) lines.unshift(usReachLine());
+  say(lines, [['Sounds expensive&hellip;', sell],['Book a meeting', book],['Instant line &#128222;', instant]]);
 }
 function sell(){
   say([
     "Marketing help is rather the house specialty. We grow brands: campaigns, content, search, film, funding introductions, the lot.",
     "The output of a funded agency at a fraction of the invoice, because our partners don't need salaries, holidays, or emotional support plants.",
     "Founders past initial traction who can't yet justify agency payroll, SMEs that need real marketing infrastructure, diaspora founders building across two markets, institutions that want AI powered marketing without losing governance. If that's you, we're already interested."
-  ], [['The £99 Audit', fdAudit],['Book a meeting', book],['Instant line &#128222;', instant],['Back', greet]]);
+  ], [['The ' + priceUSD('£99') + ' Audit', fdAudit],['Book a meeting', book],['Instant line &#128222;', instant],['Back', greet]]);
 }
 function fdAudit(){
   say([
     "The Ninth House Audit: you answer ten sharp questions, the partners convene, and within two working days you receive a sealed growth docket. Strategy, quick wins, and exactly where the money is leaking.",
-    "From £99, signed by the human, and famously the cheapest meeting with nineteen experts in recorded history."
+    "From " + priceUSD('£99') + ", signed by the human, and famously the cheapest meeting with nineteen experts in recorded history."
   ], [['Commission the Audit', ()=>window.open(WA+'?text='+encodeURIComponent('Hello Ninth House, I would like to commission The Ninth House Audit (from £99). My business: '),'_blank')],['Book a meeting instead', book],['Back', greet]]);
 }
 
@@ -985,6 +996,27 @@ const WA9 = 'https://wa.me/447448668350';
 const PAY = { boardroom:'https://buy.stripe.com/aFaeVe01tdU4ei6alG0Jq01', audit:'https://buy.stripe.com/cNi4gA4hJ3fqa1Q9hC0Jq04', golf:'https://buy.stripe.com/dRm4gA6pRbLW1vkgK4OJq02', foundingAudit:'https://buy.stripe.com/aFa00k29BcQ06PE65qOJq03', packs:{} }; // Stripe Payment Links; empty falls back to WhatsApp
 const PACKS = { maren:['The Boardroom Session','£149'], jonah:['Brand Platform Sprint','£220'], ingrid:['Positioning Sprint','£220'], valentina:['30 Day Social Series','£160'], adaeze:['Africa Market Entry Map','£180'], theo:['Paid Media Test Plan','£150'], priya:['SEO Sprint','£250'], sipho:['Press Pitch Pack','£140'], kenji:['Lifecycle Flow Pack','£180'], noor:['Brand Voice Bible','£160'], lin:['The Film Pack','£180'], mei:['Brand Image Pack','£120'], rocio:['Funnel Diagnosis','£140'], lena:['Competitor Teardown','£160'], amara:['Impact Report','£180'], tobias:['Site Health Audit','£120'], margaret:['Finance Health Check','£160'], chidinma:['Grant Scan','£140'], harrison:['Funding Readiness Pack','£220'] };
 function payOr(link, waText){ if(link){ window.open(link,'_blank'); } else { window.open(WA9+'?text='+encodeURIComponent(waText),'_blank'); } }
+
+/* ============ CURRENCY AWARENESS (comprehension only; Stripe checkout stays GBP) ============ */
+const GBP_TO_USD = 1.27; // CEO: update this monthly to the current GBP-to-USD rate
+function isUSVisitor(){
+  try{
+    const lang = (navigator.language || '').toLowerCase();
+    if(lang === 'en-us') return true;
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+    if(tz.indexOf('America/') === 0) return true;
+  }catch(e){}
+  return false;
+}
+const SHOW_USD = isUSVisitor();
+function priceUSD(gbpText){
+  if(!SHOW_USD) return gbpText;
+  const m = String(gbpText).match(/[\d,]+\.?\d*/);
+  if(!m) return gbpText;
+  const n = parseFloat(m[0].replace(/,/g,''));
+  if(!n) return gbpText;
+  return gbpText + ' (approx $' + Math.round(n * GBP_TO_USD) + ')';
+}
 const HOURNOW = new Date().getHours();
 const NIGHT = (HOURNOW < 6 || HOURNOW >= 19);
 let twGuest = '';
@@ -1389,7 +1421,7 @@ function goLobby(){
        <button class="tw-btn" onclick="goFloor(8)">The Observatory (8)</button>
        <button class="tw-btn" onclick="goFloor(5)">The Partners (5)</button>
        <button class="tw-btn" onclick="goFloor(1)">The Lounge (1)</button>
-       <button class="tw-btn" onclick="payOr(PAY.audit, 'Hello Ninth House, I would like to commission The Ninth House Audit (from £99). My business: ')">The Audit · from £99</button>
+       <button class="tw-btn" onclick="payOr(PAY.audit, 'Hello Ninth House, I would like to commission The Ninth House Audit (from £99). My business: ')">The Audit · from ${priceUSD('£99')}</button>
      </div>
    </div></div>`;
 }
@@ -1475,7 +1507,7 @@ function goOffice(pid){
          ${p.id === 'adaeze' ? `<p style="margin-top:6px;color:var(--muted)">Adaeze also keeps <a href="africa.html" style="color:var(--gold);font-weight:600">The Africa Desk</a>.</p>` : ''}
        </div>
      </div>
-     ${PACKS[p.id]?`<p style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line)"><span style="color:var(--gold);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;font-weight:700">House product</span><br>${PACKS[p.id][0]} &middot; <span style="font-family:'Spline Sans Mono',monospace">${PACKS[p.id][1]}</span></p>`:''}
+     ${PACKS[p.id]?`<p style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line)"><span style="color:var(--gold);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;font-weight:700">House product</span><br>${PACKS[p.id][0]} &middot; <span style="font-family:'Spline Sans Mono',monospace">${priceUSD(PACKS[p.id][1])}</span></p>`:''}
      <div class="tw-actions">
        ${PACKS[p.id]?`<button class="tw-btn gold" onclick="payOr(PAY.packs['${p.id}'], 'Hello Ninth House, I would like to commission the ${PACKS[p.id][0]} (${PACKS[p.id][1]}) from ${p.n.replace(/'/g,'')}.')">Commission this pack</button>`:''}
        <button class="tw-btn" onclick="window.open('${WA9}?text='+encodeURIComponent('Hello Ninth House, I visited ${p.n.replace(/'/g,'')}\'s office in the Tower and would like a meeting.'),'_blank')">Request a meeting</button>
@@ -1499,7 +1531,7 @@ function goBoardroom(){
    <div class="tw-panel"><h3>Where the minutes are made.</h3><p>Nineteen chairs, one seal, and a screen that has never once shown a boring slide. The boardroom convenes for clients too: strategy sessions chaired by Maren, minutes delivered same day.</p>
    <p style="margin-top:8px;color:var(--muted)">Corporations and governments are received on the ninth floor. <a href="institutions.html" style="color:var(--gold);font-weight:600">The Institutional Floor &rarr;</a></p>
    <p style="margin-top:8px;color:var(--muted)">See what the house has already built. <a href="success.html" style="color:var(--gold);font-weight:600">The Founding Portfolio &rarr;</a></p>
-   <p style="margin-top:8px"><span style="font-family:'Spline Sans Mono',monospace;color:var(--gold)">The Boardroom Session · £149</span> · sixty minutes, chaired by Maren, minutes delivered same day, signed by the human.</p>
+   <p style="margin-top:8px"><span style="font-family:'Spline Sans Mono',monospace;color:var(--gold)">The Boardroom Session · ${priceUSD('£149')}</span> · sixty minutes, chaired by Maren, minutes delivered same day, signed by the human.</p>
    <div class="tw-actions"><button class="tw-btn gold" onclick="payOr(PAY.boardroom, 'Hello Ninth House, I would like to book The Boardroom Session (£149).')">Book the Boardroom Session</button><button class="tw-btn" onclick="payOr('', 'Hello Ninth House, I have a question before booking the boardroom.')">Ask first</button></div></div></div>`;
 }
 
@@ -2104,7 +2136,7 @@ function goGolf(){
      <div class="golf-plaque"><div class="face">
        <b>A Round with the Principal</b>
        <p>Eighteen holes with the Chief Executive. Business discussed on the fairway, plans sealed in the clubhouse. A morning that outperforms most boardrooms.</p>
-       <span class="price">\u00a3350 per guest, UK courses, by arrangement</span>
+       <span class="price">${priceUSD('\u00a3350')} per guest, UK courses, by arrangement</span>
      </div></div>
      <div class="tw-actions"><button class="tw-btn gold" onclick="payOr(PAY.golf, 'Hello Ninth House, I would like to request a tee time for A Round with the Principal (\u00a3350).')">Request a tee time</button></div>
    </div>
@@ -2497,7 +2529,7 @@ function principalEnd(){
   if(s > par){
     title = 'You beat the Principal.';
     body = 'You scored ' + s + ' against his benchmark of ' + par + '.';
-    extra = `<div class="tw-panel" style="margin:14px 0 0;text-align:left"><p style="font-size:14px">The house honours its losses. Quote <strong style="color:var(--gold)">BEATTHEKEEPER</strong> for £10 off The Ninth House Audit.</p><div class="tw-actions"><button class="tw-btn gold" onclick="payOr(PAY.audit, 'Hello Ninth House, I beat the Principal at his own benchmark and would like to commission The Ninth House Audit (from £99), quoting BEATTHEKEEPER.')">The Audit · from £99</button></div></div>`;
+    extra = `<div class="tw-panel" style="margin:14px 0 0;text-align:left"><p style="font-size:14px">The house honours its losses. Quote <strong style="color:var(--gold)">BEATTHEKEEPER</strong> for £10 off The Ninth House Audit.</p><div class="tw-actions"><button class="tw-btn gold" onclick="payOr(PAY.audit, 'Hello Ninth House, I beat the Principal at his own benchmark and would like to commission The Ninth House Audit (from £99), quoting BEATTHEKEEPER.')">The Audit · from ${priceUSD('£99')}</button></div></div>`;
   } else if(s < par){
     title = 'The Principal remains undefeated.';
     body = 'He is, after all, a Solicitor. You scored ' + s + ' against his ' + par + '.';
