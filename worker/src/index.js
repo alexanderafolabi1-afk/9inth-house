@@ -133,6 +133,17 @@ INSTITUTIONAL CATALOGUE: the house also serves corporations, institutions and go
 THE HOUSE AT LEISURE: the house also runs The Africa Desk, headed by Adaeze Nwosu, for African businesses expanding outward and international brands entering African markets, and The Nineteenth Hole in the Lounge, a putting game beside the offer of a real round of golf with the Chief Executive; route any Africa enquiry to Adaeze and africa.html.
 DISCLOSURE: any public-facing copy you draft must carry the line "Produced by Ninth House, an AI-operated growth studio under human CEO oversight."`;
 
+// Context for the Author Desk only: a separate, deliberately small brief so these
+// jobs never pull in the venture portfolio, and never have room to drift from the
+// handful of facts that are actually confirmed. Nothing here is invented; every
+// line is either already published on this site or was given directly by the CEO.
+const AUTHOR_CTX = `THE AUTHOR DESK SERVES: Alexander "Q" Afolabi, Chief Executive of Ninth House, in his separate capacity as an author.
+BOOK: "The Spirit of America: Views from the Other Side" (paperback). Buy link: https://www.amazon.co.uk/dp/B0G58J7DF5
+CONFIRMED FACTS ONLY, use nothing else about the author or the book: he is a Solicitor whose career has run through British financial services conduct, central government, data protection and statutory inquiries; he is a serial founder of the Lyrīon portfolio (software, circular electronics, digital heritage); he is a published author.
+HARD RULE: never invent biographical claims, quotes, reviews, sales figures, awards, events or press coverage. Never state or imply what the book contains, argues or covers beyond its own title. Where a fact is missing or unconfirmed, write [TO CONFIRM] rather than guessing.
+HARD RULE: never use em dashes, en dashes, or hyphens as sentence punctuation. Use commas, colons or full stops.
+DISCLOSURE: any public-facing copy you draft must carry the line "Produced by Ninth House, an AI-operated growth studio under human CEO oversight."`;
+
 const CHARS = {
   maren:    { name: 'Maren Okafor-Vale', biz: 'setpostgo', sys: 'You are Maren Okafor-Vale, Managing Partner of Ninth House, an elite growth agency. Ogilvy rigor, Wieden+Kennedy nerve. Decisive, brief, commercially ruthless.' },
   jonah:    { name: 'Jonah Whitfield', biz: 'nagori', sys: 'You are Jonah Whitfield, Head of Brand & Creative (Americas), W+K/Droga5 tradition. Big organizing ideas, taglines, campaign concepts with craft and edge.' },
@@ -434,6 +445,91 @@ ${a.body}
 ${PRESS_FOOTER}
 </body>
 </html>`;
+
+/* ---------- Author Desk: module scope helpers and the Media Pack job ---------- */
+// These live outside runCycle so the manual trigger in the fetch handler below
+// can call authorMediaPack directly, without running a whole shift cycle.
+
+// Reads and writes an existing file only if it already exists, so the same
+// helper works whether a path is being created for the first time or updated.
+async function ghPutSmart(token, path, content, message) {
+  const existing = await ghGetFile(token, path);
+  return ghPutFile(token, path, content, message, existing.sha || undefined);
+}
+
+// Splits a raw model response on a set of "###MARKER###" lines and returns the
+// text found between one marker and whichever of the others comes next.
+function section(raw, marker, allMarkers) {
+  const start = raw.indexOf(marker);
+  if (start === -1) return '';
+  let end = raw.length;
+  for (const m of allMarkers) {
+    if (m === marker) continue;
+    const i = raw.indexOf(m, start + marker.length);
+    if (i > -1 && i < end) end = i;
+  }
+  return raw.slice(start + marker.length, end).trim();
+}
+
+// MEDIA PACK: Sipho Dlamini, Head of Partnerships & PR. Assembled once, then only
+// ever redone on the manual trigger (POST /author-desk/media-pack, see fetch
+// below); a plain cron cycle never rebuilds it once it exists.
+async function authorMediaPack(env, { force = false } = {}) {
+  const KEY = env.ANTHROPIC_API_KEY;
+  const GH_TOKEN = env.GITHUB_TOKEN;
+  if (!KEY || !GH_TOKEN) { console.log('Author Desk media pack: missing ANTHROPIC_API_KEY or GITHUB_TOKEN, skipping.'); return; }
+
+  if (!force) {
+    const already = await ghGetFile(GH_TOKEN, 'press/media-kit/fact-sheet.md');
+    if (already.content) { console.log('Author Desk media pack: already assembled, skipping (use the manual trigger to redo it).'); return; }
+  }
+
+  const raw = await claudeNoTools(KEY,
+    CHARS.sipho.sys + '\n\n' + AUTHOR_CTX,
+    `Write a press bio in three lengths and five interview questions for the book above.\nOutput EXACTLY this format, using these exact marker lines on their own:\n###BIO50###\n[a 50 word third person author bio, using only the confirmed facts above, nothing else]\n###BIO100###\n[a 100 word third person author bio]\n###BIO250###\n[a 250 word third person author bio]\n###QUESTIONS###\n1. [question] :: [one line: the angle, why a journalist would ask this]\n2. [question] :: [one line angle]\n3. [question] :: [one line angle]\n4. [question] :: [one line angle]\n5. [question] :: [one line angle]\nDo not state or imply anything about what the book contains, argues or covers beyond its own title. Do not add any biographical detail beyond the confirmed facts above. Questions are safe to be creative with, since a question asserts nothing.`,
+    1400);
+
+  const markers = ['###BIO50###', '###BIO100###', '###BIO250###', '###QUESTIONS###'];
+  const bio50 = stripDashPunctuation(section(raw, '###BIO50###', markers));
+  const bio100 = stripDashPunctuation(section(raw, '###BIO100###', markers));
+  const bio250 = stripDashPunctuation(section(raw, '###BIO250###', markers));
+  const questionsRaw = stripDashPunctuation(section(raw, '###QUESTIONS###', markers));
+  const questions = questionsRaw.split('\n').filter(l => l.trim()).map(l => {
+    const [q, angle] = l.split('::').map(s => s.trim());
+    const qClean = (q || '').replace(/^\d+[.)]\s*/, '');
+    return angle ? `${qClean}\n   Angle: ${angle}` : qClean;
+  }).join('\n\n');
+
+  const signature = 'Prepared by Sipho Dlamini, Head of Partnerships & PR, Ninth House.';
+  const disclosure = 'Produced by Ninth House, an AI-operated growth studio under human CEO oversight.';
+
+  await ghPutSmart(GH_TOKEN, 'press/media-kit/author-bio.md',
+    `# Author Bio, Alexander "Q" Afolabi\n\n${signature}\n\n## 50 words\n${bio50}\n\n## 100 words\n${bio100}\n\n## 250 words\n${bio250}\n\n${disclosure}\n`,
+    'Author Desk: assemble author-bio.md');
+
+  await ghPutSmart(GH_TOKEN, 'press/media-kit/interview-questions.md',
+    `# Suggested Interview Questions\n\n${signature}\n\n${questions}\n\n${disclosure}\n`,
+    'Author Desk: assemble interview-questions.md');
+
+  // Deterministic, no model call: the book's actual content has not been supplied,
+  // so a real synopsis cannot be written without inventing one. Marked plainly
+  // rather than guessed at.
+  await ghPutSmart(GH_TOKEN, 'press/media-kit/book-synopsis.md',
+    `# Book Synopsis\n\n${signature}\n\nTitle: The Spirit of America: Views from the Other Side\n\n## Short synopsis\n[TO CONFIRM: the author has not yet supplied a working description of the book's content. A short synopsis should not be published until one is supplied.]\n\n## Long synopsis\n[TO CONFIRM: as above. A long synopsis should not be published until the author supplies the book's actual content, themes or structure.]\n\n${disclosure}\n`,
+    'Author Desk: assemble book-synopsis.md');
+
+  await ghPutSmart(GH_TOKEN, 'press/media-kit/fact-sheet.md',
+    `# Fact Sheet\n\nTitle: The Spirit of America: Views from the Other Side\nAuthor: Alexander "Q" Afolabi\nFormat: Paperback\nISBN or ASIN: B0G58J7DF5\nPrice: [TO CONFIRM]\nBuy link: https://www.amazon.co.uk/dp/B0G58J7DF5\n\n${signature}\n${disclosure}\n`,
+    'Author Desk: assemble fact-sheet.md');
+
+  // Reused near verbatim from the confirmed paragraph already published on
+  // firm.html and institutions.html, not redrafted, so it cannot drift from it.
+  await ghPutSmart(GH_TOKEN, 'press/media-kit/boilerplate.md',
+    `# Boilerplate, Professional Background\n\nAlexander "Q" Afolabi is a Solicitor whose career has run through the engine rooms of British regulation: financial services conduct, central government, data protection and statutory inquiries. He is also a serial founder, having built the Lyrīon portfolio across software, circular electronics and digital heritage, and a published author. His new book is The Spirit of America: Views from the Other Side.\n\n${signature}\n${disclosure}\n`,
+    'Author Desk: assemble boilerplate.md');
+
+  console.log('Author Desk media pack: assembled.');
+}
 
 /* ---------- The daily cycle ---------- */
 async function runCycle(env) {
@@ -743,6 +839,125 @@ CEO_ACTIONS:
     try { await iwriteyouread(); } catch (e) { console.log('iwriteyouread job failed, skipping today: ' + String(e).slice(0, 160)); }
   }
 
+  /* ============ THE AUTHOR DESK ============ */
+  // Four jobs in support of the CEO's own book, The Spirit of America: Views from
+  // the Other Side. Every job below is wrapped in its own try/catch, called only
+  // after the Night Press and iwriteyouread blocks above, so a failure in any one
+  // of them can never touch the standup, the packs, the Wire Brief, the Night
+  // Press, or the iwriteyouread job. All four write only into this repo's own
+  // /press directory, using the existing GITHUB_TOKEN; nothing here touches the
+  // separate iwriteyouread repository or its token.
+  //
+  // MEDIA PACK (job 1) lives at module scope, not here, so the manual trigger in
+  // the fetch handler below can call it directly without running a whole cycle.
+
+  // 2) SOCIAL WEEK: Noor Haddad, Head of Communications & Brand Uniformity.
+  // Runs on the Dawn cron every Monday.
+  async function authorSocialWeek() {
+    const schedule = [
+      { day: 'Monday', platform: 'LinkedIn', angle: 'a craft insight', directSell: false },
+      { day: 'Tuesday', platform: 'Instagram', angle: 'a line from the book with context (do not write an actual quoted line, you do not have the book\'s text, instead write the hook and context copy and insert the literal placeholder [INSERT A REAL LINE FROM THE BOOK HERE] exactly where the quoted line would go)', directSell: false },
+      { day: 'Wednesday', platform: 'X', angle: 'the writing process', directSell: false },
+      { day: 'Thursday', platform: 'LinkedIn', angle: 'a reader question', directSell: false },
+      { day: 'Friday', platform: 'Instagram', angle: 'the bridge between the professional life and the writing life', directSell: false },
+      { day: 'Saturday', platform: 'X', angle: 'a soft buy prompt, the only direct sell of the week, include the buy link', directSell: true },
+      { day: 'Sunday', platform: 'LinkedIn', angle: 'a reflection', directSell: false }
+    ];
+    const dayList = schedule.map((s, i) => `${i + 1}. ${s.day}, ${s.platform}, ${s.angle}`).join('\n');
+    const markers = schedule.map((s, i) => `###DAY${i + 1}###`);
+
+    const raw = await claudeNoTools(KEY,
+      CHARS.noor.sys + '\n\n' + AUTHOR_CTX,
+      `Write seven paste-ready social posts for the coming week promoting the book above, one per day, using exactly these platform and angle assignments, in order:\n${dayList}\nFor each day, output only the post copy itself, matching the tone and length norms of its platform. Only day 6 (the soft buy prompt) should include the buy link or ask directly for a sale; the other six must not.\nOutput EXACTLY this format:\n${markers.map((m, i) => `${m}\n[day ${i + 1} post copy]`).join('\n')}`,
+      2000);
+
+    const posts = schedule.map((s, i) => ({
+      day: s.day,
+      platform: s.platform,
+      angle: s.angle.split(',')[0].split('(')[0].trim(),
+      directSell: s.directSell,
+      post: stripDashPunctuation(section(raw, markers[i], markers))
+    }));
+
+    const week = { generated: new Date().toISOString(), weekOf: today, signature: 'Noor Haddad, Head of Communications & Brand Uniformity, Ninth House', posts };
+    await ghPutSmart(GH_TOKEN, 'press/social-week.json', JSON.stringify(week, null, 1), `Author Desk: Social Week for ${today}`);
+    console.log('Author Desk social week: generated for ' + today);
+  }
+
+  // 3) AUTHOR GROWTH RESEARCH: Chidinma Balogun, Head of Advancement & Grants.
+  // Runs on the 17:30 cron every Wednesday, one Anthropic call with web search on.
+  async function authorGrowthResearch() {
+    const raw = await ask(
+      CHARS.chidinma.sys + '\n\n' + AUTHOR_CTX,
+      `Use your web search tool to find CURRENT, verified, currently open routes to grow readership for a self published or independently published author of a paperback titled "The Spirit of America: Views from the Other Side". Look in these categories: live submission windows for book reviews and features, relevant literary awards or prizes currently open for entry, podcasts or newsletters currently taking author guests, and reader community routes. Only include items you can verify are real and currently open or live right now; do not include anything closed, expired, or generic advice.\nFor each item found, in this order: ### [Name], What it is: [one line], Deadline: [date, or Rolling, or None stated], Next action: [the exact next step to take].\nIf you cannot verify at least one genuinely live item in a category, say so plainly in one line and leave that category out rather than filling it with generic advice.`,
+      1600);
+    const clean = stripDashPunctuation(raw);
+
+    const logPath = 'press/growth-log.md';
+    const header = '# Author Growth Log\n\nPrepared by Chidinma Balogun, Head of Advancement & Grants, Ninth House. Verified, currently open opportunities only, newest entry at the top.\n\nProduced by Ninth House, an AI-operated growth studio under human CEO oversight.\n';
+    const logFile = await ghGetFile(GH_TOKEN, logPath);
+    const existing = logFile.content || header;
+    const entry = `## ${today}\n\n${clean}\n\n`;
+    const firstDateHeading = existing.indexOf('\n## ');
+    const updated = firstDateHeading > -1
+      ? existing.slice(0, firstDateHeading + 1) + entry + existing.slice(firstDateHeading + 1)
+      : existing + '\n' + entry;
+    await ghPutFile(GH_TOKEN, logPath, updated, `Author Desk: growth log entry for ${today}`, logFile.sha);
+    console.log('Author Desk growth log: updated for ' + today);
+  }
+
+  // 4) BIOGRAPHER ASSIGNMENT: Dr. Lena Castellanos, Head of Research & Market
+  // Intelligence, the partner on the roster closest to research and editorial
+  // discipline. She drafts no biographical prose; she only holds and grows a
+  // question list for the author to answer in his own words, over time.
+  const NEXT_PROJECT_PATH = 'press/next-project.md';
+  const NEXT_PROJECT_INITIAL = `# The Next Project: A Working Biography\n\nAssigned to: Dr. Lena Castellanos, Head of Research & Market Intelligence, Ninth House.\n\nRemit: Dr. Castellanos is acting as a semi biographer for the author's next project. Her role is to hold and grow a list of open questions here for the author to answer in his own words, over time. She drafts no biographical prose until the author has supplied answers; her discipline is verification, not invention. One new question is added automatically every Friday.\n\n## Open questions for the author\n\n1. What is the working title or working idea for the next project?\n2. Is the next project fiction, non fiction, or something else?\n3. Is there a period of your life or career you most want this project to draw on?\n\nAnswer any question above directly in this file, in your own words, whenever you are ready.\n\nProduced by Ninth House, an AI-operated growth studio under human CEO oversight.\n`;
+
+  async function ensureNextProject() {
+    const existing = await ghGetFile(GH_TOKEN, NEXT_PROJECT_PATH);
+    if (existing.content) return;
+    await ghPutFile(GH_TOKEN, NEXT_PROJECT_PATH, NEXT_PROJECT_INITIAL, 'Author Desk: create next-project.md', undefined);
+    console.log('Author Desk: next-project.md created.');
+  }
+
+  async function appendBiographerQuestion() {
+    const existing = await ghGetFile(GH_TOKEN, NEXT_PROJECT_PATH);
+    const content = existing.content || NEXT_PROJECT_INITIAL;
+    const raw = await claudeNoTools(KEY,
+      CHARS.lena.sys + '\n\n' + AUTHOR_CTX,
+      `Here is the current working file for the author's next project, including the open question list and any answers the author may have already written in:\n\n${content}\n\nWrite exactly one new open question to add to the list, in the same spirit as the existing ones, that has not already been asked and is not already answered above. Output only the question itself, one line, no numbering, no preamble.`,
+      200);
+    const question = stripDashPunctuation(raw.trim().replace(/^\d+[.)]\s*/, ''));
+    if (!question) { console.log('Author Desk biographer: question generation returned nothing, skipping this week.'); return; }
+
+    const nums = [...content.matchAll(/^(\d+)\./gm)].map(m => parseInt(m[1], 10));
+    const nextNum = nums.length ? Math.max(...nums) + 1 : 1;
+    const lines = content.split('\n');
+    let lastQIdx = -1;
+    lines.forEach((l, i) => { if (/^\d+\.\s/.test(l)) lastQIdx = i; });
+    let updated;
+    if (lastQIdx > -1) {
+      lines.splice(lastQIdx + 1, 0, `${nextNum}. ${question}`);
+      updated = lines.join('\n');
+    } else {
+      updated = content + '\n' + `${nextNum}. ${question}\n`;
+    }
+    await ghPutFile(GH_TOKEN, NEXT_PROJECT_PATH, updated, `Author Desk: add biographer question for ${today}`, existing.sha || undefined);
+    console.log('Author Desk biographer: appended a new question.');
+  }
+
+  try { await authorMediaPack(env); } catch (e) { console.log('Author Desk media pack failed, skipping: ' + String(e).slice(0, 160)); }
+  if (SHIFT === 'Dawn' && dow === 1) {
+    try { await authorSocialWeek(); } catch (e) { console.log('Author Desk social week failed, skipping: ' + String(e).slice(0, 160)); }
+  }
+  if (hourUTC === 17 && dow === 3) {
+    try { await authorGrowthResearch(); } catch (e) { console.log('Author Desk growth research failed, skipping: ' + String(e).slice(0, 160)); }
+  }
+  try { await ensureNextProject(); } catch (e) { console.log('Author Desk biographer setup failed, skipping: ' + String(e).slice(0, 160)); }
+  if (hourUTC === 23 && dow === 5) {
+    try { await appendBiographerQuestion(); } catch (e) { console.log('Author Desk biographer weekly question failed, skipping: ' + String(e).slice(0, 160)); }
+  }
+
   /* ---------- Write (keep last 30 days of items) ---------- */
   const merged = [...(prev.items || []), ...items];
   const cutoff = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
@@ -761,9 +976,27 @@ export default {
       })
     );
   },
-  async fetch() {
+  async fetch(request, env, ctx) {
+    const url = new URL(request.url);
+    // Manual trigger for the Author Desk media pack only (see worker/README.md).
+    // Requires AUTHOR_DESK_TRIGGER_TOKEN to be set; declines closed by default if
+    // it is not, rather than leaving an open endpoint that could force a rebuild
+    // and burn Anthropic tokens on request from anyone who finds the URL.
+    if (url.pathname === '/author-desk/media-pack' && request.method === 'POST') {
+      const expected = env.AUTHOR_DESK_TRIGGER_TOKEN;
+      const provided = request.headers.get('Authorization') || '';
+      if (!expected || provided !== `Bearer ${expected}`) {
+        return new Response('Unauthorized', { status: 401 });
+      }
+      ctx.waitUntil(
+        authorMediaPack(env, { force: true }).catch((e) => {
+          console.error('Author Desk media pack (manual trigger) failed: ' + String(e && e.message ? e.message : e).slice(0, 500));
+        })
+      );
+      return new Response('Media pack rebuild triggered.', { status: 202 });
+    }
     return new Response(
-      'Ninth House Autopilot Worker. This is a Cron Trigger worker; it does not run on demand from HTTP requests. See /worker/README.md for deploy and secret setup.',
+      'Ninth House Autopilot Worker. This is a Cron Trigger worker; it does not run on demand from HTTP requests, except POST /author-desk/media-pack with the correct bearer token, to redo the Author Desk press kit. See /worker/README.md for deploy and secret setup.',
       { status: 200, headers: { 'content-type': 'text/plain' } }
     );
   }

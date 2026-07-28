@@ -84,6 +84,17 @@ separate means a compromise of one token can never reach the other repo;
 `GITHUB_TOKEN` is never used against `Lyrion1/iwriteyouread` anywhere in
 this code, and `IWRITEYOUREAD_GITHUB_TOKEN` is never used against this repo.
 
+**`AUTHOR_DESK_TRIGGER_TOKEN` is optional.** It only gates the manual
+media pack trigger described under "The Author Desk" below. If you never
+set it, that one HTTP endpoint simply refuses every request with a 401;
+nothing else is affected. If you do want to be able to trigger a press
+kit rebuild on demand, pick any long random string yourself (this is a
+shared secret you invent, not something to fetch from a provider) and:
+
+```
+wrangler secret put AUTHOR_DESK_TRIGGER_TOKEN
+```
+
 ### 4. Deploy
 
 ```
@@ -172,6 +183,80 @@ array, or a different filename entirely), that one step will need a small
 follow-up change once the actual format is known; nothing else in this job
 depends on it.
 
+## The Author Desk
+
+Four jobs in support of the CEO's own book, *The Spirit of America: Views
+from the Other Side* (paperback, https://www.amazon.co.uk/dp/B0G58J7DF5).
+Each is wrapped in its own `try`/`catch`, so a failure in any one of them
+can never touch the standup, the packs, the Wire Brief, the Night Press,
+or the iwriteyouread job. All four write only into this repo's own
+`/press` directory using the existing `GITHUB_TOKEN`; none of them touch
+`Lyrion1/iwriteyouread` or its token.
+
+Each job is assigned to the existing partner from `firm.html`'s roster
+whose stated role fits it best. No new partners were created.
+
+1. **Media pack, assigned to Sipho Dlamini (Head of Partnerships & PR).**
+   Runs once, the first time the Worker fires after this code is deployed,
+   then never again on a plain cron cycle; it checks whether
+   `press/media-kit/fact-sheet.md` already exists and skips itself if so.
+   Assembles `press/media-kit/author-bio.md` (50, 100 and 250 word bios),
+   `press/media-kit/interview-questions.md` (five questions with the
+   angle behind each), `press/media-kit/book-synopsis.md`,
+   `press/media-kit/fact-sheet.md`, and `press/media-kit/boilerplate.md`.
+   One Anthropic call, without the web search tool, covers the bios and
+   the questions; the fact sheet and boilerplate are written directly from
+   confirmed facts, no model call needed for those.
+
+   To redo it on demand:
+   ```
+   curl -X POST https://<your-worker-subdomain>.workers.dev/author-desk/media-pack \
+     -H "Authorization: Bearer <your AUTHOR_DESK_TRIGGER_TOKEN>"
+   ```
+   Declines with 401 if the secret is not set or the header does not match.
+
+2. **Social week, assigned to Noor Haddad (Head of Communications & Brand
+   Uniformity).** Runs on the Dawn cron every Monday. One Anthropic call,
+   without the web search tool, writes seven paste-ready posts for the
+   coming week, mixed across LinkedIn, Instagram and X, one angle per day:
+   a craft insight, a line from the book with context, the writing
+   process, a reader question, the bridge between the professional life
+   and the writing life, a soft buy prompt, and a reflection. Only the
+   soft buy prompt day includes the buy link; the model is instructed to
+   place a plain placeholder for the "line from the book" rather than an
+   invented quote, since the book's actual text was never supplied. Writes
+   `press/social-week.json` for the Desk PWA to read.
+
+3. **Author growth research, assigned to Chidinma Balogun (Head of
+   Advancement & Grants), the partner whose desk already does exactly
+   this pattern for the venture portfolio's own grants and competitions.**
+   Runs on the 17:30 cron every Wednesday. One Anthropic call with the web
+   search tool on, looking for currently open review and feature
+   submission windows, live literary awards and prizes, podcasts and
+   newsletters taking author guests, and reader community routes.
+   Instructed to name a category empty rather than fill it with generic
+   or closed material. Prepends a dated entry to `press/growth-log.md`,
+   newest at the top.
+
+4. **Biographer assignment, assigned to Dr. Lena Castellanos (Head of
+   Research & Market Intelligence), the partner on the roster closest to
+   research and editorial discipline.** Creates `press/next-project.md`
+   the first time the Worker runs, with her name and role, a stated remit,
+   and three opening questions for the author to answer in his own words
+   whenever he is ready. On the 23:30 cron every Friday, one Anthropic
+   call (no web search) reads the current file and appends exactly one new
+   question, drawn from what is not yet asked or answered. She drafts no
+   biographical prose anywhere in this code; the only thing this job ever
+   writes is a question.
+
+**An honest limit on the media pack and the social week's "line from the
+book" day:** no synopsis, plot detail, or actual line from the book was
+ever supplied to write this. The synopsis file is filled with `[TO
+CONFIRM]` placeholders rather than an invented description, and the
+social week's book-line day carries a placeholder token instead of a
+quote. Both need the author's own input before they read as finished;
+neither should be published as-is.
+
 ## Known limits worth watching
 
 **CPU time on the Workers Free plan is 10 milliseconds of actual JavaScript
@@ -198,10 +283,16 @@ comfortably fit inside that, but if Anthropic is having a slow day this is
 the ceiling.
 
 **Subrequests**: the free plan allows 50 fetch calls per invocation. The
-busiest realistic shift (a Dawn shift that is also an incident and also a
-Monday or Thursday, so every desk fires, plus the iwriteyouread job's own
-directory listing, sample reads, one call, and its post, index and sitemap
-writes) comes to roughly 37, still comfortably under the limit.
+busiest realistic ongoing shift (a Dawn shift that is also an incident and
+also a Monday, so every desk fires, plus iwriteyouread, plus the Author
+Desk's social week and its two "already done" marker checks) comes to
+roughly 42, still under the limit but with less room to spare than before.
+The single narrow edge case that comes close to the ceiling is the very
+first deploy, if that first cron firing happens to land on an incident
+Monday Dawn: the media pack and the biographer's first-run file creation
+both do more work than on every run after, which could bring that one
+specific invocation up to roughly 49. This is a one-time risk on the very
+first run only; every run after settles back to roughly 42 or fewer.
 
 ## What remains for the CEO to do
 
@@ -227,6 +318,14 @@ means in practice). Concretely, the steps only you can do are:
    the new post reads well and that the index and sitemap updates, if any,
    look right. See "The iwriteyouread job" above for what to do if the real
    blog index turns out to use a different shape than a plain JSON array.
+7. After the first run of any kind, check this repo's own `/press/media-kit/`
+   and `/press/next-project.md`: fill in the book's actual synopsis and the
+   fact sheet's price where they say `[TO CONFIRM]`, and answer whichever of
+   the biographer's opening questions you are ready to answer, directly in
+   `next-project.md`, in your own words.
+8. If you want the on-demand media pack rebuild, set `AUTHOR_DESK_TRIGGER_TOKEN`
+   (step 3 above) and keep that string somewhere safe; it is the only thing
+   that authorises `POST /author-desk/media-pack`.
 
 Nothing else in this repository change requires action from you; the
 GitHub Actions workflow is disabled (its schedule is commented out, its
