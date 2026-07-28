@@ -66,6 +66,50 @@ async function ghPutFile(token, path, content, message, sha) {
   return await res.json();
 }
 
+// Cross-repo variants of the three helpers above, for the iwriteyouread job only.
+// The main Ninth House read/write helpers (ghGetFile, ghPutFile) stay hardcoded to
+// this repo and are untouched, so nothing about the existing engine changes here.
+async function ghGetFileFrom(token, repo, branch, path) {
+  const res = await fetch(`${GH_API}/repos/${repo}/contents/${ghPath(path)}?ref=${branch}`, {
+    headers: ghHeaders(token)
+  });
+  if (res.status === 404) return { content: null, sha: null };
+  if (!res.ok) throw new Error(`GitHub GET ${repo}/${path} failed: ${res.status} ${(await res.text()).slice(0, 200)}`);
+  const data = await res.json();
+  const content = typeof data.content === 'string' ? Buffer.from(data.content, 'base64').toString('utf-8') : '';
+  return { content, sha: data.sha };
+}
+
+// A directory GET on the Contents API returns an array of entries instead of a
+// single file; used to discover what already exists rather than guessing filenames.
+async function ghListDirFrom(token, repo, branch, path) {
+  const res = await fetch(`${GH_API}/repos/${repo}/contents/${ghPath(path)}?ref=${branch}`, {
+    headers: ghHeaders(token)
+  });
+  if (res.status === 404) return [];
+  if (!res.ok) throw new Error(`GitHub GET ${repo}/${path} (list) failed: ${res.status} ${(await res.text()).slice(0, 200)}`);
+  const data = await res.json();
+  return Array.isArray(data) ? data : [];
+}
+
+async function ghPutFileTo(token, repo, branch, path, content, message, sha) {
+  const body = {
+    message,
+    content: Buffer.from(content, 'utf-8').toString('base64'),
+    branch,
+    committer: COMMITTER,
+    author: COMMITTER
+  };
+  if (sha) body.sha = sha;
+  const res = await fetch(`${GH_API}/repos/${repo}/contents/${ghPath(path)}`, {
+    method: 'PUT',
+    headers: ghHeaders(token, { 'Content-Type': 'application/json' }),
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) throw new Error(`GitHub PUT ${repo}/${path} failed: ${res.status} ${(await res.text()).slice(0, 200)}`);
+  return await res.json();
+}
+
 /* ---------- Portfolio & firm context ---------- */
 const BIZ = {
   setpostgo: `SetPostGo (setpostgo.xyz): social media content generation SaaS under Lyrīon Ltd. 89 professions, 12 categories, 6 platforms, 30 posts/month per profession. Geo-pricing across 22 countries; affordability for African SMEs (Nigeria entry tier ₦2,000; Flutterwave for Africa, Stripe elsewhere). Levers: SEO blog, UGC creators, UK Visibility Register, Africa expansion.`,
@@ -132,6 +176,24 @@ async function claude(key, system, user, max = 1000) {
       'anthropic-version': '2023-06-01'
     },
     body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: max, system, messages: [{ role: 'user', content: user }], tools: [{ type: 'web_search_20250305', name: 'web_search' }] })
+  });
+  if (!res.ok) throw new Error('API ' + res.status + ': ' + (await res.text()).slice(0, 200));
+  const data = await res.json();
+  return (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
+}
+
+// Same call, no web_search tool attached: for the iwriteyouread job, which writes
+// general literary reflection rather than anything time-sensitive, so there is
+// nothing to search for and one plain call keeps the cost down.
+async function claudeNoTools(key, system, user, max = 1000) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: max, system, messages: [{ role: 'user', content: user }] })
   });
   if (!res.ok) throw new Error('API ' + res.status + ': ' + (await res.text()).slice(0, 200));
   const data = await res.json();
@@ -585,6 +647,100 @@ CEO_ACTIONS:
     try { await nightPress(); } catch (e) { console.log('Night Press failed tonight, the presses rest: ' + String(e).slice(0, 160)); }
   } else {
     console.log(`Night Press: presses run on the dawn shift only (this is the ${SHIFT} shift).`);
+  }
+
+  /* ============ THE IWRITEYOUREAD JOURNAL (Dawn shift only, separate repo) ============ */
+  // A second, unrelated blog: one literary post a day in Lyrion1/iwriteyouread, written
+  // under its own token so a leak here can never touch this repo, and this repo's
+  // GITHUB_TOKEN can never touch that one. Entirely self-contained: it never reads or
+  // writes anything above this line, and its own try/catch below means a failure here
+  // can never stop the standup, the packs, the Wire Brief or the Night Press.
+  //
+  // The actual layout of Lyrion1/iwriteyouread was not available to inspect while this
+  // was written, so nothing here is hardcoded to filenames. The blog directory is
+  // listed at runtime to learn the voice from whatever is actually there, and the blog
+  // index is only touched if a JSON array is found at one of a few common candidate
+  // paths; if the real repo uses something else, that one step is skipped and logged,
+  // never guessed at blindly. Worth a CEO check after the first run.
+  const IWY_REPO = 'Lyrion1/iwriteyouread';
+  const IWY_BRANCH = 'main';
+  const IWY_BLOG_DIR = 'public/blog';
+  const IWY_INDEX_CANDIDATES = ['public/blog/index.json', 'public/blog/posts.json', 'public/blog/blog.json'];
+
+  async function iwriteyouread() {
+    const iwyToken = env.IWRITEYOUREAD_GITHUB_TOKEN;
+    if (!iwyToken) { console.log('iwriteyouread: missing IWRITEYOUREAD_GITHUB_TOKEN secret, skipping this job.'); return; }
+
+    // 1) Learn the voice: list the blog directory, read up to three existing posts.
+    const listing = await ghListDirFrom(iwyToken, IWY_REPO, IWY_BRANCH, IWY_BLOG_DIR);
+    const postFiles = listing
+      .filter(e => e.type === 'file' && /\.(md|html)$/i.test(e.name) && !/^(index|posts|blog|sitemap|readme)\./i.test(e.name))
+      .sort((a, b) => b.name.localeCompare(a.name))
+      .slice(0, 3);
+
+    const samples = [];
+    for (const f of postFiles) {
+      const got = await ghGetFileFrom(iwyToken, IWY_REPO, IWY_BRANCH, f.path);
+      if (got.content) samples.push(`--- ${f.name} ---\n${got.content.slice(0, 2000)}`);
+    }
+    const voiceSample = samples.length
+      ? samples.join('\n\n')
+      : 'No existing posts were found to sample. Write in a restrained, literary voice: exact, unhurried, no filler.';
+    const ext = postFiles.length && postFiles.every(f => /\.md$/i.test(f.name)) ? 'md' : 'html';
+
+    // 2) One Anthropic call, no web search tool: this is reflection, not reportage.
+    const raw = await claudeNoTools(KEY,
+      'You are the anonymous voice behind iwriteyouread, a literary journal. You write literary reflection, notes on the craft of writing, or commentary on poetry. Restrained, exact, no filler. Hard rule: never invent biographical claims about the author of this journal, never invent quotes, never invent events; write about craft, reading and reflection in general terms, not about specific unverifiable people or incidents. Hard rule: never use em dashes, en dashes, or hyphens as sentence punctuation. Use commas, colons or full stops.',
+      `Existing posts, to learn the voice only, do not copy their subject or borrow their lines:\n\n${voiceSample}\n\nWrite one new post: literary reflection, a note on the craft of writing, or commentary on poetry, your choice. 500 to 900 words, plain prose paragraphs.\nOutput EXACTLY this format:\nTITLE: [title, under 70 characters]\nSLUG: [lowercase-hyphenated-slug]\nBODY:\n[the post, paragraphs separated by a blank line, no markdown headers, no bullet lists unless the form itself calls for a list]`,
+      1600);
+
+    const grab = (k) => { const mm = raw.match(new RegExp('^' + k + ':\\s*(.+)$', 'm')); return mm ? mm[1].trim() : ''; };
+    const title = stripDashPunctuation(grab('TITLE'));
+    let slug = (grab('SLUG') || title).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
+    const bodyIdx = raw.indexOf('BODY:');
+    const bodyRaw = bodyIdx > -1 ? raw.slice(bodyIdx + 5).trim() : '';
+    const body = stripDashPunctuation(bodyRaw);
+    if (!title || !slug || body.length < 300) { console.log('iwriteyouread: output malformed, skipping today.'); return; }
+    slug = today + '-' + slug;
+    const filePath = `${IWY_BLOG_DIR}/${slug}.${ext}`;
+
+    await ghPutFileTo(iwyToken, IWY_REPO, IWY_BRANCH, filePath, body, `Add post: ${title}`, undefined);
+    console.log('iwriteyouread: published ' + filePath);
+
+    // 3) Update the blog index, only if a recognisable JSON array is found.
+    let indexUpdated = false;
+    for (const candidate of IWY_INDEX_CANDIDATES) {
+      const idxFile = await ghGetFileFrom(iwyToken, IWY_REPO, IWY_BRANCH, candidate);
+      if (!idxFile.content) continue;
+      try {
+        const idx = JSON.parse(idxFile.content);
+        if (Array.isArray(idx)) {
+          idx.unshift({ title, slug, date: today, path: filePath });
+          await ghPutFileTo(iwyToken, IWY_REPO, IWY_BRANCH, candidate, JSON.stringify(idx, null, 1), `Update blog index: ${title}`, idxFile.sha);
+          console.log('iwriteyouread: updated index at ' + candidate);
+          indexUpdated = true;
+        }
+      } catch (e) {
+        console.log(`iwriteyouread: ${candidate} exists but is not a JSON array, left untouched.`);
+      }
+      break;
+    }
+    if (!indexUpdated) console.log('iwriteyouread: no recognised JSON blog index found, skipped that step.');
+
+    // 4) Update sitemap.xml, same pattern as the Night Press uses for this repo.
+    const smFile = await ghGetFileFrom(iwyToken, IWY_REPO, IWY_BRANCH, 'sitemap.xml');
+    if (smFile.content) {
+      let sm = smFile.content;
+      const loc = `https://iwriteyouread.org/blog/${slug}`;
+      if (!sm.includes(loc)) sm = sm.replace('</urlset>', `  <url><loc>${loc}</loc></url>\n</urlset>`);
+      await ghPutFileTo(iwyToken, IWY_REPO, IWY_BRANCH, 'sitemap.xml', sm, `Add ${slug} to sitemap`, smFile.sha);
+      console.log('iwriteyouread: updated sitemap.xml');
+    } else {
+      console.log('iwriteyouread: no sitemap.xml found at repo root, skipped.');
+    }
+  }
+  if (SHIFT === 'Dawn') {
+    try { await iwriteyouread(); } catch (e) { console.log('iwriteyouread job failed, skipping today: ' + String(e).slice(0, 160)); }
   }
 
   /* ---------- Write (keep last 30 days of items) ---------- */
