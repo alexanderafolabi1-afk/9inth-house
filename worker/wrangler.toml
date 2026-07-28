@@ -1,0 +1,15 @@
+name = "ninth-house-autopilot"
+main = "src/index.js"
+compatibility_date = "2026-07-28"
+compatibility_flags = ["nodejs_compat"]
+
+# Four shifts a day, matching the retired GitHub Actions schedule exactly.
+# All times UTC. Cloudflare Cron Triggers are always UTC, so no conversion
+# from the old workflow's cron lines is needed.
+[triggers]
+crons = [
+  "30 5 * * *",   # 05:30 UTC, Dawn shift (Night Press publishes here)
+  "30 11 * * *",  # 11:30 UTC, Midday shift
+  "30 17 * * *",  # 17:30 UTC, Evening shift
+  "30 23 * * *"   # 23:30 UTC, Night shift
+]
