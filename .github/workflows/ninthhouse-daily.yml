@@ -1,11 +1,15 @@
 name: Ninth House Daily Cycle
 on:
-  schedule:
-    - cron: '30 5 * * *'    # 05:30 UTC — Dawn shift (work ready before you wake; Night Press publishes here)
-    - cron: '30 11 * * *'   # 11:30 UTC — Midday shift
-    - cron: '30 17 * * *'   # 17:30 UTC — Evening shift
-    - cron: '30 23 * * *'   # 23:30 UTC — Night shift
-  workflow_dispatch: {}     # manual "Run workflow" button for testing
+  # Schedule disabled: the four daily shifts now run on a Cloudflare Worker's
+  # Cron Triggers instead (see /worker), independent of GitHub Actions
+  # billing. Uncomment the lines below to restore this workflow's own
+  # schedule if the Worker is ever retired.
+  # schedule:
+  #   - cron: '30 5 * * *'    # 05:30 UTC, Dawn shift (work ready before you wake, Night Press publishes here)
+  #   - cron: '30 11 * * *'   # 11:30 UTC, Midday shift
+  #   - cron: '30 17 * * *'   # 17:30 UTC, Evening shift
+  #   - cron: '30 23 * * *'   # 23:30 UTC, Night shift
+  workflow_dispatch: {}     # manual "Run workflow" button, kept as a fallback
 
 permissions:
   contents: write
