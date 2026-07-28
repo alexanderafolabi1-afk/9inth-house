@@ -239,13 +239,13 @@ document.getElementById('register').innerHTML = TABLE.map(t =>
 /* Slim registry of house properties, names separated by the Jupiter glyph */
 const ESTATE = [
   ['SetPostGo','https://setpostgo.xyz'], ['NAGORI','https://nagori.xyz'], ['RenviaIT','https://renviait.co.uk'],
-  ['Lyrion Atelier','https://lyrion.co.uk'], ['iwriteyouread','https://iwriteyouread.org'],
+  ['Lyrion&nbsp;Atelier','https://lyrion.co.uk'], ['iwriteyouread','https://iwriteyouread.org'],
   ['ChurchOS','#'], ['WishWall','#']
 ];
 document.getElementById('reg-line').innerHTML =
   ESTATE.map(([n, u]) => u === '#'
     ? `<a href="#" data-pending title="Opening soon" onclick="return false">${n}</a>`
-    : `<a href="${u}" target="_blank" rel="noopener">${n}</a>`).join('<span class="g">&#9795;</span>');
+    : `<a href="${u}" target="_blank" rel="noopener">${n}</a>`).join('<span class="g">&#9795;</span>&#8203;');
 
 const io = new IntersectionObserver(es => es.forEach(e => { if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } }), { threshold:.12 });
 document.querySelectorAll('.reveal').forEach(el => io.observe(el));

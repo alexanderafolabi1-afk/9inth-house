@@ -231,7 +231,7 @@ footer .fine{text-align:center}
 #obs-lift b{font-family:'Spline Sans Mono',monospace;font-size:8px;letter-spacing:.2em;color:#241B07;text-align:center}
 #obs-lift a{width:40px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:8px;background:linear-gradient(#FBF7EE,#EDE4D0);border:1px solid #8F7434;color:#3E2E1E;font-family:'Spline Sans Mono',monospace;font-size:11px;font-weight:600;text-decoration:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.6)}
 #obs-lift a:hover{background:linear-gradient(#241B07,#3E2E1E);color:#E9CE8C}
-@media(max-width:720px){#obs-lift{flex-direction:row;flex-wrap:wrap;max-width:150px;bottom:12px;left:12px}#obs-lift b{width:100%}}
+@media(max-width:720px){#obs-lift{flex-direction:row;flex-wrap:wrap;max-width:336px;bottom:12px;left:12px}#obs-lift b{width:100%}#obs-lift a{width:34px;height:26px;font-size:10px}.obs-hero img{height:20vh;max-height:160px}.lead{font-size:15px;line-height:1.5}}
 
 /* Ticker */
 .ticker{background:var(--dark);border-top:1px solid var(--gold);border-bottom:1px solid var(--gold);overflow:hidden}
@@ -444,7 +444,7 @@ const ESTATE = [
   { name:'SetPostGo',      line:'Social content, pre-generated for 89 professions', url:'https://setpostgo.xyz' },
   { name:'NAGORI',         line:'One million sealed letters, then never again',      url:'https://nagori.xyz' },
   { name:'RenviaIT',       line:'Retired technology, returned to the world',         url:'https://renviait.co.uk' },
-  { name:'Lyrion Atelier', line:'Clothing written in the stars',                     url:'https://lyrion.co.uk' },
+  { name:'Lyrion&nbsp;Atelier', line:'Clothing written in the stars',                     url:'https://lyrion.co.uk' },
   { name:'iwriteyouread',  line:'Words by the principal',                            url:'https://iwriteyouread.org' },
   { name:'ChurchOS',       line:'Operating software for the modern ministry',        url:'#', pending:true },
   { name:'WishWall',       line:'Where wishes find their patrons',                   url:'#', pending:true }
@@ -457,7 +457,7 @@ document.getElementById('estate-grid').innerHTML = ESTATE.map(e =>
      <span class="face"><b>${e.name}</b><i></i><span>${e.line}</span></span>
    </a>`).join('');
 document.getElementById('estate-fine').innerHTML =
-  ESTATE.map(e => `<a ${estAttrs(e)}>${e.name}</a>`).join('<span class="g">&#9795;</span>');
+  ESTATE.map(e => `<a ${estAttrs(e)}>${e.name}</a>`).join('<span class="g">&#9795;</span>&#8203;');
 
 /* ============ TICKER ============ */
 const tickerBits = [];
