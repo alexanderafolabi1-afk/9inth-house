@@ -671,7 +671,7 @@ document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
 .fd-fallback.fd-show{display:block}
 #fd-head b{font-family:'Marcellus',serif;font-weight:400;font-size:15px;color:var(--ink);display:block}
 #fd-head small{color:var(--muted);font-size:11px;display:block;min-height:14px}
-#fd-close{margin-left:auto;background:none;border:none;font-size:19px;color:var(--muted);cursor:pointer;padding:4px}
+#fd-close{margin-left:auto;background:none;border:none;font-size:19px;color:var(--muted);cursor:pointer;padding:4px;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center}
 #fd-msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:9px}
 .fd-m{max-width:86%;padding:9px 13px;border-radius:14px;line-height:1.5;color:var(--body)}
 .fd-b{background:var(--band);border:1px solid var(--line);border-bottom-left-radius:4px;align-self:flex-start}
@@ -685,18 +685,18 @@ document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
 .fd-opt:hover{background:var(--band)}
 #fd-inrow{display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--line);background:var(--band)}
 #fd-in{flex:1;border:1px solid var(--line);border-radius:11px;padding:9px 12px;font-family:'Albert Sans',sans-serif;font-size:13.5px;background:var(--card);color:var(--ink);outline:none}
-#fd-send{border:none;background:var(--gold);color:#FFFDF8;border-radius:11px;padding:0 15px;font-weight:700;cursor:pointer}
+#fd-send{border:none;background:var(--gold);color:#FFFDF8;border-radius:11px;padding:0 15px;font-weight:700;cursor:pointer;min-width:44px;min-height:44px}
 </style>
 
 <button id="fd-launch" aria-label="Open front desk" onclick="fdOpen()">
   <span class="ring"></span>
-  <img class="fd-photo" src="avatars/barnaby.jpg" alt="Photo of Barnaby Sterling" onerror="fdAvatarFallback(this)">
+  <img class="fd-photo" src="art/vivienne.webp" alt="Photo of Vivienne, House Concierge" width="256" height="256" loading="eager" onerror="fdAvatarFallback(this)">
   <svg class="fd-fallback" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
     <circle cx="60" cy="60" r="60" fill="#F4EDDC"/>
     <path d="M26 118 Q30 86 60 84 Q90 86 94 118 Z" fill="#A97F2F"/>
-    <path d="M52 90 L60 96 L68 90 L64 86 L56 86 Z" fill="#1C2128"/>
-    <circle cx="60" cy="52" r="23" fill="#F1C27D"/>
-    <path d="M37 52 Q37 26 60 26 Q83 26 83 52 Q80 34 60 33 Q40 34 37 52 Z" fill="#5B4128"/>
+    <path d="M50 92 L60 104 L70 92 Q60 88 50 92 Z" fill="#FBF7EE"/>
+    <circle cx="60" cy="52" r="23" fill="#FFDBAC"/>
+    <path d="M36 66 Q32 26 60 25 Q88 26 84 66 Q82 38 60 36 Q38 38 36 66 Z" fill="#C9A557"/>
     <circle cx="51" cy="50" r="2.6" fill="#1C2128"/>
     <circle cx="69" cy="50" r="2.6" fill="#1C2128"/>
     <path d="M49 59 Q60 71 71 59" fill="none" stroke="#1C2128" stroke-width="2.6" stroke-linecap="round"/>
@@ -708,25 +708,25 @@ document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
 <div id="fd" role="dialog" aria-label="Ninth House Front Desk">
   <div id="fd-head">
     <div class="fdav">
-      <img class="fd-photo" src="avatars/barnaby.jpg" alt="Photo of Barnaby Sterling" onerror="fdAvatarFallback(this)">
+      <img class="fd-photo" src="art/vivienne.webp" alt="Photo of Vivienne, House Concierge" width="256" height="256" loading="eager" onerror="fdAvatarFallback(this)">
       <svg class="fd-fallback" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
         <circle cx="60" cy="60" r="60" fill="#F4EDDC"/>
         <path d="M26 118 Q30 86 60 84 Q90 86 94 118 Z" fill="#A97F2F"/>
-        <path d="M52 90 L60 96 L68 90 L64 86 L56 86 Z" fill="#1C2128"/>
-        <circle cx="60" cy="52" r="23" fill="#F1C27D"/>
-        <path d="M37 52 Q37 26 60 26 Q83 26 83 52 Q80 34 60 33 Q40 34 37 52 Z" fill="#5B4128"/>
+        <path d="M50 92 L60 104 L70 92 Q60 88 50 92 Z" fill="#FBF7EE"/>
+        <circle cx="60" cy="52" r="23" fill="#FFDBAC"/>
+        <path d="M36 66 Q32 26 60 25 Q88 26 84 66 Q82 38 60 36 Q38 38 36 66 Z" fill="#C9A557"/>
         <circle cx="51" cy="50" r="2.6" fill="#1C2128"/>
         <circle cx="69" cy="50" r="2.6" fill="#1C2128"/>
         <path d="M49 59 Q60 71 71 59" fill="none" stroke="#1C2128" stroke-width="2.6" stroke-linecap="round"/>
       </svg>
     </div>
-    <div><b>Ninth House Front Desk</b><small id="fd-status">Barnaby Sterling, Front of House</small></div>
+    <div><b>Ninth House Front Desk</b><small id="fd-status">Vivienne, House Concierge</small></div>
     <button id="fd-close" onclick="fdClose()" aria-label="Close">&times;</button>
   </div>
   <div id="fd-msgs"></div>
   <div id="fd-opts"></div>
   <div id="fd-inrow">
-    <input id="fd-in" placeholder="Type to Barnaby&hellip;" onkeydown="if(event.key==='Enter')fdSend()">
+    <input id="fd-in" placeholder="Type to Vivienne&hellip;" onkeydown="if(event.key==='Enter')fdSend()">
     <button id="fd-send" onclick="fdSend()">&rarr;</button>
   </div>
 </div>
@@ -758,7 +758,7 @@ const statusEl = document.getElementById('fd-status');
 let opened = false, started = false, userClosed = false;
 
 const STATUS = [
-  'Barnaby Sterling, Front of House',
+  'Vivienne, House Concierge',
   'The Observatory: open at last. Barnaby polished the telescope himself',
   'Maren: in the boardroom (do not knock)',
   'Lin: on set. Again.',
@@ -822,18 +822,18 @@ function keeperOpener(){
   return 'Working late, sir? The night shift has it covered. Do rest.';
 }
 const GREETING_VARIANTS = [
-  'Welcome to Ninth House. Barnaby Sterling, Front of House.',
-  'Do come in. Barnaby Sterling, at the desk as ever.',
-  'Ninth House, at your service. Barnaby Sterling, Front of House.',
-  'You have found the front door. Barnaby Sterling, here to open the rest.',
+  'Welcome to Ninth House. Vivienne, House Concierge.',
+  'Do come in. Vivienne, at the door as ever.',
+  'Ninth House, at your service. Vivienne, House Concierge.',
+  'You have found the front door. Vivienne, here to open the rest.',
   'Welcome. The house is awake, and so, it turns out, am I.',
-  'Barnaby Sterling speaking. The nineteen are already at their desks.',
-  'Good of you to call. Barnaby Sterling, Front of House.',
+  'Vivienne speaking. The twenty-three are already at their desks.',
+  'Good of you to call. Vivienne, House Concierge.',
   'Ninth House. Come in before the weather changes its mind.',
-  'Welcome to the house that never quite sleeps. Barnaby Sterling, Front of House.',
-  'You have reached the front desk. Barnaby Sterling, delighted to have you.',
-  'Ninth House, nineteen partners, one door. Barnaby Sterling holds it open.',
-  'Welcome in. Barnaby Sterling, and the house is rather pleased to see you.'
+  'Welcome to the house that never quite sleeps. Vivienne, House Concierge.',
+  'You have reached the front desk. Vivienne, delighted to have you.',
+  'Ninth House, twenty-three partners, one door. Vivienne holds it open.',
+  'Welcome in. Vivienne, and the house is rather pleased to see you.'
 ];
 function publicOpener(){
   const h = fdHour();
@@ -923,7 +923,7 @@ const SELL_NUDGES = [
   "Growth is the whole trade here. Strategy, content, search, film, funding introductions, delivered at a pace most departments cannot match.",
   "You have come to the right desk. Campaigns, content, search, film, funding introductions, nineteen partners deep.",
   "Ask any of the nineteen and they will tell you the same thing: growth is the entire point of this house.",
-  "This is precisely the sort of question Barnaby was built to redirect. Campaigns, content, search, film, funding introductions, the full orchestra.",
+  "This is precisely the sort of question Vivienne was built to redirect. Campaigns, content, search, film, funding introductions, the full orchestra.",
   "Marketing is our one and only trade. Strategy, brand, film, performance, SEO, PR, all under one seal.",
   "The house exists for exactly this. Campaigns, content, search, film, funding introductions, and a human who signs off on every last one.",
   "Splendid question. The nineteen partners have been waiting all morning for someone to ask it.",
@@ -1024,7 +1024,10 @@ window.fdClose = function(){
   userClosed = true;
 };
 /* A direct request to speak to the desk (e.g. "Speak to the concierge" on
-   table.html) opens Barnaby immediately, bypassing the ambient auto-open logic.
+   table.html) opens Vivienne's concierge panel immediately, bypassing the
+   ambient auto-open logic below. The query param stays "barnaby" for
+   backwards compatibility with existing links that already use it (see
+   table.html); it only ever opens the desk, whoever currently mans it.
    Deferred to the next tick so it runs after the rest of the page's script
    (including the currency-awareness constants further down this file) has
    finished initialising. */
@@ -1035,14 +1038,18 @@ if(new URLSearchParams(location.search).get('barnaby') === 'open'){
     try{ history.replaceState(null, '', location.pathname + location.hash); }catch(e){}
   }, 0);
 }
-/* Barnaby is a butler, not a nuisance: auto-open at most once per session,
-   only if the visitor is still at the exterior or lobby six seconds in,
-   nothing else has already opened or closed the desk, and no panel is up. */
+/* Vivienne is a concierge, not a nuisance: auto-open at most once per
+   session (tracked in the opened/userClosed JS variables above, so it never
+   fires twice in the same page life), only if the visitor is still at the
+   exterior or lobby six seconds in, nothing else has already opened or
+   closed the desk, and no panel, game or ceremony is up. */
 setTimeout(()=>{
   if(opened || userClosed) return;
   if(document.getElementById('fd').classList.contains('open')) return;
   const avail = document.getElementById('tw-avail');
   if(avail && avail.classList.contains('on')) return;
+  const passCard = document.getElementById('pass-card');
+  if(passCard && passCard.classList.contains('show')) return;
   if(window.TW_AT_HOME === false) return;
   fdOpen();
   opened = true;
@@ -1526,7 +1533,7 @@ function goLobby(){
      <h3>Reception</h3>
      <p id="tw-ticker" style="font-family:'Spline Sans Mono',monospace;font-size:11px;color:var(--gold);min-height:16px;margin-bottom:6px"></p>
      ${(!(window.nhIsKeeper&&window.nhIsKeeper()) && window.nhHasPass && window.nhHasPass() && window.nhPassObj()) ? `<p style="font-family:'Spline Sans Mono',monospace;font-size:11px;letter-spacing:.05em;color:var(--muted);margin-bottom:6px">Pass holder: ${escTxt(window.nhPassObj().name)}</p>` : ''}
-     <p>${(window.nhIsKeeper&&window.nhIsKeeper())?'Welcome, Keeper of the Seal. The desk stands ready, the lift is to your left, and the house is exactly as you left it.':(twGuest?('Welcome back, '+twGuest+'. Your visitor badge still suits you.'):'Barnaby is at the desk, the lift is to your left, and the directory never lies.')} Where to?</p>
+     <p>${(window.nhIsKeeper&&window.nhIsKeeper())?'Welcome, Keeper of the Seal. The desk stands ready, the lift is to your left, and the house is exactly as you left it.':(twGuest?('Welcome back, '+twGuest+'. Your visitor badge still suits you.'):'Vivienne is at the desk, Barnaby runs the lift, and the directory never lies.')} Where to?</p>
      ${twGuest?'':'<div style="display:flex;gap:8px;margin-top:10px"><input id="tw-guest-in" placeholder="Sign the visitors\' book (first name)" style="flex:1;border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-family:\'Albert Sans\',sans-serif;font-size:13px;background:var(--band);color:var(--ink);outline:none"><button class="tw-btn gold" onclick="twSign()">Sign in</button></div>'}
      <div class="tw-actions">
        <button class="tw-btn gold" onclick="fdOpen()">Speak to the front desk</button>
