@@ -15,10 +15,11 @@
 <meta name="twitter:title" content="Nineteen AI partners. One human seal.">
 <meta name="twitter:description" content="A growth firm that runs while founders sleep. Real campaigns, a real docket, nothing ships without one human's signature.">
 <meta name="theme-color" content="#FBF7EE">
+<meta name="google-site-verification" content="RFVbXgMNK2PnSCQimthMFjJ7PkNNkW9nHFMu95rG8fQ">
 <!-- Cloudflare Web Analytics. CEO: replace CFTOKEN with your real site token from dash.cloudflare.com > Analytics & Logs > Web Analytics > (your site) > Manage site > JS snippet. -->
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "CFTOKEN"}'></script>
+<script src="scripts/analytics.js"></script>
 <script defer src="scripts/clean-index-url.js"></script>
-<meta name="keywords" content="marketing agency UK, growth marketing SaaS, brand strategy, performance marketing, SEO content agency, marketing for founders, Ninth House">
 <link rel="canonical" href="https://9thpoint.com/">
 
 <link rel="apple-touch-icon" href="art/og.jpg">
@@ -466,13 +467,10 @@ footer .fine{text-align:center}
 
 </style>
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"ProfessionalService","name":"Ninth House Growth Partners","alternateName":"Ninth House","description":"A global growth and marketing studio operated by AI partner personas under the oversight and final authority of one human Chief Executive.","parentOrganization":{"@type":"Organization","name":"Lyrion Ltd"},"founder":{"@type":"Person","name":"Alexander Afolabi","jobTitle":"Chief Executive"},"areaServed":["North America","Europe","Asia","Middle East","Africa","Latin America"],"knowsAbout":["brand strategy","performance marketing","SEO","social media marketing","video production","public relations","CRM","market research","grant funding"],"slogan":"The output of a funded agency. The payroll of none."}
+{"@context":"https://schema.org","@type":"ProfessionalService","name":"Ninth House Growth Partners","alternateName":"Ninth House","url":"https://9thpoint.com/","logo":"https://9thpoint.com/art/og.jpg","email":"hello@9thpoint.com","description":"A global growth and marketing studio operated by AI partner personas under the oversight and final authority of one human Chief Executive.","parentOrganization":{"@type":"Organization","name":"Lyrion Ltd"},"founder":{"@type":"Person","name":"Alexander Afolabi","jobTitle":"Chief Executive"},"areaServed":["North America","Europe","Asia","Middle East","Africa","Latin America"],"knowsAbout":["brand strategy","performance marketing","SEO","social media marketing","video production","public relations","CRM","market research","grant funding"],"slogan":"The output of a funded agency. The payroll of none."}
 </script>
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"ProfessionalService","name":"Ninth House Growth Partners","alternateName":"Ninth House","description":"A global growth and marketing studio operated by AI partner personas under the oversight and final authority of one human Chief Executive.","parentOrganization":{"@type":"Organization","name":"Lyrion Ltd"},"founder":{"@type":"Person","name":"Alexander Afolabi","jobTitle":"Chief Executive"},"areaServed":["North America","Europe","Asia","Middle East","Africa","Latin America"],"knowsAbout":["brand strategy","performance marketing","SEO","social media marketing","video production","public relations","CRM","market research","grant funding"],"slogan":"The output of a funded agency. The payroll of none."}
-</script>
-<script type="application/ld+json">
-{"@context":"https://schema.org","@type":"Organization","name":"Ninth House Growth Partners","alternateName":"Ninth House","url":"https://9thpoint.com/","logo":"https://9thpoint.com/avatars/ceo.jpg","founder":{"@type":"Person","name":"Alexander Afolabi"},"parentOrganization":{"@type":"Organization","name":"Lyrion Ltd"},"email":"hello@9thpoint.com","description":"The world's first openly AI-operated growth studio: nineteen partners, six departments, one human Chief Executive."}
+{"@context":"https://schema.org","@type":"Organization","name":"Ninth House Growth Partners","alternateName":"Ninth House","url":"https://9thpoint.com/","logo":"https://9thpoint.com/art/og.jpg","founder":{"@type":"Person","name":"Alexander Afolabi"},"parentOrganization":{"@type":"Organization","name":"Lyrion Ltd"},"email":"hello@9thpoint.com","description":"The world's first openly AI-operated growth studio: nineteen partners, six departments, one human Chief Executive."}
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
@@ -1000,6 +998,7 @@ window.fdSend = function(){
   const inp = document.getElementById('fd-in');
   const v = inp.value.trim(); if(!v) return;
   inp.value=''; bubble(v.replace(/</g,'&lt;'), 'u');
+  if(window.nhTrack) nhTrack.conciergeMsgSent();
   const t = v.toLowerCase();
   if(/book|meet|call|appoint|schedul|diary/.test(t)) return book();
   if(/price|cost|fee|how much|rate/.test(t)) return say(["Fees are agreed with the human, scoped to the work, and famously smaller than the payroll we replaced. Book a meeting and bring your ambitions."],[['Book a meeting', book],['Back', greet]]);
@@ -1017,6 +1016,7 @@ window.fdOpen = function(){
   document.getElementById('fd').classList.add('open');
   document.getElementById('fd-launch').style.display='none';
   if(!started){ started = true; greet(); }
+  if(window.nhTrack) nhTrack.conciergeOpened();
 };
 window.fdClose = function(){
   document.getElementById('fd').classList.remove('open');
@@ -1101,7 +1101,16 @@ const PAY = { boardroom:'https://buy.stripe.com/aFaeVe01tdU4ei6alG0Jq01', audit:
   floorWalk:'https://buy.stripe.com/5kQ7sMg0r7vGc9YctO0Jq05'
 }; // Stripe Payment Links; empty falls back to WhatsApp
 const PACKS = { maren:['The Boardroom Session','£149'], jonah:['Brand Platform Sprint','£220'], ingrid:['Positioning Sprint','£220'], valentina:['30 Day Social Series','£160'], adaeze:['Africa Market Entry Map','£180'], theo:['Paid Media Test Plan','£150'], priya:['SEO Sprint','£250'], sipho:['Press Pitch Pack','£140'], kenji:['Lifecycle Flow Pack','£180'], noor:['Brand Voice Bible','£160'], lin:['The Film Pack','£180'], mei:['Brand Image Pack','£120'], rocio:['Funnel Diagnosis','£140'], lena:['Competitor Teardown','£160'], amara:['Impact Report','£180'], tobias:['Site Health Audit','£120'], margaret:['Finance Health Check','£160'], chidinma:['Grant Scan','£140'], harrison:['Funding Readiness Pack','£220'] };
-function payOr(link, waText){ if(link){ window.open(link,'_blank'); } else { window.open(WA9+'?text='+encodeURIComponent(waText),'_blank'); } }
+function payOr(link, waText, offerName){
+  var name = offerName || (waText ? waText.replace(/^Hello Ninth House,?\s*/i,'').substring(0,60) : 'unknown');
+  if(link){
+    if(window.nhTrack) nhTrack.paymentLinkClicked(name);
+    window.open(link,'_blank');
+  } else {
+    if(window.nhTrack) nhTrack.outboundWhatsapp();
+    window.open(WA9+'?text='+encodeURIComponent(waText),'_blank');
+  }
+}
 
 // CEO: create a free Calendly account and paste your real scheduling link below,
 // replacing the CALENDLY-HANDLE placeholder. Until then, Book a Floor Walk falls
@@ -1598,6 +1607,7 @@ function goFloor(f){
 
 function knock(pid){
   const p = TW.partners.find(x=>x.id===pid);
+  if(window.nhTrack) nhTrack.partnerCardOpened(p ? p.n : pid);
   const ov = document.getElementById('tw-avail'); const txt = document.getElementById('tw-avail-txt');
   ov.classList.add('on');
   txt.textContent = 'Checking ' + p.n.split(' ')[0] + "'s availability\u2026";
@@ -2957,6 +2967,7 @@ window.soundToggle = function(btn){
       if(!nameOk || !emailOk) return;
       const floorLabel = (typeof f === 'number') ? ((TW.floors && TW.floors[f]) || ('Floor ' + f)) : (f || 'The front desk');
       const pass = window.nhIssuePass(name, email, floorLabel);
+      if(window.nhTrack) nhTrack.auditRequestSubmitted();
       passSubmitBtn.onclick = null; passDeclineBtn.onclick = null;
       passFormWrap.style.display = 'none';
       const shown = name.charAt(0).toUpperCase() + name.slice(1);
