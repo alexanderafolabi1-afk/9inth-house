@@ -331,3 +331,170 @@ Nothing else in this repository change requires action from you; the
 GitHub Actions workflow is disabled (its schedule is commented out, its
 manual "Run workflow" button still works as a fallback) and needs no
 further changes unless you want it removed entirely later.
+
+---
+
+# The distribution engine
+
+This is the part that writes the social posts, holds them in a queue, waits for
+you to approve them, and publishes the ones you approve. It sits on the same
+Worker as everything above and it cannot break any of it: if its storage is not
+connected, or one of its jobs fails, the autopilot, the Night Press and the
+journal all carry on untouched.
+
+How it runs, in order:
+
+1. **05:30, generate.** For each active venture it works out what is owed today
+   from that venture's own weekly cadence, writes the copy, and puts it in the
+   queue. It publishes nothing.
+2. **You are told.** A notification goes to your phone saying how many posts are
+   waiting across how many ventures. Tapping it opens the queue.
+3. **You approve.** Open the desk, read each card, then approve, edit, schedule
+   or skip. Approving sends it immediately.
+4. **Every shift, the sweep.** Anything you scheduled goes out at the first shift
+   after its time.
+5. **17:30, the readings.** If a metrics source is connected, the numbers are
+   stored. What performs is generated more often. What you skip is generated less.
+
+Everything publishes through the single Make.com webhook. The Worker never holds
+a LinkedIn, X or Instagram credential, and never talks to those platforms itself.
+
+## Which secrets are required
+
+Set each with `npx wrangler secret put NAME` from inside the `worker` directory,
+pasting the value when it asks. They are never written into the repo.
+
+**Required for the engine to do anything:**
+
+| Secret | What it is |
+|---|---|
+| `MAKE_WEBHOOK_URL` | The Make.com webhook address that actually posts. Never write this into a file. |
+| `DESK_ADMIN_TOKEN` | A password you invent, of your own choosing, and paste into the desk once. It is what lets your phone tell the engine to act. Make it long. |
+| `ANTHROPIC_API_KEY` | Already set. The engine writes the copy with it. |
+
+**Required for the morning notification:**
+
+| Secret | What it is |
+|---|---|
+| `VAPID_PUBLIC_KEY` | Notification key, public half. |
+| `VAPID_PRIVATE_KEY` | Notification key, private half. |
+| `VAPID_SUBJECT` | `mailto:` and your email address, for example `mailto:hello@9thpoint.com`. |
+
+You do not have to invent the two VAPID keys. Once `DESK_ADMIN_TOKEN` is set,
+ask the engine to make a pair for you:
+
+```
+curl -X POST https://YOUR-WORKER-ADDRESS/social/push/keys \
+  -H "Authorization: Bearer YOUR-DESK-ADMIN-TOKEN"
+```
+
+It answers with both keys. Paste them straight into
+`npx wrangler secret put VAPID_PUBLIC_KEY` and
+`npx wrangler secret put VAPID_PRIVATE_KEY`. The private one is never stored by
+the Worker and is not shown twice, so if you lose it, just make another pair.
+
+**Optional:**
+
+| Secret | What it is |
+|---|---|
+| `NOTIFY_EMAIL_WEBHOOK` | Somewhere to post the morning note if the phone notification cannot be delivered. Email is the fallback, never the main route. |
+| `METRICS_WEBHOOK_URL` | Somewhere the engine can ask for impression and engagement numbers. Without it the engine never invents a number, it just has none. |
+| `DESK_ORIGIN` | Which web addresses may use the admin, comma separated. Defaults to `https://9thpoint.com,https://www.9thpoint.com`. |
+
+## First time setup, in order
+
+1. **Make the database.** `cd worker && npx wrangler d1 create ninth-house-social`
+2. **Connect it.** Open `worker/wrangler.toml`, find the block at the bottom
+   marked STORAGE, paste the id it just printed, and delete the `#` from those
+   four lines. Commit and push.
+3. **Set the secrets** in the table above.
+4. **Open the desk** at `9thpoint.com/desk.html`, tap the cog, and under "The
+   distribution engine" enter your Worker address and the desk token. Save.
+5. **Tap "Prepare storage"** once. That creates the tables and puts the first
+   venture on the books.
+6. **Tap "Turn on notifications"**, then "Send a test".
+7. **Tap "Generate now"** to see the queue fill without waiting for the morning.
+
+## How to add a venture
+
+In the desk, Queue tab, "Add a venture". No code, no deploy, no help needed.
+
+Fill in the slug, the name, the site, and then the four boxes that matter most:
+
+- **Positioning.** What it is, who it serves, why it wins. This is what the copy
+  is actually written from, so a vague paragraph gives vague posts.
+- **Audience.** Who is really reading.
+- **Tone.** How it speaks, and how it never speaks.
+- **Words it never uses.** A comma separated list. Anything here is banned from
+  its copy.
+
+Then set the posts a week per platform, and the mix. Save, and it starts
+generating on the next dawn shift.
+
+Two ventures never sound alike as long as those four boxes differ. If two
+ventures start reading the same, the positioning is doing too little work.
+
+## How to change a cadence
+
+Queue tab, "Edit ventures", pick the venture, change the number of posts a week
+for that platform, save.
+
+Zero switches a platform off for that venture without deleting anything. The
+engine spreads what is owed across the days left in the week rather than posting
+it all at once, and a venture that has met its target for the week is given
+nothing to pad with.
+
+To stop a venture entirely for a while, use Pause in "Edit ventures". Nothing more
+is generated for it, and nothing already in the queue is lost.
+
+## How to add a platform
+
+Two steps, in this order.
+
+1. **In Make**, add a branch for it on the existing webhook, routing on the
+   `platform` field the way the LinkedIn branch already does. The rail receives
+   `venture`, `platform`, `text`, `image_url` and `link` on every post.
+2. **In the code**, add one entry to `worker/src/social/config.js` under
+   `PLATFORMS`, giving its label, its character limit, whether it needs an image,
+   and how many hashtags it takes. Deploy.
+
+It then appears by itself in the venture form, ready to be given a cadence. No
+other file changes, because nothing else in the engine knows what a platform is:
+there is a check in `scripts/check-social.mjs` that fails the build if any module
+other than the config starts naming platforms.
+
+Only LinkedIn is live on the rail as at 12 August 2026, which is why the first
+venture is seeded with LinkedIn alone. Queueing posts for a platform the rail
+cannot route yet would only fill your morning with things that cannot be sent.
+
+## Checking it yourself
+
+```
+curl https://YOUR-WORKER-ADDRESS/social/selfcheck \
+  -H "Authorization: Bearer YOUR-DESK-ADMIN-TOKEN"
+```
+
+It answers with which secrets are set, whether storage is connected, which
+platforms are configured, and whether the no em dash rule is holding. It never
+prints a secret, only whether one is present.
+
+`node scripts/check-social.mjs` from the repo root runs the engine's own checks:
+the cadence arithmetic, the category mix, the send guards, and the notification
+encryption, which is verified by decrypting its own output rather than trusted.
+
+## Things worth knowing
+
+- **Nothing publishes twice.** Approving claims the row in the database before
+  anything is sent, so a double tap, a retried request or two phones at once all
+  collapse into one post. A post that has already gone can never be sent again.
+- **Approve all** sends up to twenty five at a time and tells you how many are
+  left, because a Worker has a limit on how many outbound calls one request may
+  make.
+- **The engine does not make images.** A post that needs one is queued with a
+  description of the image to make, and refuses to send until you paste in the
+  address of an image you have hosted. That is deliberate: it will not invent a
+  picture and it will not fabricate a link to one.
+- **Skipping matters.** A skip is kept, not deleted, and counts against that kind
+  of post when the next batch is written. It is the strongest signal you give it.
+- **No number is ever invented.** If no metrics source is connected, the engine
+  has no readings, says so, and generates unbiased. It will not estimate.

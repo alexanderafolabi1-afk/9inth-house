@@ -13,6 +13,19 @@
 // Anthropic calls are plain fetch() to api.anthropic.com, authenticated with an
 // ANTHROPIC_API_KEY secret. Nothing here ever logs either secret.
 
+// The cross venture distribution engine lives in ./social. It is additive: if its
+// storage binding is absent, or one of its jobs throws, the autopilot, the press
+// job and the iwriteyouread job all carry on exactly as before. Nothing in this
+// file's existing behaviour depends on it.
+import { stripDashPunctuation } from './social/text.js';
+import { hasStore, ensureSchema, seedVentures, dueScheduled } from './social/db.js';
+import { runGeneration } from './social/generate.js';
+import { publishPost } from './social/distribute.js';
+import { captureMetrics } from './social/metrics.js';
+import { notifyOwner } from './social/push.js';
+import { isSocialRoute, handleSocial } from './social/api.js';
+import { SENDABLE } from './social/config.js';
+
 const REPO = 'alexanderafolabi1-afk/9inth-house';
 const BRANCH = 'main';
 const GH_API = 'https://api.github.com';
@@ -420,24 +433,10 @@ const MARKDOWN_RULE_RE = /^\s*---+\s*$/gm;
 const DEFAULT_PRESS_CEO_ACTIONS = '- Read it over coffee; if anything displeases you, edit or delete the file in the repo\n- Share it once on the matching brand channel';
 
 // Belt and braces: the prompts ask the model never to use em dashes, en dashes or
-// spaced hyphens as punctuation, but this catches anything that slips through
-// before it is ever written to an article or wire HTML file. Processed line by
-// line so a leading "- " markdown bullet marker is never mistaken for punctuation.
-function stripDashPunctuation(input = '') {
-  const lines = String(input || '').split('\n').map((line) => {
-    const bulletMatch = line.match(/^(\s*-\s+)([\s\S]*)$/);
-    const prefix = bulletMatch ? bulletMatch[1] : '';
-    let rest = bulletMatch ? bulletMatch[2] : line;
-    rest = rest.replace(/\s*[—–]\s*/g, ', '); // em dash, en dash
-    rest = rest.split(' - ').join(', '); // spaced hyphen used as punctuation
-    return prefix + rest;
-  });
-  let out = lines.join('\n');
-  out = out.replace(/ {2,}/g, ' '); // collapse any double spaces left behind
-  out = out.replace(/(^|[>\n])[ \t]*,[ \t]*/g, '$1'); // no leading comma right after a tag, newline or start
-  out = out.replace(/,\s*([.,!?])/g, '$1'); // avoid doubled punctuation like ", ."
-  return out;
-}
+// spaced hyphens as punctuation, but the rule is enforced again before anything is
+// written to an article or a wire HTML file. It now lives in ./social/text.js so
+// the engine and the distribution pipeline cannot drift apart on the house rule,
+// and is imported at the top of this file. Behaviour is unchanged.
 
 function sanitisePublishedHtml(input = '') {
   let out = String(input || '').replace(/\r\n/g, '\n').trim();
@@ -1159,8 +1158,121 @@ CEO_ACTIONS:
   console.log(`Cycle complete: ${items.length} new deliverables, ${kept.length} in ledger.`);
 }
 
+/* ============ THE DISTRIBUTION ENGINE ============ */
+// Generation on the dawn shift, a scheduling sweep on every shift, metrics once a
+// day on the evening shift. Kept in its own function with its own try/catch and
+// its own waitUntil, so a failure here can never stop the standup, the packs, the
+// Night Press or the iwriteyouread journal, and a failure there can never stop a
+// scheduled post from going out.
+
+// Social copy is written without the web search tool. It costs less, and more to
+// the point a social post must not go out carrying a claim nobody in the house has
+// checked. Anything time sensitive belongs in an article first.
+const socialAsk = (env) => (system, user, max = 700) => claudeNoTools(env.ANTHROPIC_API_KEY, system, user, max);
+
+// What the article_derived category is allowed to cut from: the house journal,
+// which the Night Press maintains. A venture with its own article feed is added by
+// extending this, and until then it simply has no articles and generates net new
+// copy from its positioning instead.
+async function gatherArticles(env) {
+  const token = env.GITHUB_TOKEN;
+  if (!token) return [];
+  try {
+    const file = await ghGetFile(token, 'press/index.json');
+    if (!file.content) return [];
+    const idx = JSON.parse(file.content);
+    if (!Array.isArray(idx)) return [];
+    return idx
+      .filter((a) => a && a.slug && a.title)
+      .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')))
+      .slice(0, 25)
+      .map((a) => ({
+        venture: '9thpoint',
+        title: a.title,
+        meta: a.meta || '',
+        date: a.date || '',
+        url: `https://9thpoint.com/press/${a.slug}.html`
+      }));
+  } catch (e) {
+    console.log('Distribution engine: could not read press/index.json, generating without articles. ' + String(e && e.message ? e.message : e).slice(0, 160));
+    return [];
+  }
+}
+
+async function runSocial(env, shift) {
+  if (!hasStore(env)) {
+    console.log('Distribution engine: no D1 binding, so nothing to do. See worker/README.md to connect storage.');
+    return;
+  }
+
+  const db = env.DB;
+  // Idempotent and cheap, and it means the owner never has to run a migration by
+  // hand for the tables to exist before the first generation run.
+  await ensureSchema(db);
+  await seedVentures(db);
+
+  // Anything scheduled that has come due, on every shift. This runs before
+  // generation so a due post is never delayed by a slow generation run.
+  try {
+    const due = await dueScheduled(db, new Date().toISOString(), 25);
+    let sent = 0;
+    for (const post of due) {
+      const r = await publishPost(env, db, post, { sendable: SENDABLE });
+      if (r.ok) sent += 1;
+    }
+    if (due.length) console.log(`Distribution engine: ${sent} of ${due.length} scheduled posts went out.`);
+  } catch (e) {
+    console.error('Distribution engine: the scheduling sweep failed. ' + String(e && e.message ? e.message : e).slice(0, 300));
+  }
+
+  if (shift === 'Dawn') {
+    try {
+      if (!env.ANTHROPIC_API_KEY) {
+        console.error('Distribution engine: no ANTHROPIC_API_KEY, so nothing was generated.');
+      } else {
+        const articles = await gatherArticles(env);
+        const result = await runGeneration(env, db, { ask: socialAsk(env), articles, now: new Date() });
+        for (const note of result.notes) console.log('Distribution engine: ' + note);
+        console.log(`Distribution engine: queued ${result.created.length} posts across ${result.ventures} ventures.`);
+
+        // The owner is told the batch is waiting without opening anything. Push
+        // first, email only if push reached nobody.
+        if (result.created.length) {
+          const ventureCount = result.ventures;
+          const note = {
+            title: 'The morning batch is ready',
+            body: `${result.created.length} ${result.created.length === 1 ? 'post' : 'posts'} waiting across ${ventureCount} ${ventureCount === 1 ? 'venture' : 'ventures'}. Approve, edit or skip.`,
+            url: '/desk.html#queue'
+          };
+          const delivered = await notifyOwner(env, db, note);
+          console.log('Distribution engine: morning notification went out by ' + delivered.channel + '.');
+        }
+      }
+    } catch (e) {
+      console.error('Distribution engine: generation failed. ' + String(e && e.message ? e.message : e).slice(0, 300));
+    }
+  }
+
+  // Once a day, and on the evening shift rather than the dawn one, so a reading is
+  // taken some hours after the morning batch went out rather than minutes after.
+  if (shift === 'Evening') {
+    try {
+      const captured = await captureMetrics(env, db, { now: new Date() });
+      console.log('Distribution engine: metrics, ' + (captured.captured ? `${captured.captured} readings stored.` : captured.reason));
+    } catch (e) {
+      console.error('Distribution engine: metrics capture failed. ' + String(e && e.message ? e.message : e).slice(0, 300));
+    }
+  }
+}
+
 export default {
   async scheduled(event, env, ctx) {
+    // The shift is read from the trigger time rather than from wall clock inside
+    // runCycle, so both jobs agree on which shift this is even if one of them
+    // starts a few seconds either side of the hour.
+    const hourUTC = new Date(event.scheduledTime || Date.now()).getUTCHours();
+    const shift = hourUTC < 9 ? 'Dawn' : hourUTC < 15 ? 'Midday' : hourUTC < 21 ? 'Evening' : 'Night';
+
     ctx.waitUntil(
       runCycle(env).catch((e) => {
         // Never log secrets. Error messages here come from our own fetch calls,
@@ -1168,9 +1280,25 @@ export default {
         console.error('Autopilot cycle failed: ' + String(e && e.message ? e.message : e).slice(0, 500));
       })
     );
+
+    // A separate waitUntil on purpose: the two jobs must not be able to take each
+    // other down, in either direction.
+    ctx.waitUntil(
+      runSocial(env, shift).catch((e) => {
+        console.error('Distribution engine failed: ' + String(e && e.message ? e.message : e).slice(0, 500));
+      })
+    );
   },
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+
+    // The distribution engine's admin API, behind DESK_ADMIN_TOKEN. Every route
+    // under /social is authenticated, including the read ones: an endpoint that can
+    // fire posts must never answer to whoever finds the URL.
+    if (isSocialRoute(url.pathname)) {
+      return await handleSocial(request, env, ctx, { ask: socialAsk(env), gatherArticles });
+    }
+
     // Manual trigger for the Author Desk media pack only (see worker/README.md).
     // Requires AUTHOR_DESK_TRIGGER_TOKEN to be set; declines closed by default if
     // it is not, rather than leaving an open endpoint that could force a rebuild
@@ -1189,7 +1317,7 @@ export default {
       return new Response('Media pack rebuild triggered.', { status: 202 });
     }
     return new Response(
-      'Ninth House Autopilot Worker. This is a Cron Trigger worker; it does not run on demand from HTTP requests, except POST /author-desk/media-pack with the correct bearer token, to redo the Author Desk press kit. See /worker/README.md for deploy and secret setup.',
+      'Ninth House Autopilot Worker. Mostly a Cron Trigger worker. The routes that do answer HTTP all require a bearer token: POST /author-desk/media-pack to redo the Author Desk press kit, and everything under /social for the distribution engine behind desk.html. See /worker/README.md for deploy and secret setup.',
       { status: 200, headers: { 'content-type': 'text/plain' } }
     );
   }

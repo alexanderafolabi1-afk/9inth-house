@@ -8,8 +8,33 @@ compatibility_flags = ["nodejs_compat"]
 # from the old workflow's cron lines is needed.
 [triggers]
 crons = [
-  "30 5 * * *",   # 05:30 UTC, Dawn shift (Night Press publishes here)
+  "30 5 * * *",   # 05:30 UTC, Dawn shift (Night Press publishes here, and the social batch is written)
   "30 11 * * *",  # 11:30 UTC, Midday shift
-  "30 17 * * *",  # 17:30 UTC, Evening shift
+  "30 17 * * *",  # 17:30 UTC, Evening shift (metrics are read here)
   "30 23 * * *"   # 23:30 UTC, Night shift
 ]
+
+# ============================================================================
+# STORAGE FOR THE DISTRIBUTION ENGINE
+# ============================================================================
+# The queue, the venture registry, the metrics and the notification subscriptions
+# all live in a D1 database. It is commented out rather than filled in with a
+# placeholder on purpose: this Worker deploys automatically from main, and a
+# binding pointing at a database that does not exist yet fails the deploy and
+# stops the autopilot, the Night Press and the journal from shipping with it.
+#
+# Until it is connected the engine simply says storage is not configured, and
+# everything else runs exactly as before.
+#
+# To connect it, once:
+#
+#   1. cd worker && npx wrangler d1 create ninth-house-social
+#   2. Copy the database_id it prints into the block below.
+#   3. Delete the # from the four lines below.
+#   4. Commit and push. The deploy creates the tables on the next shift, or you
+#      can use Prepare storage in the desk Settings to do it immediately.
+#
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "ninth-house-social"
+# database_id = "paste-the-id-here"
