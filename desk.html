@@ -5,11 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Ninth House | Growth Partners</title>
 <meta name="theme-color" content="#12161C">
+<meta name="robots" content="noindex, nofollow">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Ninth House">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2312161C'/%3E%3Ctext x='32' y='44' font-size='36' text-anchor='middle' fill='%23C9A557' font-family='serif'%3E%E2%99%83%3C/text%3E%3C/svg%3E">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Albert+Sans:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -47,7 +51,7 @@ header{
   font-family:'Spline Sans Mono',monospace;font-size:11px;color:var(--gold);
   border:1px solid var(--line);border-radius:20px;padding:5px 11px;background:var(--panel2);white-space:nowrap;
 }
-.gear{background:none;border:none;color:var(--muted);font-size:19px;cursor:pointer;padding:6px}
+.gear{background:none;border:none;color:var(--muted);font-size:19px;cursor:pointer;padding:6px;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;flex:none}
 
 main{padding:4px 18px 24px;max-width:680px;margin:0 auto}
 /* Wider working canvas on desktop: cards flow into a responsive grid,
@@ -84,12 +88,13 @@ main{padding:4px 18px 24px;max-width:680px;margin:0 auto}
   border-radius:11px;border:1px solid var(--line);background:var(--panel2);color:var(--paper);
   font-family:'Albert Sans',sans-serif;font-size:13.5px;font-weight:600;padding:11px 16px;cursor:pointer;
   transition:transform .08s ease, border-color .15s;
+  min-height:44px;min-width:44px;
 }
 .btn:active{transform:scale(.97)}
 .btn.gold{background:var(--gold);border-color:var(--gold);color:#171309}
 .btn.ghost{background:transparent}
 .btn.wide{width:100%}
-.btn.sm{padding:8px 12px;font-size:12.5px;border-radius:9px}
+.btn.sm{padding:8px 12px;font-size:12.5px;border-radius:9px;min-height:44px}
 .btn:disabled{opacity:.45;pointer-events:none}
 .btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 
@@ -184,6 +189,100 @@ nav button .badge{
 .kpirow span{flex:1;font-size:13.5px}
 .kpirow input{width:110px;font-family:'Spline Sans Mono',monospace;font-size:13px;text-align:right}
 .notice{background:var(--panel2);border:1px dashed var(--gold-deep);border-radius:10px;padding:11px 13px;font-size:12.5px;color:var(--muted);margin-bottom:12px}
+
+/* ============ MOBILE SPECIFICATION ============ */
+/* This is a phone app that also works on a desktop, not the other way round. */
+
+/* Sixteen pixels is the threshold below which iOS Safari zooms the whole page on
+   focus, which then leaves the layout scrolled sideways and the keyboard covering
+   the field. Every text entry is at or above it. */
+input[type=text],input[type=password],input[type=number],input[type=url],input[type=search],
+input[type=datetime-local],input[type=time],input[type=date],textarea,select{font-size:16px}
+.kpirow input{font-size:16px}
+
+/* A tick box is a tap target, so the whole row is the target rather than the
+   twenty pixel square inside it. .tapline is at least the minimum height and its
+   label toggles the box, which is what makes these usable with a thumb. */
+.tapline{display:flex;align-items:center;gap:12px;min-height:44px;cursor:pointer}
+.tapline input[type=checkbox]{width:24px;height:24px;flex:none;accent-color:var(--jade)}
+
+/* Every bottom nav target clears the minimum on its own. */
+nav button{min-height:56px;min-width:44px}
+
+/* Nothing may scroll sideways, at any width the phone market actually ships. */
+html,body{overflow-x:hidden;max-width:100%}
+main{overflow-x:hidden}
+pre,code,.mono{overflow-wrap:anywhere;word-break:break-word}
+
+/* ============ THE MORNING QUEUE ============ */
+.qhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.qhead .btn{flex:none}
+
+.qcard{
+  position:relative;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);
+  padding:14px;margin-bottom:12px;overflow:hidden;touch-action:pan-y;
+}
+.qcard.gone{opacity:.45}
+/* The swipe layer moves, the card does not, so the action hint underneath stays put. */
+.qswipe{transition:transform .18s ease;background:var(--panel);position:relative;z-index:2}
+.qcard.dragging .qswipe{transition:none}
+.qhint{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:space-between;
+  padding:0 18px;font-family:'Spline Sans Mono',monospace;font-size:11px;letter-spacing:.16em;
+  text-transform:uppercase;z-index:1;
+}
+.qhint .yes{color:var(--jade)}
+.qhint .no{color:var(--rust)}
+
+.qmeta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:9px}
+.qtag{
+  font-family:'Spline Sans Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  padding:3px 7px;border-radius:5px;border:1px solid var(--line);color:var(--muted);white-space:nowrap;
+}
+.qtag.venture{color:var(--gold);border-color:var(--gold-deep)}
+.qtag.count.over{color:var(--rust);border-color:var(--rust)}
+.qtag.state.failed{color:var(--rust);border-color:var(--rust)}
+.qtag.state.scheduled{color:var(--jade);border-color:var(--jade)}
+
+.qtext{font-size:15px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere;margin-bottom:10px}
+.qcard textarea{min-height:150px;line-height:1.5}
+.qnote{background:var(--panel2);border-left:2px solid var(--gold-deep);padding:8px 10px;border-radius:0 8px 8px 0;font-size:12.5px;color:var(--muted);white-space:pre-wrap;margin-bottom:10px}
+.qerr{background:rgba(181,86,63,.12);border-left:2px solid var(--rust);padding:8px 10px;border-radius:0 8px 8px 0;font-size:12.5px;color:#E5A192;margin-bottom:10px}
+.qimg{width:100%;max-height:190px;object-fit:cover;border-radius:9px;border:1px solid var(--line);margin-bottom:10px;background:var(--panel2)}
+
+/* The row of actions. Approve sits at one end and skip at the other, with a gap
+   between them, so a thumb cannot catch the wrong one on the way past. */
+.qacts{display:flex;gap:10px;align-items:stretch}
+.qacts .btn{min-height:44px;min-width:44px;display:flex;align-items:center;justify-content:center;flex:1}
+.qacts .spacer{flex:0 0 24px}
+.qmore{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap}
+.qmore .btn{min-height:44px;flex:1;min-width:104px;display:flex;align-items:center;justify-content:center}
+.btn.jade{background:var(--jade);color:#0B1410;border-color:var(--jade);font-weight:600}
+.btn.danger{color:var(--rust);border-color:rgba(181,86,63,.5)}
+
+/* The undo toast. Above the nav, inside the safe area, and wide enough to hit. */
+#toast{
+  position:fixed;left:12px;right:12px;bottom:calc(92px + env(safe-area-inset-bottom));z-index:70;
+  background:var(--panel);border:1px solid var(--gold-deep);border-radius:12px;
+  padding:12px 14px;display:none;align-items:center;gap:12px;
+  box-shadow:0 12px 32px rgba(0,0,0,.45);max-width:660px;margin:0 auto;
+}
+#toast.show{display:flex}
+#toast span{flex:1;font-size:13.5px}
+#toast button{min-height:44px;min-width:76px;padding:0 14px;border-radius:9px;border:1px solid var(--gold-deep);background:none;color:var(--gold);font-family:'Albert Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer}
+
+.qstat{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:14px;-webkit-overflow-scrolling:touch}
+.qstat .cell{flex:0 0 auto;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 12px;min-width:132px}
+.qstat .cell b{display:block;font-family:'Marcellus',serif;font-size:15px;color:var(--gold);font-weight:400}
+.qstat .cell small{color:var(--faint);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase}
+
+.offline{background:rgba(181,86,63,.14);border:1px solid var(--rust);border-radius:10px;padding:10px 12px;font-size:12.5px;margin-bottom:12px}
+
+/* Desktop gets more room, and not one feature more. */
+@media (min-width:820px){
+  .qlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:12px;align-items:start}
+  .qcard{margin-bottom:0}
+}
 </style>
 </head>
 <body>
@@ -203,12 +302,15 @@ nav button .badge{
 
 <nav id="nav"></nav>
 <div id="modal-root"></div>
+<div id="toast" role="status" aria-live="polite"></div>
 
 <script>
 /* ============ STATE ============ */
 const LS_KEY = 'ninthhouse_v1';
 const defaultState = () => ({
   day: 1, apiKey: '', wa: '447448668350',
+  engine: '', engineToken: '',   // the Worker's address and the desk token, this device only
+  pendingActions: [],            // approvals taken offline, replayed when the signal returns
   docket: [],            // {id, day, charId, biz, brief, output, status}
   ledger: [],            // {text, day} durable facts the house learns about the keeper (this device only)
   standups: [],          // {day, text}
@@ -225,7 +327,20 @@ const defaultState = () => ({
   kpiDay: {}
 });
 let S = load();
-function load(){ try{ const r = localStorage.getItem(LS_KEY); if(r) return Object.assign(defaultState(), JSON.parse(r)); }catch(e){} return defaultState(); }
+function load(){
+  const base = defaultState();
+  let saved = base;
+  try{ const r = localStorage.getItem(LS_KEY); if(r) saved = Object.assign(base, JSON.parse(r)); }catch(e){ saved = defaultState(); }
+  // Shallow merge leaves nested defaults behind, so the per venture KPI blocks are
+  // restored one at a time. Without this a partial saved state throws on render.
+  const kpiDefaults = defaultState().kpis;
+  if(!saved.kpis || typeof saved.kpis !== 'object') saved.kpis = {};
+  for(const key of Object.keys(kpiDefaults)){
+    saved.kpis[key] = Object.assign({}, kpiDefaults[key], saved.kpis[key] || {});
+  }
+  if(!Array.isArray(saved.pendingActions)) saved.pendingActions = [];
+  return saved;
+}
 function save(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }catch(e){} }
 const uid = () => Math.random().toString(36).slice(2,9);
 const esc = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -429,6 +544,7 @@ function md(t){
 
 /* ============ NAV / RENDER ============ */
 const TABS = [
+  {id:'queue', ic:'&#9741;', label:'Queue'},
   {id:'desk',  ic:'&#9670;', label:'Desk'},
   {id:'floor', ic:'&#9825;', label:'The Floor'},
   {id:'docket',ic:'&#9998;', label:'Docket'},
@@ -440,7 +556,7 @@ function renderNav(){
   const pend = S.docket.filter(d=>d.status==='pending').length;
   document.getElementById('nav').innerHTML = TABS.map(t=>`
     <button class="${TAB===t.id?'on':''}" onclick="go('${t.id}')">
-      ${t.id==='docket'&&pend?`<i class="badge">${pend}</i>`:''}
+      ${t.id==='docket'&&pend?`<i class="badge">${pend}</i>`:''}${t.id==='queue'&&Q.posts.length?`<i class="badge">${Q.posts.length}</i>`:''}
       <i class="ic">${t.ic}</i><span>${t.label}</span>
     </button>`).join('');
 }
@@ -449,11 +565,13 @@ function render(){
   document.getElementById('daychip').textContent = 'DAY '+String(S.day).padStart(3,'0');
   renderNav();
   const app = document.getElementById('app');
+  if(TAB==='queue') app.innerHTML = vQueue();
   if(TAB==='desk') app.innerHTML = vDesk();
   if(TAB==='floor') app.innerHTML = vFloor();
   if(TAB==='docket') app.innerHTML = vDocket();
   if(TAB==='rooms') app.innerHTML = vRooms();
   if(TAB==='board') app.innerHTML = vBoard();
+  if(TAB==='queue') bindSwipe();
 }
 
 /* ============ VIEWS ============ */
@@ -553,10 +671,10 @@ function vDesk(){
         </div>
         <div class="tiny" style="margin:2px 0 8px">${esc(b.tier)} &middot; ${esc(b.date)} &middot; code <span class="mono">${esc(b.code)}</span></div>
         ${b.tier === BACKER_TIERS[BACKER_TIERS.length-1].label ? `
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-          <input type="checkbox" ${b.quarterlyUpdateSent?'checked':''} onchange="toggleQuarterly('${b.id}')" style="width:18px;height:18px;accent-color:var(--jade)">
+        <label class="tapline" style="margin-bottom:4px">
+          <input type="checkbox" ${b.quarterlyUpdateSent?'checked':''} onchange="toggleQuarterly('${b.id}')">
           <span class="tiny" style="color:var(--paper)">Quarterly update sent</span>
-        </div>` : ''}
+        </label>` : ''}
         <div class="btnrow">
           <button class="btn sm" id="thanks-${b.id}" onclick="draftThankYou('${b.id}')">Draft thank you email</button>
           <button class="btn sm ghost" style="color:var(--rust)" onclick="delBacker('${b.id}')">Remove</button>
@@ -606,13 +724,17 @@ function vDesk(){
   <div class="eyebrow">Execution ledger</div>
   ${appr.length? appr.map(d=>{
     const c = charById(d.charId), done = !!S.execDone[d.id];
-    return `<div class="card" style="display:flex;align-items:center;gap:12px">
-      <input type="checkbox" ${done?'checked':''} onchange="toggleExec('${d.id}')" style="width:20px;height:20px;accent-color:var(--jade)">
-      <div style="flex:1">
-        <div style="font-size:14px;${done?'opacity:.55;text-decoration:line-through':''}">${esc(d.brief.slice(0,70))}${d.brief.length>70?'…':''}</div>
-        <div class="tiny">${c.name} · ${BIZ[d.biz].name} · Day ${d.day}</div>
-      </div>
-      <button class="btn sm ghost" onclick="viewItem('${d.id}')">Open</button>
+    // The label covers the tick box and its text, so the row is the tap target,
+    // and the Open button stays outside it so tapping Open does not also tick it.
+    return `<div class="card" style="display:flex;align-items:center;gap:10px">
+      <label class="tapline" style="flex:1;min-width:0">
+        <input type="checkbox" ${done?'checked':''} onchange="toggleExec('${d.id}')">
+        <span style="flex:1;min-width:0">
+          <span style="display:block;font-size:14px;${done?'opacity:.55;text-decoration:line-through':''}">${esc(d.brief.slice(0,70))}${d.brief.length>70?'…':''}</span>
+          <span class="tiny" style="display:block">${c.name} · ${BIZ[d.biz].name} · Day ${d.day}</span>
+        </span>
+      </label>
+      <button class="btn sm ghost" style="flex:none;min-height:44px" onclick="viewItem('${d.id}')">Open</button>
     </div>`;
   }).join('') : `<div class="card"><p class="sub">Nothing sealed yet. Commission work on The Floor, then approve it in the Docket. Approved work lands here as your real-world execution list.</p></div>`}
   `;
@@ -676,10 +798,10 @@ function vDocket(){
         </div>
         <span class="status ${d.status}">${d.status}</span>
       </div>
-      ${shipLabel?`<div style="display:flex;align-items:center;gap:10px;margin:8px 0 2px">
-        <input type="checkbox" ${S.shipped[d.id]?'checked':''} onchange="toggleShipped('${d.id}')" style="width:18px;height:18px;accent-color:var(--jade)">
+      ${shipLabel?`<label class="tapline" style="margin:4px 0 0">
+        <input type="checkbox" ${S.shipped[d.id]?'checked':''} onchange="toggleShipped('${d.id}')">
         <span class="tiny" style="color:var(--paper)">${shipLabel}</span>
-      </div>`:''}
+      </label>`:''}
       <div class="btnrow" style="align-items:center">
         <button class="btn sm" onclick="viewItem('${d.id}')">Read deliverable</button>
         ${d.status==='pending'?`
@@ -702,7 +824,7 @@ function vRooms(){
     <div class="card">
       <h3 class="serif" style="color:${b.color}">${b.name}</h3>
       <p class="tiny" style="margin-bottom:12px">${b.tag}</p>
-      ${Object.entries(S.kpis[k]).map(([m,v])=>`
+      ${Object.entries(S.kpis[k] || {}).map(([m,v])=>`
         <div class="kpirow">
           <span>${m}</span>
           <input type="number" value="${v}" onchange="setKpi('${k}','${m}',this.value)">
@@ -724,7 +846,7 @@ function vRooms(){
       <div class="kpirow">
         <span>${esc(o.name)} <span class="tiny">· ${o.entity} · renews ${o.day}${['st','nd','rd'][((o.day+90)%100-10)%10-1]||'th'}</span></span>
         <span class="mono" style="flex:none;font-size:13px">&pound;${o.amount.toFixed(2)}</span>
-        <button class="btn sm ghost" style="color:var(--rust);padding:4px 9px" onclick="delOutgoing('${o.id}')">&times;</button>
+        <button class="btn sm ghost" style="color:var(--rust);padding:4px 9px" aria-label="Remove this outgoing" onclick="delOutgoing('${o.id}')">&times;</button>
       </div>`).join('') : '<p class="sub">Log every subscription and direct debit here. no bank credentials, ever. Just the figures. Margaret does the rest.</p>'}
     <div class="btnrow">
       <button class="btn sm" onclick="openAddOutgoing()">+ Log outgoing</button>
@@ -742,7 +864,7 @@ function vRooms(){
         <span>${esc(d.name)}</span>
         <span class="mono" style="flex:none;font-size:13px">&pound;${d.amount.toFixed(2)}</span>
         <button class="btn sm" style="padding:4px 9px" onclick="payDebt('${d.id}')">Pay</button>
-        <button class="btn sm ghost" style="color:var(--rust);padding:4px 9px" onclick="delDebt('${d.id}')">&times;</button>
+        <button class="btn sm ghost" style="color:var(--rust);padding:4px 9px" aria-label="Remove this debt" onclick="delDebt('${d.id}')">&times;</button>
       </div>`).join('') : '<p class="sub">Clear. The ledger holds no outstanding liabilities.</p>'}
     <div class="btnrow"><button class="btn sm" onclick="openAddDebt()">+ Log liability</button></div>
     <p class="tiny" style="margin-top:8px">Margaret reads this ledger in every review. Recording a payment reduces the balance; a zero balance clears the line.</p>
@@ -1105,9 +1227,27 @@ function openSettings(){
     <label>Group WhatsApp line</label>
     <input type="text" id="set-wa" value="${esc(S.wa||'')}" placeholder="447700900000 (digits only, country code first)">
     <p class="tiny" style="margin-top:6px">${S.wa?`Live link: wa.me/${esc(S.wa)}. Noor wires this into content packs and CTAs.`:'One number, one WhatsApp Business profile ("Lyrīon Group") serving all brands via quick replies.'}</p>
+
+    <div class="hr"></div>
+    <div class="eyebrow">The distribution engine</div>
+    <label>Worker address</label>
+    <input type="url" id="set-engine" value="${esc(S.engine||'')}" placeholder="https://9inth-house-engine.workers.dev">
+    <label>Desk token</label>
+    <input type="password" id="set-token" value="${esc(S.engineToken||'')}" placeholder="the DESK_ADMIN_TOKEN secret">
+    <p class="tiny" style="margin-top:6px">Held on this device only. It lets this desk ask the engine to act, and nothing else: the keys for Anthropic, GitHub and the distribution rail never leave the Worker.</p>
+    <div class="btnrow" style="margin-top:10px">
+      <button class="btn ghost" style="min-height:44px" onclick="saveEngine()">Save and connect</button>
+      <button class="btn ghost" style="min-height:44px" onclick="prepareStorage()">Prepare storage</button>
+    </div>
+    <div class="btnrow" style="margin-top:8px">
+      <button class="btn ghost" style="min-height:44px" onclick="enablePush()">Turn on notifications</button>
+      <button class="btn ghost" style="min-height:44px" onclick="testPush()">Send a test</button>
+    </div>
+    <p class="tiny" style="margin-top:6px">${'Notification' in window ? (Notification.permission === 'granted' ? 'Notifications are allowed on this device.' : Notification.permission === 'denied' ? 'Notifications are blocked on this device, so the engine will fall back to email. Allow them in the browser site settings.' : 'Notifications have not been asked for yet on this device.') : 'This browser does not do notifications, so the engine will fall back to email.'}</p>
+
     <div class="hr"></div>
     <div class="btnrow">
-      <button class="btn gold" onclick="S.apiKey=document.getElementById('set-key').value.trim();S.wa=document.getElementById('set-wa').value.replace(/[^0-9]/g,'');save();closeModal();render()">Save</button>
+      <button class="btn gold" style="min-height:44px" onclick="saveEngine(true)">Save</button>
       <button class="btn ghost" onclick="exportState()">Export firm data</button>
       <button class="btn ghost" style="color:var(--rust)" onclick="if(confirm('Dissolve the firm and start over?')){localStorage.removeItem(LS_KEY);S=defaultState();closeModal();render();}">Reset</button>
     </div>
@@ -1139,7 +1279,684 @@ async function syncAutopilot(){
 }
 syncAutopilot();
 
+/* ============ THE MORNING QUEUE ============ */
+/* The approval surface for the cross venture distribution engine. Generation and
+   publishing both happen on the Worker; this screen only ever asks it to act. The
+   desk holds one credential, the desk token, and it cannot reach Anthropic, GitHub
+   or the distribution rail with it. */
+
+const Q = {
+  posts: [], ventures: [], summary: [], platforms: {}, categories: {},
+  loaded: false, loading: false, error: '', makeReady: false, vapid: null,
+  editing: {},      // post id -> true while its text area is open
+  busy: {},         // post id -> true while a request for it is in flight
+  storage: true
+};
+
+const engineBase = () => String(S.engine || '').trim().replace(/\/+$/, '');
+const engineReady = () => Boolean(engineBase() && S.engineToken);
+
+async function engine(path, body, method){
+  if(!engineReady()) throw new Error('The engine address and desk token are not set yet. Open Settings.');
+  const res = await fetch(engineBase() + path, {
+    method: method || (body ? 'POST' : 'GET'),
+    headers: Object.assign({'Authorization':'Bearer ' + S.engineToken}, body ? {'Content-Type':'application/json'} : {}),
+    body: body ? JSON.stringify(body) : undefined,
+    cache: 'no-store'
+  });
+  let data = {};
+  try{ data = await res.json(); }catch(e){ data = {}; }
+  if(res.status === 401) throw new Error('The desk token was refused. Check it in Settings.');
+  if(res.status === 503 && data.error) throw new Error(data.error);
+  if(!res.ok && !data.error) throw new Error('The engine answered ' + res.status + '.');
+  if(data.error && data.ok === false) throw new Error(data.error);
+  return data;
+}
+
+/* ---------- offline queue ---------- */
+/* An approval taken with no signal is kept and replayed, so the morning routine is
+   never blocked by a tunnel. Nothing is replayed twice: the engine refuses a second
+   send for the same post id, and the entry is dropped once it has been answered. */
+
+function queueOffline(action, payload){
+  S.pendingActions = S.pendingActions || [];
+  S.pendingActions.push({ action, payload, at: new Date().toISOString() });
+  save();
+}
+
+async function flushPending(){
+  if(!S.pendingActions || !S.pendingActions.length || !navigator.onLine || !engineReady()) return 0;
+  const waiting = S.pendingActions.slice();
+  let done = 0;
+  for(const item of waiting){
+    try{
+      await engine(item.action, item.payload);
+      S.pendingActions = S.pendingActions.filter(x => x !== item);
+      done++;
+    }catch(e){
+      // Left in the queue for the next attempt. A refused token or a dead engine
+      // must not throw the rest away.
+      break;
+    }
+  }
+  if(done){ save(); }
+  return done;
+}
+
+/* ---------- loading ---------- */
+
+async function loadQueue(quiet){
+  if(!engineReady()){ Q.loaded = true; Q.error = ''; if(!quiet) render(); return; }
+  Q.loading = true; Q.error = '';
+  if(!quiet) render();
+  try{
+    await flushPending();
+    const data = await engine('/social/queue');
+    Q.posts = data.posts || [];
+    Q.ventures = data.ventures || [];
+    Q.summary = data.summary || [];
+    Q.platforms = data.platforms || {};
+    Q.categories = data.categories || {};
+    Q.vapid = data.vapidPublicKey || null;
+    Q.makeReady = Boolean(data.makeReady);
+    Q.storage = data.storage !== false;
+  }catch(e){
+    Q.error = e.message || String(e);
+    if(/storage is not connected/i.test(Q.error)) Q.storage = false;
+  }
+  Q.loading = false; Q.loaded = true;
+  render();
+}
+
+/* ---------- the view ---------- */
+
+function platformLabel(key){ return (Q.platforms[key] && Q.platforms[key].label) || key; }
+function platformLimit(key){ return (Q.platforms[key] && Q.platforms[key].limit) || 3000; }
+function categoryLabel(key){ return (Q.categories[key] && Q.categories[key].label) || key; }
+
+function vQueue(){
+  if(!engineReady()){
+    return `
+      <div class="eyebrow">The morning queue</div>
+      <div class="card">
+        <h3 class="serif" style="font-size:17px;margin-bottom:6px">Connect the engine</h3>
+        <p class="sub">The queue lives on the Worker. Give this device the Worker address and the desk token once, and the morning batch appears here.</p>
+        <div class="btnrow" style="margin-top:12px"><button class="btn gold wide" onclick="openSettings()">Open Settings</button></div>
+      </div>
+    `;
+  }
+
+  const offline = !navigator.onLine;
+  const pending = (S.pendingActions || []).length;
+
+  const stats = Q.summary.map(v => `
+    <div class="cell">
+      <b>${v.postedThisWeek}/${v.weeklyTarget}</b>
+      <small>${esc(v.slug)} this week</small>
+    </div>
+    <div class="cell">
+      <b>${v.streak}${v.streak === 1 ? ' day' : ' days'}</b>
+      <small>${esc(v.slug)} streak</small>
+    </div>
+    ${v.bestCategory ? `<div class="cell">
+      <b style="font-size:13px">${esc(categoryLabel(v.bestCategory))}</b>
+      <small>${esc(v.slug)} best ${v.bestCategoryBasis === 'engagement' ? 'performer' : 'by volume'}</small>
+    </div>` : ''}`).join('');
+
+  const cards = Q.posts.map(qcard).join('');
+
+  return `
+    <div class="eyebrow">The morning queue</div>
+
+    ${offline ? `<div class="offline">No signal. You can still approve and skip: everything is held on this device and sent the moment the connection returns.</div>` : ''}
+    ${pending ? `<div class="notice">${pending} ${pending === 1 ? 'action is' : 'actions are'} waiting to reach the engine. <button class="btn sm ghost" style="min-height:44px" onclick="flushPending().then(()=>loadQueue())">Send now</button></div>` : ''}
+    ${!Q.storage ? `<div class="offline">Storage is not connected on the Worker yet. Create the D1 database, add the binding, then use Prepare storage in Settings.</div>` : ''}
+    ${Q.error ? `<div class="qerr">${esc(Q.error)}</div>` : ''}
+    ${!Q.makeReady && Q.storage && !Q.error ? `<div class="notice">The distribution rail is not configured on the Worker, so nothing can publish yet. Set MAKE_WEBHOOK_URL.</div>` : ''}
+
+    ${stats ? `<div class="qstat">${stats}</div>` : ''}
+
+    <div class="qhead">
+      <button class="btn gold" style="min-height:44px" onclick="approveAll()" ${Q.posts.length ? '' : 'disabled'}>Approve all</button>
+      <button class="btn ghost" style="min-height:44px" onclick="loadQueue()">${Q.loading ? '<span class="spin"></span>' : 'Refresh'}</button>
+      <button class="btn ghost" style="min-height:44px" onclick="generateNow()">Generate now</button>
+    </div>
+
+    ${Q.loading && !Q.posts.length ? `<div class="card"><p class="sub"><span class="spin"></span> Reading the queue.</p></div>` : ''}
+
+    ${Q.posts.length ? `<div class="qlist">${cards}</div>` : (Q.loading ? '' : `<div class="card">
+      <h3 class="serif" style="font-size:17px;margin-bottom:6px">Nothing waiting</h3>
+      <p class="sub">The queue is clear. The next batch is written on the dawn shift, and you will be told when it lands.</p>
+    </div>`)}
+
+    <div class="hr"></div>
+    <div class="eyebrow">The registry</div>
+    <div class="card">
+      <p class="sub">${Q.ventures.length} ${Q.ventures.length === 1 ? 'venture' : 'ventures'} on the books. A venture is added here, never in code.</p>
+      <div class="btnrow" style="margin-top:10px">
+        <button class="btn gold" style="min-height:44px" onclick="openVenture()">Add a venture</button>
+        <button class="btn ghost" style="min-height:44px" onclick="openRegistry()">Edit ventures</button>
+      </div>
+    </div>
+  `;
+}
+
+function qcard(p){
+  const limit = platformLimit(p.platform);
+  const len = (p.text || '').length;
+  const over = len > limit;
+  const editing = !!Q.editing[p.id];
+  const busy = !!Q.busy[p.id];
+  const needsImage = !p.image_url && (
+    (Q.platforms[p.platform] && Q.platforms[p.platform].imageRequired) ||
+    (Q.categories[p.category] && Q.categories[p.category].needsImage)
+  );
+
+  return `<div class="qcard ${busy ? 'gone' : ''}" id="qc-${p.id}" data-id="${p.id}">
+    <div class="qhint"><span class="yes">Approve</span><span class="no">Skip</span></div>
+    <div class="qswipe">
+      <div class="qmeta">
+        <span class="qtag venture">${esc(p.venture)}</span>
+        <span class="qtag">${esc(platformLabel(p.platform))}</span>
+        <span class="qtag">${esc(categoryLabel(p.category))}</span>
+        <span class="qtag count ${over ? 'over' : ''}">${len}/${limit}</span>
+        ${p.status !== 'queued' ? `<span class="qtag state ${esc(p.status)}">${esc(p.status)}</span>` : ''}
+      </div>
+
+      ${p.image_url ? `<img class="qimg" src="${esc(p.image_url)}" alt="" loading="lazy" onerror="this.style.display='none'">` : ''}
+      ${needsImage ? `<div class="qnote">This one needs an image before it can be sent.</div>` : ''}
+
+      ${editing
+        ? `<textarea id="qt-${p.id}" oninput="qCount('${p.id}')">${esc(p.text)}</textarea>
+           <div class="tiny" id="qn-${p.id}" style="margin:6px 0 10px">${len} of ${limit} characters</div>`
+        : `<div class="qtext">${esc(p.text)}</div>`}
+
+      ${p.notes ? `<div class="qnote">${esc(p.notes)}</div>` : ''}
+      ${p.error ? `<div class="qerr">${esc(p.error)}</div>` : ''}
+      ${p.scheduled_for ? `<div class="tiny" style="margin-bottom:8px">Scheduled for ${esc(new Date(p.scheduled_for).toLocaleString())}</div>` : ''}
+      ${p.link ? `<div class="tiny" style="margin-bottom:10px;overflow-wrap:anywhere">Link: ${esc(p.link)}</div>` : ''}
+
+      ${editing
+        ? `<div class="qacts">
+             <button class="btn jade" onclick="saveText('${p.id}')">Save</button>
+             <button class="btn ghost" onclick="Q.editing['${p.id}']=false;render()">Cancel</button>
+           </div>`
+        : `<div class="qacts">
+             <button class="btn jade" onclick="approve('${p.id}')" ${busy ? 'disabled' : ''}>${p.status === 'failed' ? 'Retry' : 'Approve'}</button>
+             <span class="spacer"></span>
+             <button class="btn danger" onclick="skip('${p.id}')" ${busy ? 'disabled' : ''}>Skip</button>
+           </div>
+           <div class="qmore">
+             <button class="btn ghost" onclick="Q.editing['${p.id}']=true;render()">Edit</button>
+             <button class="btn ghost" onclick="openSchedule('${p.id}')">Schedule</button>
+             <button class="btn ghost" onclick="openImage('${p.id}')">Image</button>
+           </div>`}
+    </div>
+  </div>`;
+}
+
+function qCount(id){
+  const ta = document.getElementById('qt-' + id);
+  const out = document.getElementById('qn-' + id);
+  if(!ta || !out) return;
+  const post = Q.posts.find(p => p.id === id);
+  const limit = platformLimit(post ? post.platform : '');
+  out.textContent = ta.value.length + ' of ' + limit + ' characters';
+  out.style.color = ta.value.length > limit ? 'var(--rust)' : '';
+}
+
+/* ---------- the toast, and undo ---------- */
+
+let UNDO = null;
+let TOAST_TIMER = null;
+
+function toast(message, undoLabel, undoFn){
+  const el = document.getElementById('toast');
+  if(!el) return;
+  UNDO = undoFn || null;
+  el.innerHTML = `<span>${esc(message)}</span>` + (undoFn ? `<button onclick="runUndo()">${esc(undoLabel || 'Undo')}</button>` : '');
+  el.classList.add('show');
+  if(TOAST_TIMER) clearTimeout(TOAST_TIMER);
+  TOAST_TIMER = setTimeout(hideToast, undoFn ? 7000 : 3200);
+}
+function hideToast(){
+  const el = document.getElementById('toast');
+  if(el) el.classList.remove('show');
+  UNDO = null;
+}
+function runUndo(){
+  const fn = UNDO;
+  hideToast();
+  if(fn) fn();
+}
+
+/* ---------- actions ---------- */
+
+async function approve(id){
+  const post = Q.posts.find(p => p.id === id);
+  if(!post) return;
+  if(!navigator.onLine){
+    queueOffline('/social/approve', { id });
+    Q.posts = Q.posts.filter(p => p.id !== id);
+    render();
+    toast('Held until the signal returns.');
+    return;
+  }
+  Q.busy[id] = true; render();
+  try{
+    await engine('/social/approve', { id });
+    Q.posts = Q.posts.filter(p => p.id !== id);
+    toast('Sent to ' + platformLabel(post.platform) + '.');
+  }catch(e){
+    // The reason comes back from the engine and is worth reading, so it is put on
+    // the card rather than flashed past in a toast.
+    post.status = 'failed';
+    post.error = e.message || String(e);
+    toast('That one did not go.');
+  }
+  delete Q.busy[id];
+  render();
+}
+
+async function skip(id){
+  const post = Q.posts.find(p => p.id === id);
+  if(!post) return;
+  const restore = Object.assign({}, post);
+  if(!navigator.onLine){
+    queueOffline('/social/skip', { id });
+    Q.posts = Q.posts.filter(p => p.id !== id);
+    render();
+    toast('Skipped, and held until the signal returns.');
+    return;
+  }
+  Q.busy[id] = true; render();
+  try{
+    await engine('/social/skip', { id });
+    Q.posts = Q.posts.filter(p => p.id !== id);
+    delete Q.busy[id];
+    render();
+    // A skip is a real signal to generation, so undo has to undo it there too.
+    toast('Skipped. It counts against that category.', 'Undo', async () => {
+      try{
+        await engine('/social/unskip', { id });
+        Q.posts.unshift(restore);
+        render();
+        toast('Back in the queue.');
+      }catch(e){ toast('Could not put it back: ' + (e.message || e)); }
+    });
+  }catch(e){
+    delete Q.busy[id];
+    post.error = e.message || String(e);
+    render();
+    toast('Could not skip that one.');
+  }
+}
+
+async function approveAll(){
+  if(!Q.posts.length) return;
+  const count = Q.posts.length;
+  if(!confirm('Send all ' + count + (count === 1 ? ' post' : ' posts') + ' now?')) return;
+  if(!navigator.onLine){
+    for(const p of Q.posts) queueOffline('/social/approve', { id: p.id });
+    Q.posts = [];
+    render();
+    toast('All held until the signal returns.');
+    return;
+  }
+  Q.loading = true; render();
+  try{
+    const out = await engine('/social/approve-all', {});
+    toast(out.sent + ' sent' + (out.failed ? ', ' + out.failed + ' did not go' : '') + (out.remaining ? ', ' + out.remaining + ' still waiting' : '') + '.');
+  }catch(e){
+    toast('That did not work: ' + (e.message || e));
+  }
+  await loadQueue(true);
+}
+
+async function saveText(id){
+  const ta = document.getElementById('qt-' + id);
+  if(!ta) return;
+  try{
+    const out = await engine('/social/text', { id, text: ta.value });
+    const post = Q.posts.find(p => p.id === id);
+    if(post) post.text = out.text || ta.value;
+    Q.editing[id] = false;
+    render();
+    toast('Saved.');
+  }catch(e){
+    toast(e.message || String(e));
+  }
+}
+
+function openSchedule(id){
+  const post = Q.posts.find(p => p.id === id);
+  if(!post) return;
+  // Defaults to the next round hour, because that is what a person actually wants.
+  const soon = new Date(Date.now() + 3600e3);
+  soon.setMinutes(0, 0, 0);
+  const pad = n => String(n).padStart(2, '0');
+  const local = `${soon.getFullYear()}-${pad(soon.getMonth() + 1)}-${pad(soon.getDate())}T${pad(soon.getHours())}:${pad(soon.getMinutes())}`;
+  modal(`
+    <h2>Send it later</h2>
+    <p class="sub">${esc(platformLabel(post.platform))} &middot; ${esc(post.venture)}</p>
+    <label>When</label>
+    <input type="datetime-local" id="sch-when" value="${local}">
+    <p class="tiny" style="margin-top:6px">Your own time zone. The engine sweeps for anything due on every shift, so it goes out at the next sweep after that time.</p>
+    <div class="btnrow" style="margin-top:14px">
+      <button class="btn gold wide" style="min-height:44px" onclick="doSchedule('${id}')">Schedule it</button>
+      <button class="btn ghost" style="min-height:44px" onclick="closeModal()">Cancel</button>
+    </div>
+  `);
+}
+
+async function doSchedule(id){
+  const input = document.getElementById('sch-when');
+  if(!input || !input.value) return;
+  try{
+    const out = await engine('/social/schedule', { id, when: new Date(input.value).toISOString() });
+    const post = Q.posts.find(p => p.id === id);
+    if(post){ post.status = 'scheduled'; post.scheduled_for = out.scheduled_for; }
+    closeModal(); render();
+    toast('Scheduled.');
+  }catch(e){ toast(e.message || String(e)); }
+}
+
+function openImage(id){
+  const post = Q.posts.find(p => p.id === id);
+  if(!post) return;
+  modal(`
+    <h2>The image</h2>
+    <p class="sub">Paste the address of an image that is already hosted. The engine does not make images.</p>
+    <label>Image address</label>
+    <input type="url" id="img-url" value="${esc(post.image_url || '')}" placeholder="https://…">
+    ${post.notes ? `<div class="qnote" style="margin-top:10px">${esc(post.notes)}</div>` : ''}
+    <div class="btnrow" style="margin-top:14px">
+      <button class="btn gold wide" style="min-height:44px" onclick="doImage('${id}')">Save</button>
+      <button class="btn ghost" style="min-height:44px" onclick="closeModal()">Cancel</button>
+    </div>
+  `);
+}
+
+async function doImage(id){
+  const input = document.getElementById('img-url');
+  if(!input) return;
+  try{
+    await engine('/social/image', { id, image_url: input.value.trim() });
+    const post = Q.posts.find(p => p.id === id);
+    if(post) post.image_url = input.value.trim();
+    closeModal(); render();
+    toast('Image attached.');
+  }catch(e){ toast(e.message || String(e)); }
+}
+
+async function generateNow(){
+  if(!confirm('Write today’s posts now? This runs the same job as the dawn shift.')) return;
+  Q.loading = true; render();
+  try{
+    const out = await engine('/social/generate', {});
+    toast(out.created ? out.created + ' queued.' : 'Nothing was due today.');
+    for(const note of (out.notes || [])) console.log('Engine: ' + note);
+  }catch(e){ toast(e.message || String(e)); }
+  await loadQueue(true);
+}
+
+/* ---------- swipe, with an undo behind it ---------- */
+/* Right approves, left skips, and neither fires until the card has travelled far
+   enough that it cannot be a scroll. Vertical movement wins early, so the list
+   still scrolls normally under a thumb. */
+
+const SWIPE_TRIGGER = 96;
+
+function bindSwipe(){
+  const list = document.querySelector('.qlist');
+  if(!list || list.dataset.swipe === 'on') return;
+  list.dataset.swipe = 'on';
+
+  let card = null, layer = null, id = null;
+  let startX = 0, startY = 0, dx = 0, decided = '';
+
+  list.addEventListener('touchstart', (e) => {
+    const target = e.target.closest('.qcard');
+    // Not while editing, and never when the touch began on a control.
+    if(!target || e.target.closest('button, textarea, input, a')) return;
+    card = target; layer = card.querySelector('.qswipe'); id = card.dataset.id;
+    startX = e.touches[0].clientX; startY = e.touches[0].clientY;
+    dx = 0; decided = '';
+  }, { passive: true });
+
+  list.addEventListener('touchmove', (e) => {
+    if(!card) return;
+    const x = e.touches[0].clientX - startX;
+    const y = e.touches[0].clientY - startY;
+    if(!decided){
+      if(Math.abs(y) > 12 && Math.abs(y) > Math.abs(x)){ decided = 'scroll'; card = null; return; }
+      if(Math.abs(x) > 12){ decided = 'swipe'; card.classList.add('dragging'); }
+    }
+    if(decided !== 'swipe') return;
+    dx = x;
+    layer.style.transform = 'translateX(' + dx + 'px)';
+  }, { passive: true });
+
+  const release = () => {
+    if(!card) return;
+    const settled = card, settledId = id, settledLayer = layer, travelled = dx;
+    settled.classList.remove('dragging');
+    settledLayer.style.transform = '';
+    card = null; layer = null; id = null; dx = 0; decided = '';
+    if(travelled > SWIPE_TRIGGER) approve(settledId);
+    else if(travelled < -SWIPE_TRIGGER) skip(settledId);
+  };
+
+  list.addEventListener('touchend', release, { passive: true });
+  list.addEventListener('touchcancel', release, { passive: true });
+}
+
+/* ---------- the registry ---------- */
+
+function ventureForm(v){
+  const platforms = Object.keys(Q.platforms);
+  const categories = Object.keys(Q.categories).filter(k => Q.categories[k].social);
+  const val = v || { platforms: [], cadence: {}, category_mix: {} };
+  return `
+    <label>Slug</label>
+    <input type="text" id="v-slug" value="${esc(val.slug || '')}" placeholder="setpostgo" ${v ? 'readonly' : ''}>
+    <label>Name</label>
+    <input type="text" id="v-name" value="${esc(val.name || '')}" placeholder="SetPostGo">
+    <label>Site</label>
+    <input type="url" id="v-site" value="${esc(val.site_url || '')}" placeholder="https://setpostgo.xyz">
+    <label>Positioning</label>
+    <textarea id="v-pos" placeholder="What it is, who it serves, why it wins.">${esc(val.positioning || '')}</textarea>
+    <label>Audience</label>
+    <textarea id="v-aud" placeholder="Who is actually reading.">${esc(val.audience || '')}</textarea>
+    <label>Tone</label>
+    <textarea id="v-tone" placeholder="How it speaks, and how it never speaks.">${esc(val.tone || '')}</textarea>
+    <label>Words it never uses</label>
+    <textarea id="v-ban" placeholder="Comma separated.">${esc(val.banned_language || '')}</textarea>
+    <label>Posts a week, per platform</label>
+    ${platforms.map(p => `<div class="kpirow">
+      <span>${esc(platformLabel(p))}</span>
+      <input type="number" min="0" max="70" id="v-cad-${p}" value="${Number(val.cadence[p] || 0)}">
+    </div>`).join('')}
+    <p class="tiny">Zero means that platform is not used. A platform only appears here once it is in the Worker's platform config.</p>
+    <label>The mix</label>
+    ${categories.map(c => `<div class="kpirow">
+      <span>${esc(categoryLabel(c))}</span>
+      <input type="number" min="0" max="10" step="0.05" id="v-mix-${c}" value="${Number(val.category_mix[c] || 0)}">
+    </div>`).join('')}
+    <p class="tiny">Relative weights, not percentages. Leave one at zero to switch that kind of post off.</p>
+  `;
+}
+
+function openVenture(v){
+  if(!Object.keys(Q.platforms).length){ toast('Load the queue first, so the platform list is known.'); return; }
+  modal(`
+    <h2>${v ? 'Edit ' + esc(v.name) : 'Add a venture'}</h2>
+    <p class="sub">No deploy, no code. Saved straight to the registry.</p>
+    ${ventureForm(v)}
+    <div class="btnrow" style="margin-top:16px">
+      <button class="btn gold wide" style="min-height:44px" onclick="saveVenture()">Save</button>
+      <button class="btn ghost" style="min-height:44px" onclick="closeModal()">Cancel</button>
+    </div>
+  `);
+}
+
+async function saveVenture(){
+  const get = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+  const cadence = {}, mix = {}, platforms = [];
+  for(const p of Object.keys(Q.platforms)){
+    const n = Number(get('v-cad-' + p) || 0);
+    if(n > 0){ cadence[p] = n; platforms.push(p); }
+  }
+  for(const c of Object.keys(Q.categories)){
+    const el = document.getElementById('v-mix-' + c);
+    if(!el) continue;
+    const w = Number(el.value || 0);
+    if(w > 0) mix[c] = w;
+  }
+  try{
+    await engine('/social/ventures', {
+      slug: get('v-slug'), name: get('v-name'), site_url: get('v-site'),
+      positioning: get('v-pos'), audience: get('v-aud'), tone: get('v-tone'),
+      banned_language: get('v-ban'), platforms, cadence, category_mix: mix, active: 1
+    });
+    closeModal();
+    await loadQueue(true);
+    toast('Saved to the registry.');
+  }catch(e){ toast(e.message || String(e)); }
+}
+
+function openRegistry(){
+  modal(`
+    <h2>The registry</h2>
+    ${Q.ventures.length ? Q.ventures.map(v => `
+      <div class="card" style="margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <b>${esc(v.name)}</b>
+          <span class="qtag ${v.active ? 'venture' : ''}">${v.active ? 'active' : 'paused'}</span>
+        </div>
+        <div class="tiny" style="margin:4px 0 8px">${esc(v.slug)} &middot; ${Object.entries(v.cadence || {}).map(([p, n]) => esc(platformLabel(p)) + ' ' + n + 'x').join(', ') || 'no cadence set'}</div>
+        <div class="btnrow">
+          <button class="btn sm ghost" style="min-height:44px" onclick="closeModal();openVenture(Q.ventures.find(x=>x.slug==='${v.slug}'))">Edit</button>
+          <button class="btn sm ghost" style="min-height:44px" onclick="toggleVenture('${v.slug}',${v.active ? 'false' : 'true'})">${v.active ? 'Pause' : 'Activate'}</button>
+        </div>
+      </div>`).join('') : '<p class="sub">Nothing on the books yet.</p>'}
+    <div class="btnrow" style="margin-top:12px"><button class="btn ghost wide" style="min-height:44px" onclick="closeModal()">Close</button></div>
+  `);
+}
+
+async function toggleVenture(slug, active){
+  try{
+    await engine('/social/ventures/active', { slug, active });
+    closeModal();
+    await loadQueue(true);
+    toast(active ? 'Active again.' : 'Paused. Nothing more will be generated for it.');
+  }catch(e){ toast(e.message || String(e)); }
+}
+
+/* ---------- notifications ---------- */
+
+function urlB64ToUint8Array(base64){
+  const padded = (base64 + '='.repeat((4 - base64.length % 4) % 4)).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(padded);
+  const out = new Uint8Array(raw.length);
+  for(let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+
+async function enablePush(){
+  if(!('serviceWorker' in navigator) || !('PushManager' in window)){
+    toast('This browser cannot do notifications. The engine will fall back to email.');
+    return;
+  }
+  if(!Q.vapid){
+    toast('The Worker has no notification keys yet. See the README, step four.');
+    return;
+  }
+  try{
+    const permission = await Notification.requestPermission();
+    if(permission !== 'granted'){
+      toast('Notifications declined. The engine will fall back to email.');
+      return;
+    }
+    const reg = await navigator.serviceWorker.ready;
+    const existing = await reg.pushManager.getSubscription();
+    const sub = existing || await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlB64ToUint8Array(Q.vapid)
+    });
+    const json = sub.toJSON();
+    await engine('/social/push/subscribe', { endpoint: json.endpoint, keys: json.keys });
+    toast('Notifications on. You will be told when the batch lands.');
+  }catch(e){
+    toast('Could not turn notifications on: ' + (e.message || e));
+  }
+}
+
+async function testPush(){
+  try{
+    const out = await engine('/social/push/test', {});
+    toast(out.channel === 'push' ? 'Sent by push.' : out.channel === 'email' ? 'Push reached nobody, so it went by email.' : 'Nothing could be sent. Check the keys.');
+  }catch(e){ toast(e.message || String(e)); }
+}
+
+// Saves everything on the Settings sheet, including the two fields the older
+// Save button used to write, then reconnects if the engine details changed.
+function saveEngine(closeAfter){
+  const val = id => { const el = document.getElementById(id); return el ? el.value : null; };
+  const key = val('set-key'); if(key !== null) S.apiKey = key.trim();
+  const wa = val('set-wa'); if(wa !== null) S.wa = wa.replace(/[^0-9]/g, '');
+  const url = val('set-engine'); if(url !== null) S.engine = url.trim().replace(/\/+$/, '');
+  const token = val('set-token'); if(token !== null) S.engineToken = token.trim();
+  save();
+  if(closeAfter) closeModal();
+  render();
+  if(engineReady()) loadQueue(true);
+  else toast('Saved.');
+}
+
+async function prepareStorage(){
+  try{
+    const out = await engine('/social/migrate', {});
+    toast(out.message || 'Storage prepared.');
+    await loadQueue(true);
+  }catch(e){ toast(e.message || String(e)); }
+}
+
+/* ---------- boot ---------- */
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {
+      // No offline shell and no notifications, and nothing else is affected.
+    });
+  });
+}
+
+// Arriving from the notification, or from the home screen shortcut.
+function applyHash(){
+  const hash = (location.hash || '').replace('#', '');
+  if(hash && TABS.some(t => t.id === hash)){ TAB = hash; return true; }
+  return false;
+}
+window.addEventListener('hashchange', () => { if(applyHash()) render(); });
+
+// The queue is reread when the app comes back to the front, because a post may
+// have gone out from another device in the meantime.
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'visible' && TAB === 'queue' && engineReady()) loadQueue(true);
+});
+window.addEventListener('online', async () => {
+  const sent = await flushPending();
+  if(sent) toast(sent + (sent === 1 ? ' action' : ' actions') + ' sent now the signal is back.');
+  if(TAB === 'queue') loadQueue(true);
+});
+window.addEventListener('offline', () => { if(TAB === 'queue') render(); });
+
+// Land on the tab the notification or the shortcut asked for, before first paint.
+applyHash();
 render();
+// The queue is fetched after first paint, so the shell is on screen immediately.
+if(engineReady()) loadQueue(true);
 </script>
 </body>
 </html>
