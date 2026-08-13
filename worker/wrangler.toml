@@ -20,15 +20,11 @@ workers_dev = true
 # uncommitted zone_name (wrong account, zone not actually on Cloudflare) fails
 # the deploy outright and would take the cron down with it.
 #
-# To connect it, once, and only after confirming 9thpoint.com's DNS is on the
-# same Cloudflare account used for `wrangler login`:
-#
-#   1. Delete the # from the three lines below.
-#   2. Commit and push (this Worker deploys automatically from main).
-#
-# [[routes]]
-# pattern = "9thpoint.com/api/*"
-# zone_name = "9thpoint.com"
+# Connected: 9thpoint.com's DNS is confirmed on the same Cloudflare account
+# used for `wrangler login`.
+[[routes]]
+pattern = "9thpoint.com/api/*"
+zone_name = "9thpoint.com"
 
 # ============================================================================
 # LOGIN RATE LIMITING
