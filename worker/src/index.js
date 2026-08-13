@@ -25,6 +25,10 @@ import { captureMetrics } from './social/metrics.js';
 import { notifyOwner } from './social/push.js';
 import { isSocialRoute, handleSocial } from './social/api.js';
 import { SENDABLE } from './social/config.js';
+import {
+  requireSession, mintSession, verifyPassword, sessionCookie, clearedSessionCookie,
+  rateLimitConfigured, checkLockout, recordFailure, resetAttempts
+} from './auth.js';
 
 const REPO = 'alexanderafolabi1-afk/9inth-house';
 const BRANCH = 'main';
@@ -384,6 +388,13 @@ const ROTA = {
 };
 
 /* ---------- Helpers ---------- */
+function apiJson(body, status = 200, extraHeaders = {}) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...extraHeaders }
+  });
+}
+
 async function claude(key, system, user, max = 1000) {
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -1292,18 +1303,93 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
-    // The distribution engine's admin API, behind DESK_ADMIN_TOKEN. Every route
-    // under /social is authenticated, including the read ones: an endpoint that can
-    // fire posts must never answer to whoever finds the URL.
-    if (isSocialRoute(url.pathname)) {
-      return await handleSocial(request, env, ctx, { ask: socialAsk(env), gatherArticles });
+    // The admin lives on 9thpoint.com and the Worker is attached to
+    // 9thpoint.com/api/* by a Cloudflare Route so the session cookie is
+    // same-site (see worker/wrangler.toml). That means every request the
+    // browser makes arrives with an /api prefix; the .workers.dev domain
+    // (kept live for curl and the Author Desk trigger) sends the bare path.
+    // Stripping the prefix once here, rather than in every downstream
+    // handler, lets both keep working unmodified.
+    const apiPath = url.pathname.replace(/^\/api(?=\/|$)/, '') || '/';
+    const routed = apiPath === url.pathname
+      ? request
+      : new Request(new URL(apiPath + url.search, url), request);
+
+    if (apiPath === '/auth/session' && request.method === 'GET') {
+      return apiJson({ ok: true, authed: await requireSession(routed, env) });
+    }
+
+    if (apiPath === '/auth/login' && request.method === 'POST') {
+      if (!env.ADMIN_PASSWORD_HASH || !env.SESSION_SECRET) {
+        return apiJson({ ok: false, error: 'Login is not configured on this Worker yet. See worker/README.md.' }, 503);
+      }
+      if (!rateLimitConfigured(env)) {
+        return apiJson({ ok: false, error: 'Login rate limiting is not configured on this Worker yet. See worker/README.md.' }, 503);
+      }
+      const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+      const lock = await checkLockout(env, ip);
+      if (lock.locked) {
+        return apiJson(
+          { ok: false, error: `Too many attempts. Try again in ${Math.ceil(lock.retryAfterSeconds / 60)} minute(s).` },
+          429,
+          { 'Retry-After': String(lock.retryAfterSeconds) }
+        );
+      }
+      let body = {};
+      try { body = await routed.json(); } catch (e) { /* handled below by the empty-password check */ }
+      const ok = await verifyPassword(String(body.password || ''), env.ADMIN_PASSWORD_HASH);
+      if (!ok) {
+        await recordFailure(env, ip);
+        console.error('Desk login: wrong password from ' + ip);
+        return apiJson({ ok: false, error: 'Wrong password.' }, 401);
+      }
+      await resetAttempts(env, ip);
+      const token = await mintSession(env);
+      return apiJson({ ok: true }, 200, { 'Set-Cookie': sessionCookie(token) });
+    }
+
+    if (apiPath === '/auth/logout' && request.method === 'POST') {
+      return apiJson({ ok: true }, 200, { 'Set-Cookie': clearedSessionCookie() });
+    }
+
+    // The one AI endpoint the desk admin ever calls from the browser. It is a
+    // thin, authenticated proxy: the character personas, business context and
+    // prompts are assembled client-side (none of that is secret), and this
+    // route is the only place ANTHROPIC_API_KEY is ever read.
+    if (apiPath === '/desk/ask' && request.method === 'POST') {
+      if (!(await requireSession(routed, env))) return apiJson({ ok: false, error: 'Not signed in.' }, 401);
+      if (!env.ANTHROPIC_API_KEY) return apiJson({ ok: false, error: 'ANTHROPIC_API_KEY is not set on the Worker' }, 503);
+      let body = {};
+      try { body = await routed.json(); } catch (e) { body = {}; }
+      const system = String(body.system || '');
+      const user = String(body.user || '');
+      const maxTokens = Math.min(Number(body.max_tokens) || 1000, 2000);
+      if (!user.trim()) return apiJson({ ok: false, error: 'Nothing to ask.' }, 400);
+      if (system.length > 20000 || user.length > 20000) return apiJson({ ok: false, error: 'That request is too long.' }, 400);
+      try {
+        const text = await claude(env.ANTHROPIC_API_KEY, system, user, maxTokens);
+        return apiJson({ ok: true, text });
+      } catch (e) {
+        console.error('Desk ask failed: ' + String(e && e.message ? e.message : e).slice(0, 300));
+        return apiJson({ ok: false, error: 'The house could not reach Anthropic. Try again shortly.' }, 502);
+      }
+    }
+
+    // The distribution engine's admin API, behind the same session cookie.
+    // Every route under /social is authenticated, including the read ones: an
+    // endpoint that can fire posts must never answer to whoever finds the URL.
+    if (isSocialRoute(apiPath)) {
+      return await handleSocial(routed, env, ctx, { ask: socialAsk(env), gatherArticles });
     }
 
     // Manual trigger for the Author Desk media pack only (see worker/README.md).
     // Requires AUTHOR_DESK_TRIGGER_TOKEN to be set; declines closed by default if
     // it is not, rather than leaving an open endpoint that could force a rebuild
-    // and burn Anthropic tokens on request from anyone who finds the URL.
-    if (url.pathname === '/author-desk/media-pack' && request.method === 'POST') {
+    // and burn Anthropic tokens on request from anyone who finds the URL. This is
+    // a machine path, deliberately separate from the session cookie: whoever
+    // triggers it (a script, a curl call from the CEO's terminal) has no browser
+    // session to carry.
+    if (apiPath === '/author-desk/media-pack' && request.method === 'POST') {
       const expected = env.AUTHOR_DESK_TRIGGER_TOKEN;
       const provided = request.headers.get('Authorization') || '';
       if (!expected || provided !== `Bearer ${expected}`) {
@@ -1317,7 +1403,7 @@ export default {
       return new Response('Media pack rebuild triggered.', { status: 202 });
     }
     return new Response(
-      'Ninth House Autopilot Worker. Mostly a Cron Trigger worker. The routes that do answer HTTP all require a bearer token: POST /author-desk/media-pack to redo the Author Desk press kit, and everything under /social for the distribution engine behind desk.html. See /worker/README.md for deploy and secret setup.',
+      'Ninth House Autopilot Worker. Mostly a Cron Trigger worker. POST /author-desk/media-pack (bearer token) redoes the Author Desk press kit. Everything under /social and /desk, and /auth/session, /auth/login, /auth/logout, back the admin at desk.html and are session-cookie authenticated. See /worker/README.md for deploy and secret setup.',
       { status: 200, headers: { 'content-type': 'text/plain' } }
     );
   }

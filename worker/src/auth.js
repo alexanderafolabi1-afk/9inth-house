@@ -1,0 +1,188 @@
+// Session auth for the desk admin. One owner, one password.
+//
+// The password itself is never stored: only a PBKDF2 hash, in the
+// ADMIN_PASSWORD_HASH secret, in the same "$" delimited format this file
+// writes and reads (see scripts/hash-password.mjs, which produces it).
+//
+// The session is a stateless, signed cookie rather than a server-side
+// session store, so login does not depend on D1 being provisioned: it is a
+// timestamp, HMAC-signed with the SESSION_SECRET secret, and verified by
+// recomputing the signature. There is nothing to look up and nothing that
+// can leak from a database, only a secret that must not leak.
+//
+// Login attempts are rate limited and locked out per IP using the
+// LOGIN_ATTEMPTS KV binding. If that binding is absent, login is refused
+// outright rather than left unlimited: closed by default, the same rule
+// worker/src/social/api.js already applies to D1.
+
+const COOKIE_NAME = 'nh_session';
+const SESSION_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
+const PBKDF2_ITERATIONS = 210000;
+const LOCKOUT_THRESHOLD = 5;
+const LOCKOUT_SECONDS = 15 * 60;
+const ATTEMPTS_TTL_SECONDS = 60 * 60;
+
+function b64urlEncode(bytes) {
+  let bin = '';
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function b64urlDecode(str) {
+  const pad = str.length % 4 === 0 ? '' : '='.repeat(4 - (str.length % 4));
+  const bin = atob(str.replace(/-/g, '+').replace(/_/g, '/') + pad);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
+function constantTimeEqual(a, b) {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
+  return diff === 0;
+}
+
+/* ---------- password hashing ---------- */
+
+// Format: pbkdf2$<iterations>$<salt base64url>$<hash base64url>
+// scripts/hash-password.mjs writes this same format with Node's crypto, and
+// PBKDF2-HMAC-SHA256 is a standard algorithm both runtimes implement
+// identically for the same inputs, so the two sides agree without either one
+// knowing about the other's implementation.
+async function derivePbkdf2(password, salt, iterations) {
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits']
+  );
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', hash: 'SHA-256', salt, iterations },
+    keyMaterial,
+    256
+  );
+  return new Uint8Array(bits);
+}
+
+export async function verifyPassword(password, stored) {
+  if (!password || !stored) return false;
+  const parts = String(stored).split('$');
+  if (parts.length !== 4 || parts[0] !== 'pbkdf2') return false;
+  const iterations = Number(parts[1]);
+  if (!Number.isFinite(iterations) || iterations <= 0) return false;
+  const salt = b64urlDecode(parts[2]);
+  const expected = b64urlDecode(parts[3]);
+  const actual = await derivePbkdf2(password, salt, iterations);
+  return constantTimeEqual(actual, expected);
+}
+
+/* ---------- session cookie ---------- */
+
+async function hmacKey(env) {
+  if (!env.SESSION_SECRET) return null;
+  return crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(env.SESSION_SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']
+  );
+}
+
+export async function mintSession(env) {
+  const key = await hmacKey(env);
+  if (!key) return null;
+  const exp = Date.now() + SESSION_MAX_AGE * 1000;
+  const payload = b64urlEncode(new TextEncoder().encode(JSON.stringify({ exp })));
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload));
+  return `${payload}.${b64urlEncode(new Uint8Array(sig))}`;
+}
+
+async function verifySessionToken(token, env) {
+  if (!token || typeof token !== 'string') return false;
+  const key = await hmacKey(env);
+  if (!key) return false;
+  const dot = token.indexOf('.');
+  if (dot < 0) return false;
+  const payload = token.slice(0, dot);
+  const sig = token.slice(dot + 1);
+  let valid = false;
+  try {
+    valid = await crypto.subtle.verify('HMAC', key, b64urlDecode(sig), new TextEncoder().encode(payload));
+  } catch (e) {
+    return false;
+  }
+  if (!valid) return false;
+  try {
+    const { exp } = JSON.parse(new TextDecoder().decode(b64urlDecode(payload)));
+    return typeof exp === 'number' && exp > Date.now();
+  } catch (e) {
+    return false;
+  }
+}
+
+function readCookie(request, name) {
+  const header = request.headers.get('Cookie') || '';
+  for (const part of header.split(';')) {
+    const i = part.indexOf('=');
+    if (i < 0) continue;
+    if (part.slice(0, i).trim() === name) return part.slice(i + 1).trim();
+  }
+  return null;
+}
+
+// True only when the request carries a signature-valid, unexpired session
+// cookie. Every admin route calls this; nothing here trusts the front end.
+export async function requireSession(request, env) {
+  const token = readCookie(request, COOKIE_NAME);
+  return verifySessionToken(token, env);
+}
+
+// Path scoped to /api: the cookie is never needed on, or sent with, a plain
+// page load, only on calls to the admin API.
+export function sessionCookie(token) {
+  return `${COOKIE_NAME}=${token}; HttpOnly; Secure; SameSite=Strict; Path=/api; Max-Age=${SESSION_MAX_AGE}`;
+}
+
+export function clearedSessionCookie() {
+  return `${COOKIE_NAME}=; HttpOnly; Secure; SameSite=Strict; Path=/api; Max-Age=0`;
+}
+
+/* ---------- login rate limiting ---------- */
+
+export function rateLimitConfigured(env) {
+  return Boolean(env.LOGIN_ATTEMPTS);
+}
+
+function attemptsKey(ip) {
+  return `fail:${ip}`;
+}
+
+// Checked before the password is even looked at, so a locked-out IP never
+// pays for a PBKDF2 derivation and never gets a timing signal either.
+export async function checkLockout(env, ip) {
+  const raw = await env.LOGIN_ATTEMPTS.get(attemptsKey(ip));
+  if (!raw) return { locked: false };
+  let state;
+  try {
+    state = JSON.parse(raw);
+  } catch (e) {
+    return { locked: false };
+  }
+  if (state.lockedUntil && state.lockedUntil > Date.now()) {
+    return { locked: true, retryAfterSeconds: Math.ceil((state.lockedUntil - Date.now()) / 1000) };
+  }
+  return { locked: false };
+}
+
+export async function recordFailure(env, ip) {
+  const key = attemptsKey(ip);
+  const raw = await env.LOGIN_ATTEMPTS.get(key);
+  let state = { count: 0 };
+  if (raw) {
+    try { state = JSON.parse(raw); } catch (e) { state = { count: 0 }; }
+  }
+  state.count = (state.count || 0) + 1;
+  if (state.count >= LOCKOUT_THRESHOLD) {
+    state.lockedUntil = Date.now() + LOCKOUT_SECONDS * 1000;
+  }
+  await env.LOGIN_ATTEMPTS.put(key, JSON.stringify(state), { expirationTtl: ATTEMPTS_TTL_SECONDS });
+}
+
+export async function resetAttempts(env, ip) {
+  await env.LOGIN_ATTEMPTS.delete(attemptsKey(ip));
+}

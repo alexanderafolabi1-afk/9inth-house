@@ -3,6 +3,53 @@ main = "src/index.js"
 compatibility_date = "2026-07-28"
 compatibility_flags = ["nodejs_compat"]
 
+# Kept on alongside the Route below, on purpose: the .workers.dev address stays
+# reachable for curl (the Author Desk trigger, manual /social calls with a
+# bearer token) even once the admin itself moves to the Route.
+workers_dev = true
+
+# ============================================================================
+# SAME-SITE ROUTE FOR THE SESSION COOKIE
+# ============================================================================
+# desk.html lives on 9thpoint.com. For its login to set an HttpOnly,
+# SameSite=Strict cookie that the browser will actually send back, the Worker
+# has to answer on a hostname the browser considers the same site as
+# 9thpoint.com; a SameSite=Strict cookie is never sent on a cross-site fetch,
+# so leaving the Worker on only the .workers.dev domain would make the whole
+# login silently useless. Commented out, like the D1 block below, because an
+# uncommitted zone_name (wrong account, zone not actually on Cloudflare) fails
+# the deploy outright and would take the cron down with it.
+#
+# To connect it, once, and only after confirming 9thpoint.com's DNS is on the
+# same Cloudflare account used for `wrangler login`:
+#
+#   1. Delete the # from the three lines below.
+#   2. Commit and push (this Worker deploys automatically from main).
+#
+# [[routes]]
+# pattern = "9thpoint.com/api/*"
+# zone_name = "9thpoint.com"
+
+# ============================================================================
+# LOGIN RATE LIMITING
+# ============================================================================
+# Failed login attempts and lockouts are counted here, keyed by IP. Unlike the
+# D1 block below, this one is not optional once login is in use: with no
+# LOGIN_ATTEMPTS binding, POST /api/auth/login refuses every request rather
+# than allow unlimited guesses, so the admin cannot be logged into at all
+# until this is connected.
+#
+# To connect it, once:
+#
+#   1. cd worker && npx wrangler kv namespace create LOGIN_ATTEMPTS
+#   2. Copy the id it prints into the block below.
+#   3. Delete the # from the three lines below.
+#   4. Commit and push.
+#
+# [[kv_namespaces]]
+# binding = "LOGIN_ATTEMPTS"
+# id = "paste-the-id-here"
+
 # Four shifts a day, matching the retired GitHub Actions schedule exactly.
 # All times UTC. Cloudflare Cron Triggers are always UTC, so no conversion
 # from the old workflow's cron lines is needed.

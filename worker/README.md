@@ -326,6 +326,11 @@ means in practice). Concretely, the steps only you can do are:
 8. If you want the on-demand media pack rebuild, set `AUTHOR_DESK_TRIGGER_TOKEN`
    (step 3 above) and keep that string somewhere safe; it is the only thing
    that authorises `POST /author-desk/media-pack`.
+9. Set up the desk admin's login: run `node scripts/hash-password.mjs`, set
+   `ADMIN_PASSWORD_HASH` and `SESSION_SECRET`, connect the `LOGIN_ATTEMPTS` KV
+   namespace, and connect the `9thpoint.com/api/*` Route. See "Authentication"
+   under "The distribution engine" below; none of it can be done for you, since
+   it means choosing a password and confirming your own Cloudflare zone.
 
 Nothing else in this repository change requires action from you; the
 GitHub Actions workflow is disabled (its schedule is commented out, its
@@ -369,8 +374,9 @@ pasting the value when it asks. They are never written into the repo.
 | Secret | What it is |
 |---|---|
 | `MAKE_WEBHOOK_URL` | The Make.com webhook address that actually posts. Never write this into a file. |
-| `DESK_ADMIN_TOKEN` | A password you invent, of your own choosing, and paste into the desk once. It is what lets your phone tell the engine to act. Make it long. |
-| `ANTHROPIC_API_KEY` | Already set. The engine writes the copy with it. |
+| `ADMIN_PASSWORD_HASH` | The owner's login password, hashed. Never the password itself. Generate it with `node scripts/hash-password.mjs` from the repo root (see "Authentication" below) and paste its output here. |
+| `SESSION_SECRET` | Any long random string, used to sign the session cookie. Generate one with `openssl rand -base64 32`, or anything else that is long and unguessable. Rotating it instantly signs every device out. |
+| `ANTHROPIC_API_KEY` | Already set. The engine writes the copy with it, and the desk admin's AI features (standup, board, commissioning a partner) now also go through this same key on the Worker, never in the browser. |
 
 **Required for the morning notification:**
 
@@ -380,12 +386,14 @@ pasting the value when it asks. They are never written into the repo.
 | `VAPID_PRIVATE_KEY` | Notification key, private half. |
 | `VAPID_SUBJECT` | `mailto:` and your email address, for example `mailto:hello@9thpoint.com`. |
 
-You do not have to invent the two VAPID keys. Once `DESK_ADMIN_TOKEN` is set,
-ask the engine to make a pair for you:
+You do not have to invent the two VAPID keys. Once you are signed in (see
+"Authentication" below), ask the engine to make a pair for you, keeping a
+cookie jar across the two calls since `/social/push/keys` needs the session:
 
 ```
-curl -X POST https://YOUR-WORKER-ADDRESS/social/push/keys \
-  -H "Authorization: Bearer YOUR-DESK-ADMIN-TOKEN"
+curl -c cookies.txt -X POST https://9thpoint.com/api/auth/login \
+  -H "Content-Type: application/json" -d '{"password":"YOUR-PASSWORD"}'
+curl -b cookies.txt -X POST https://9thpoint.com/api/social/push/keys
 ```
 
 It answers with both keys. Paste them straight into
@@ -399,7 +407,47 @@ the Worker and is not shown twice, so if you lose it, just make another pair.
 |---|---|
 | `NOTIFY_EMAIL_WEBHOOK` | Somewhere to post the morning note if the phone notification cannot be delivered. Email is the fallback, never the main route. |
 | `METRICS_WEBHOOK_URL` | Somewhere the engine can ask for impression and engagement numbers. Without it the engine never invents a number, it just has none. |
-| `DESK_ORIGIN` | Which web addresses may use the admin, comma separated. Defaults to `https://9thpoint.com,https://www.9thpoint.com`. |
+| `DESK_ORIGIN` | Which web addresses may use the admin, comma separated. Defaults to `https://9thpoint.com,https://www.9thpoint.com`. Kept as defense in depth; the admin itself now calls the Worker same-origin (see "Authentication"), so this mostly matters if something else ever needs to call `/social` cross-origin. |
+
+## Authentication
+
+The whole admin, and every route behind it, requires signing in with a single
+owner password. There is no username, and no way to reach `/social`, `/desk`,
+or the queue without a valid session.
+
+**Required, in order, before the admin will work at all:**
+
+1. **Choose the password.** From the repo root: `node scripts/hash-password.mjs`.
+   It asks for the password twice (hidden input), and prints a hash, not the
+   password itself. Set it: `cd worker && npx wrangler secret put ADMIN_PASSWORD_HASH`,
+   pasting the printed value.
+2. **Set `SESSION_SECRET`** (see the table above): `npx wrangler secret put SESSION_SECRET`.
+3. **Connect the login rate limiter.** This is not optional the way the D1
+   database below is: with no `LOGIN_ATTEMPTS` KV binding, `POST /api/auth/login`
+   refuses every request rather than allow unlimited guesses, so nobody,
+   including the owner, can sign in until this is connected.
+   ```
+   cd worker && npx wrangler kv namespace create LOGIN_ATTEMPTS
+   ```
+   Paste the id it prints into the `LOGIN_ATTEMPTS` block near the top of
+   `worker/wrangler.toml`, delete the `#` from those three lines, commit and push.
+4. **Connect the same-site Route**, so the session cookie actually works. The
+   admin lives on `9thpoint.com`; a `SameSite=Strict` cookie set by a Worker on
+   only the `.workers.dev` domain would never be sent back by the browser, so
+   the Worker needs to answer on `9thpoint.com/api/*` too. This needs
+   `9thpoint.com`'s DNS to be on the same Cloudflare account used for
+   `wrangler login`. Paste the zone into the `routes` block near the top of
+   `worker/wrangler.toml`, delete the `#` from those three lines, commit and push.
+
+Once all four are done, `9thpoint.com/desk.html` shows a login screen instead
+of the app, and stays that way until the right password is entered. Five wrong
+attempts from one IP lock it out for fifteen minutes. Signing in sets a cookie
+that lasts 30 days; "Sign out" in Settings clears it early.
+
+The `/author-desk/media-pack` trigger and everything under `/social` and
+`/desk` on the `.workers.dev` domain (bearer-token routes, or curl with a
+cookie jar as above) are unaffected by any of this and keep working exactly
+as documented; the login only gates the browser admin.
 
 ## First time setup, in order
 
@@ -407,13 +455,15 @@ the Worker and is not shown twice, so if you lose it, just make another pair.
 2. **Connect it.** Open `worker/wrangler.toml`, find the block at the bottom
    marked STORAGE, paste the id it just printed, and delete the `#` from those
    four lines. Commit and push.
-3. **Set the secrets** in the table above.
-4. **Open the desk** at `9thpoint.com/desk.html`, tap the cog, and under "The
-   distribution engine" enter your Worker address and the desk token. Save.
-5. **Tap "Prepare storage"** once. That creates the tables and puts the first
+3. **Set up authentication.** See "Authentication" above; the admin will not
+   load at all until this is done.
+4. **Set the remaining secrets** in the table above.
+5. **Open the desk** at `9thpoint.com/desk.html` and sign in with the password
+   you chose in step 3.
+6. **Tap "Prepare storage"** once. That creates the tables and puts the first
    venture on the books.
-6. **Tap "Turn on notifications"**, then "Send a test".
-7. **Tap "Generate now"** to see the queue fill without waiting for the morning.
+7. **Tap "Turn on notifications"**, then "Send a test".
+8. **Tap "Generate now"** to see the queue fill without waiting for the morning.
 
 ## How to add a venture
 
