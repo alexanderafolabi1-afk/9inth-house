@@ -35,16 +35,10 @@ zone_name = "9thpoint.com"
 # than allow unlimited guesses, so the admin cannot be logged into at all
 # until this is connected.
 #
-# To connect it, once:
-#
-#   1. cd worker && npx wrangler kv namespace create LOGIN_ATTEMPTS
-#   2. Copy the id it prints into the block below.
-#   3. Delete the # from the three lines below.
-#   4. Commit and push.
-#
-# [[kv_namespaces]]
-# binding = "LOGIN_ATTEMPTS"
-# id = "paste-the-id-here"
+# Connected.
+[[kv_namespaces]]
+binding = "LOGIN_ATTEMPTS"
+id = "9a1f764305b74398a0bcdc109586e713"
 
 # Four shifts a day, matching the retired GitHub Actions schedule exactly.
 # All times UTC. Cloudflare Cron Triggers are always UTC, so no conversion
