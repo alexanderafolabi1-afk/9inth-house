@@ -2,13 +2,16 @@
 //
 // Every route here is authenticated. There is no read only route and no public
 // route: an endpoint that fires posts and answers to anyone who finds the URL is
-// a defect, not a convenience. Authentication is a bearer token held in the
-// DESK_ADMIN_TOKEN secret, and if that secret is missing every route declines,
-// closed by default, rather than falling open.
+// a defect, not a convenience. Authentication is the same HttpOnly session
+// cookie the rest of the admin uses (see worker/src/auth.js): the browser logs
+// in once with the owner's password, and every call after that carries the
+// cookie automatically. If SESSION_SECRET is missing, sessions cannot be
+// verified and every route here declines, closed by default, rather than
+// falling open.
 //
-// The token is the only credential the admin ever holds. It cannot reach
-// Anthropic, GitHub or the Make endpoint directly: those secrets stay on the
-// Worker and the admin only ever asks the Worker to act.
+// The session cookie is the only credential the admin ever holds. It cannot
+// reach Anthropic, GitHub or the Make endpoint directly: those secrets stay on
+// the Worker and the admin only ever asks the Worker to act.
 
 import { PLATFORMS, CATEGORIES, SENDABLE, platformKeys, isPlatform } from './config.js';
 import {
@@ -21,6 +24,7 @@ import { runGeneration } from './generate.js';
 import { ingestMetrics, ventureSummary } from './metrics.js';
 import { generateVapidKeys, pushConfigured, notifyOwner } from './push.js';
 import { sanitiseSocialText, hasDashPunctuation, stripDashPunctuation } from './text.js';
+import { requireSession } from '../auth.js';
 
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' };
 
@@ -49,25 +53,6 @@ function json(request, env, body, status = 200) {
     status,
     headers: { ...JSON_HEADERS, ...corsHeaders(request, env) }
   });
-}
-
-// Compared in constant time so the token cannot be recovered a character at a
-// time by measuring how long a wrong answer takes.
-function tokenMatches(provided, expected) {
-  const a = new TextEncoder().encode(provided);
-  const b = new TextEncoder().encode(expected);
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
-  return diff === 0;
-}
-
-function authorised(request, env) {
-  const expected = env.DESK_ADMIN_TOKEN;
-  if (!expected) return false;
-  const header = request.headers.get('Authorization') || '';
-  if (!header.startsWith('Bearer ')) return false;
-  return tokenMatches(header.slice(7), expected);
 }
 
 async function readJson(request) {
@@ -103,10 +88,11 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
     return new Response(null, { status: 204, headers: corsHeaders(request, env) });
   }
 
-  if (!authorised(request, env)) {
-    // The same answer whether the token is wrong or the secret was never set, so
-    // nothing here reports on the Worker's own configuration to a stranger.
-    return json(request, env, { ok: false, error: 'Unauthorized' }, 401);
+  if (!(await requireSession(request, env))) {
+    // The same answer whether the session is missing, expired, or SESSION_SECRET
+    // was never set, so nothing here reports on the Worker's own configuration
+    // to a stranger.
+    return json(request, env, { ok: false, error: 'Not signed in.' }, 401);
   }
 
   const db = env.DB;
@@ -137,6 +123,7 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
           emailFallback: Boolean(env.NOTIFY_EMAIL_WEBHOOK),
           metricsWebhook: Boolean(env.METRICS_WEBHOOK_URL),
           anthropic: Boolean(env.ANTHROPIC_API_KEY),
+          loginRateLimit: Boolean(env.LOGIN_ATTEMPTS),
           platforms: platformKeys(),
           dashRuleHolds: !hasDashPunctuation(probe),
           allowedOrigins: allowedOrigins(env)

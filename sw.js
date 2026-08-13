@@ -8,7 +8,7 @@
 // this app, and the admin API is never cached: a cached approval or a cached queue
 // would be worse than no cache at all.
 
-const VERSION = 'nh-desk-v1';
+const VERSION = 'nh-desk-v2';
 const SHELL = `${VERSION}-shell`;
 const RUNTIME = `${VERSION}-runtime`;
 
@@ -83,9 +83,12 @@ self.addEventListener('fetch', (event) => {
   let url;
   try { url = new URL(request.url); } catch (e) { return; }
 
-  // The admin API. Never cached, never intercepted: an approval must reach the
-  // engine or fail loudly, and a stale queue would show posts that already went.
+  // The admin API, including auth. Never cached, never intercepted: an approval
+  // must reach the engine or fail loudly, a stale queue would show posts that
+  // already went, and a cached session check could tell the app it is still
+  // signed in when the cookie has expired.
   if (url.pathname === '/social' || url.pathname.startsWith('/social/')) return;
+  if (url.pathname === '/api' || url.pathname.startsWith('/api/')) return;
 
   // A navigation to the admin. Cache first so it opens with no wait, network in
   // the background so it stays current.

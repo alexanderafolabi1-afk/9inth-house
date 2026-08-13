@@ -295,7 +295,7 @@ pre,code,.mono{overflow-wrap:anywhere;word-break:break-word}
   </div>
   <div class="hspace"></div>
   <div class="daychip" id="daychip">DAY 001</div>
-  <button class="gear" onclick="openSettings()" aria-label="Settings">&#9881;</button>
+  <button class="gear" id="gearbtn" onclick="openSettings()" aria-label="Settings">&#9881;</button>
 </header>
 
 <main id="app"></main>
@@ -308,8 +308,7 @@ pre,code,.mono{overflow-wrap:anywhere;word-break:break-word}
 /* ============ STATE ============ */
 const LS_KEY = 'ninthhouse_v1';
 const defaultState = () => ({
-  day: 1, apiKey: '', wa: '447448668350',
-  engine: '', engineToken: '',   // the Worker's address and the desk token, this device only
+  day: 1, wa: '447448668350',
   pendingActions: [],            // approvals taken offline, replayed when the signal returns
   docket: [],            // {id, day, charId, biz, brief, output, status}
   ledger: [],            // {text, day} durable facts the house learns about the keeper (this device only)
@@ -486,7 +485,7 @@ function ledgerBlock(){
     + facts.map(f => '- ' + f.text).join('\n');
 }
 async function learnFromItem(d){
-  if(!d || !S.apiKey) return; // learning is best-effort and needs the key
+  if(!d) return; // learning is best-effort, and silently skipped if not signed in
   try{
     const brief = (d.brief || '').slice(0, 600);
     const body = (d.output || '').slice(0, 3000);
@@ -509,23 +508,19 @@ async function learnFromItem(d){
 }
 function ledgerForget(i){ if(S.ledger && i >= 0 && i < S.ledger.length){ S.ledger.splice(i, 1); save(); render(); } }
 
-/* ============ CLAUDE API ============ */
+/* ============ CLAUDE, VIA THE WORKER ============ */
+/* The browser never talks to Anthropic. It sends the system/user prompt (built
+   here from character bios and firm state, none of it secret) to the Worker's
+   /desk/ask, which holds ANTHROPIC_API_KEY and is the only thing that calls
+   Anthropic. Same session-cookie auth, same engine() helper, as every other
+   admin action. */
 async function callClaude(system, user, maxTokens, skipLedger){
-  const headers = {'Content-Type':'application/json'};
-  if(S.apiKey){
-    headers['x-api-key'] = S.apiKey;
-    headers['anthropic-version'] = '2023-06-01';
-    headers['anthropic-dangerous-direct-browser-access'] = 'true';
-  }
-  const payload = { model:'claude-sonnet-4-6', max_tokens: maxTokens||1000,
-      system: skipLedger ? system : (system + ledgerBlock()), messages:[{role:'user', content:user}] };
-  if(S.apiKey) payload.tools = [{ type:'web_search_20250305', name:'web_search' }];
-  const res = await fetch('https://api.anthropic.com/v1/messages',{
-    method:'POST', headers, body: JSON.stringify(payload)
+  const data = await engine('/desk/ask', {
+    system: skipLedger ? system : (system + ledgerBlock()),
+    user,
+    max_tokens: maxTokens || 1000
   });
-  if(!res.ok){ const t = await res.text(); throw new Error('API '+res.status+': '+t.slice(0,180)); }
-  const data = await res.json();
-  return (data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n');
+  return data.text || '';
 }
 
 /* markdown-lite */
@@ -552,6 +547,15 @@ const TABS = [
   {id:'board', ic:'&#9818;', label:'Boardroom'}
 ];
 let TAB = 'desk';
+
+/* ============ SESSION ============ */
+/* AUTHED is the one gate for the whole app. Nothing here is trusted on its
+   own: every /api call is checked server-side regardless of what this flag
+   says, this only decides what desk.html shows. A 401 from any call flips it
+   back to false and returns to the login screen (see engine(), below). */
+let AUTHED = false;
+let LOGIN_MSG = '';
+
 function renderNav(){
   const pend = S.docket.filter(d=>d.status==='pending').length;
   document.getElementById('nav').innerHTML = TABS.map(t=>`
@@ -562,9 +566,23 @@ function renderNav(){
 }
 function go(t){ TAB=t; render(); window.scrollTo(0,0); }
 function render(){
-  document.getElementById('daychip').textContent = 'DAY '+String(S.day).padStart(3,'0');
-  renderNav();
+  const nav = document.getElementById('nav');
   const app = document.getElementById('app');
+  const daychip = document.getElementById('daychip');
+  const gear = document.getElementById('gearbtn');
+  if(!AUTHED){
+    nav.style.display = 'none';
+    nav.innerHTML = '';
+    daychip.style.display = 'none';
+    gear.style.display = 'none';
+    app.innerHTML = vLogin();
+    return;
+  }
+  nav.style.display = '';
+  daychip.style.display = '';
+  gear.style.display = '';
+  daychip.textContent = 'DAY '+String(S.day).padStart(3,'0');
+  renderNav();
   if(TAB==='queue') app.innerHTML = vQueue();
   if(TAB==='desk') app.innerHTML = vDesk();
   if(TAB==='floor') app.innerHTML = vFloor();
@@ -572,6 +590,67 @@ function render(){
   if(TAB==='rooms') app.innerHTML = vRooms();
   if(TAB==='board') app.innerHTML = vBoard();
   if(TAB==='queue') bindSwipe();
+}
+
+function vLogin(){
+  return `
+  <div class="eyebrow">Ninth House</div>
+  <div class="card" style="max-width:420px;margin:10vh auto 0">
+    <h3 class="serif" style="font-size:19px;margin-bottom:6px">Sign in</h3>
+    <p class="sub">One owner, one password. The house waits for you.</p>
+    ${LOGIN_MSG ? `<p class="sub" style="color:var(--rust);margin-top:8px">${esc(LOGIN_MSG)}</p>` : ''}
+    <label style="margin-top:14px">Password</label>
+    <input type="password" id="login-password" autocomplete="current-password" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" onkeydown="if(event.key==='Enter')doLogin()">
+    <div class="btnrow" style="margin-top:14px">
+      <button class="btn gold wide" id="login-btn" style="min-height:44px" onclick="doLogin()">Sign in</button>
+    </div>
+  </div>`;
+}
+
+async function doLogin(){
+  const btn = document.getElementById('login-btn');
+  if(btn.disabled) return; // already in flight; the Enter key and the button can both call this
+  const input = document.getElementById('login-password');
+  const password = input ? input.value : '';
+  if(!password){ LOGIN_MSG = 'Enter the password.'; render(); return; }
+  btn.innerHTML = '<i class="spin"></i> Signing in…'; btn.disabled = true;
+  try{
+    await engine('/auth/login', { password }, 'POST', { timeoutMs: 15000 });
+    AUTHED = true; LOGIN_MSG = '';
+    render();
+    afterLogin();
+  }catch(e){
+    LOGIN_MSG = e.message || 'Sign in failed.';
+    render();
+    const again = document.getElementById('login-password');
+    if(again) again.focus();
+  }
+}
+
+async function logout(){
+  try{ await engine('/auth/logout', {}, 'POST', { timeoutMs: 10000 }); }catch(e){ /* clearing client state regardless */ }
+  AUTHED = false; LOGIN_MSG = '';
+  closeModal();
+  render();
+}
+
+async function checkSession(){
+  try{
+    const data = await engine('/auth/session', null, 'GET', { retries: 1, timeoutMs: 10000 });
+    AUTHED = Boolean(data.authed);
+  }catch(e){
+    AUTHED = false;
+  }
+  render();
+  if(AUTHED) afterLogin();
+}
+
+// Runs once, after the session is confirmed (fresh login or a page load that
+// finds a still-valid cookie). Everything that needs the engine and used to
+// fire unconditionally at boot now waits for this instead.
+function afterLogin(){
+  syncAutopilot();
+  loadQueue(true);
 }
 
 /* ============ VIEWS ============ */
@@ -949,7 +1028,7 @@ async function commission(charId){
     if(initiative) brief = 'Own initiative. ' + c.role.toLowerCase();
     S.docket.push({ id:uid(), day:S.day, charId, biz, brief, output:out, status:'pending' });
     save(); closeModal(); go('docket');
-  }catch(e){ btn.disabled=false; btn.textContent='Retry'; alert(errMsg(e)); }
+  }catch(e){ btn.disabled=false; btn.textContent='Retry'; alert(errMsg('Commissioning ' + c.name, e)); }
 }
 
 /* Daily cycle */
@@ -963,7 +1042,7 @@ async function runCycle(){
       `It is Day ${S.day} at Ninth House. Firm state:\n${firmState()}\n\nRun the daily standup. Deliver: ## Situation (3 lines max), ## Today's Top 3 Priorities (which partner should do what, for which business, and why), ## One Risk I'm Watching. Keep it tight.`, 800);
     S.standups.push({ day:S.day, text:out });
     save(); render();
-  }catch(e){ S.day -= 1; save(); render(); alert(errMsg(e)); }
+  }catch(e){ S.day -= 1; save(); render(); alert(errMsg('Convening the standup', e)); }
 }
 
 /* Boardroom */
@@ -976,7 +1055,7 @@ async function convene(){
       `Convene the Ninth House board on Day ${S.day}. Firm state:\n${firmState()}\n\nIssue formal board minutes: ## Wins, ## Risks, ## Directives (numbered, each assigned to a named partner with a deadline in days), ## Message to the CEO (2 lines, candid).`, 900);
     S.minutes.push({ day:S.day, text:out });
     save(); render();
-  }catch(e){ render(); alert(errMsg(e)); }
+  }catch(e){ render(); alert(errMsg('Convening the board', e)); }
 }
 
 /* Site reliability check. real pings */
@@ -1036,7 +1115,7 @@ async function beaCredit(){
       `Day ${S.day}. Private and confidential. The principal's live position: Outgoings (monthly GBP): ${JSON.stringify(S.outgoings)}. Liabilities: ${JSON.stringify(S.debts)}.\nBuild his UK credit rebuild plan: ## This month's three moves (small, concrete, calendar-ready), ## The standing routine (what runs on autopilot: direct debits, report checks), ## Liabilities order of attack (against the real numbers, gentle and realistic), ## What to check for free this week (reports, electoral roll), ## A quiet word (one warm sentence). Note where professional or free advice services are the right next step. CEO ACTIONS at the end, each under 15 minutes.`, 1000);
     S.docket.push({ id:uid(), day:S.day, charId:'bea', biz:'renviait', brief:'Private Office: credit rebuild plan', output:out, status:'pending' });
     save(); btn.disabled=false; btn.textContent='Credit rebuild plan'; go('docket');
-  }catch(e){ btn.disabled=false; btn.textContent='Retry'; alert(errMsg(e)); }
+  }catch(e){ btn.disabled=false; btn.textContent='Retry'; alert(errMsg('Building the credit rebuild plan', e)); }
 }
 async function beaWeek(){
   const btn = document.getElementById('beaweek');
@@ -1047,7 +1126,7 @@ async function beaWeek(){
       `Day ${S.day}. Private and confidential. Structure the principal's week: ## The one thing per day (Mon to Sun, one anchor task each, businesses and personal balanced), ## Batched errands (grouped to save trips and focus), ## Appointments to book this week (health, admin, renewals worth checking), ## Protected time (rest and Kirsty and music are not optional). Keep it light and kind. CEO ACTIONS at the end.`, 900);
     S.docket.push({ id:uid(), day:S.day, charId:'bea', biz:'renviait', brief:'Private Office: the week, structured', output:out, status:'pending' });
     save(); btn.disabled=false; btn.textContent='Plan my week'; go('docket');
-  }catch(e){ btn.disabled=false; btn.textContent='Retry'; alert(errMsg(e)); }
+  }catch(e){ btn.disabled=false; btn.textContent='Retry'; alert(errMsg('Planning your week', e)); }
 }
 
 /* Backers Ledger */
@@ -1079,7 +1158,7 @@ async function draftThankYou(id){
       `Day ${S.day}. Private and confidential. A backer has just supported the CEO's personal fundraiser (separate from any client work, and no equity, shares or ownership is involved). Backer name: ${b.name}. Amount: £${b.amount.toFixed(2)}. Tier: ${b.tier}. Tier benefit: ${tierPerk(b.tier)}. Discount code on file: ${b.code}.\nDraft a warm, personal thank you email from the CEO, in Bea's polished and discreet voice, ready to copy and send as is. ${mentionCode ? 'Mention the discount code naturally, since this tier includes it.' : 'Do not mention any discount code: this tier does not include one.'} Under 150 words, genuine gratitude, no corporate stiffness. Sign off as the CEO.`, 500);
     S.docket.push({ id:uid(), day:S.day, charId:'bea', biz:'renviait', brief:'Backers Ledger: thank you note for '+b.name, output:out, status:'pending' });
     save(); go('docket');
-  }catch(e){ if(btn){ btn.disabled=false; btn.textContent='Draft thank you email'; } alert(errMsg(e)); }
+  }catch(e){ if(btn){ btn.disabled=false; btn.textContent='Draft thank you email'; } alert(errMsg('Drafting the thank you email', e)); }
 }
 
 /* Studio media pack */
@@ -1092,7 +1171,7 @@ async function mediaPack(){
       `Day ${S.day}. Joint Studio session. Deliver one media pack:\n## NAGORI Films (2 short-form videos: concept, shot-by-shot storyboard, VO script, captions, then a paste-ready AI video generation prompt with aspect ratio and duration)\n## Brand Stills (2 image prompts each for NAGORI, SetPostGo and RenviaIT: paste-ready, with style, palette, composition, aspect ratio, negative prompt)\n## Production notes (which free or paid AI tools fit each item today, with rough cost)\nThen CEO ACTIONS.`, 1600);
     S.docket.push({ id:uid(), day:S.day, charId:'lin', biz:'nagori', brief:'Studio media pack (film + image)', output:out, status:'pending' });
     save(); btn.disabled=false; btn.textContent='Draft media pack'; go('docket');
-  }catch(e){ btn.disabled=false; btn.textContent='Retry'; alert(errMsg(e)); }
+  }catch(e){ btn.disabled=false; btn.textContent='Retry'; alert(errMsg('Drafting the media pack', e)); }
 }
 
 /* Content pack */
@@ -1106,7 +1185,7 @@ async function contentPack(){
       `Day ${S.day}. ${wa}\nDraft today's content pack: 2 posts per brand (SetPostGo, RenviaIT, NAGORI), each on its primary platforms. For each post: ## [Brand. Platform], the exact paste-ready copy, hashtags, link, and best posting time (UK). Vary angles across the pack.`, 1400);
     S.docket.push({ id:uid(), day:S.day, charId:'noor', biz:'setpostgo', brief:'Daily content pack. all brands', output:out, status:'pending' });
     save(); btn.disabled=false; btn.textContent='Draft today\u2019s pack'; go('docket');
-  }catch(e){ btn.disabled=false; btn.textContent='Retry'; alert(errMsg(e)); }
+  }catch(e){ btn.disabled=false; btn.textContent='Retry'; alert(errMsg('Drafting the content pack', e)); }
 }
 function openConstitution(){
   modal(`<h2>The Content Constitution</h2>
@@ -1175,7 +1254,7 @@ async function financeReview(){
       `Day ${S.day}. The CEO's live Outgoings Register (monthly, GBP):\n${JSON.stringify(S.outgoings)}\nLiabilities Ledger (outstanding, GBP):\n${JSON.stringify(S.debts)}\nKPIs: ${JSON.stringify(S.kpis)}\n\nDeliver the finance review: ## Liabilities position (total outstanding, priority order to clear, realistic monthly plan), ## Burn by entity (RenviaIT account vs Lyrīon account, totals), ## Kill or question (duplicates, low-necessity items), ## Renewals in the next 14 days (register days vs today), ## Cash discipline directives, ## CEO ACTIONS. Use only the figures given. where data is missing, list exactly what to log next.`, 900);
     S.docket.push({ id:uid(), day:S.day, charId:'margaret', biz:'renviait', brief:'Finance review. outgoings & burn', output:out, status:'pending' });
     save(); render(); go('docket');
-  }catch(e){ btn.disabled=false; btn.textContent='Retry'; alert(errMsg(e)); }
+  }catch(e){ btn.disabled=false; btn.textContent='Retry'; alert(errMsg('Running the finance review', e)); }
 }
 
 /* Diagnose KPIs */
@@ -1187,7 +1266,7 @@ async function diagnose(biz){
       `Day ${S.day}. ${BIZ[biz].name} current KPIs: ${JSON.stringify(S.kpis[biz])}. Diagnose: ## What the numbers say, ## The biggest leak, ## One experiment to run this week (hypothesis, variant, success metric). Blunt and numeric.`, 700);
     S.docket.push({ id:uid(), day:S.day, charId:'rocio', biz, brief:'KPI diagnosis. '+BIZ[biz].name, output:out, status:'pending' });
     save(); closeModal(); go('docket');
-  }catch(e){ closeModal(); alert(errMsg(e)); }
+  }catch(e){ closeModal(); alert(errMsg('Diagnosing the ' + BIZ[biz].name + ' KPIs', e)); }
 }
 
 function trackRecord(charId){
@@ -1205,11 +1284,13 @@ Recent docket:\n${recent}
 KPIs: SetPostGo ${JSON.stringify(S.kpis.setpostgo)} | RenviaIT ${JSON.stringify(S.kpis.renviait)} | NAGORI ${JSON.stringify(S.kpis.nagori)}`;
 }
 
-function errMsg(e){
-  const m = String(e.message||e);
-  if(m.includes('401')||m.includes('403')) return 'Authentication failed. Open Settings (top right) and paste your Anthropic API key.';
-  if(m.includes('Failed to fetch')) return 'Network blocked. On GitHub Pages you need your Anthropic API key set in Settings (top right).';
-  return 'The call failed: '+m;
+// engine() (and callClaude, which goes through it) already throws a specific,
+// actionable message: a timeout, a rate limit, a session expiry, or whatever
+// the Worker itself reported. This only ever adds what was being attempted,
+// so the owner never sees a bare status string with no context.
+function errMsg(action, e){
+  const m = String((e && e.message) || e || 'unknown error');
+  return action + ' failed: ' + m;
 }
 
 /* ============ SETTINGS / MODAL ============ */
@@ -1221,25 +1302,24 @@ function closeModal(){ document.getElementById('modal-root').innerHTML=''; }
 function openSettings(){
   modal(`
     <h2>Firm Settings</h2>
-    <label>Anthropic API key</label>
-    <input type="password" id="set-key" value="${esc(S.apiKey)}" placeholder="sk-ant-…">
-    <p class="tiny" style="margin-top:6px">Required when running from GitHub Pages. Stored only on this device. Get one at console.anthropic.com.</p>
+    <div class="eyebrow">Account</div>
+    <p class="sub">Signed in as the owner.</p>
+    <div class="btnrow" style="margin-top:8px">
+      <button class="btn ghost" style="min-height:44px" onclick="logout()">Sign out</button>
+    </div>
+
+    <div class="hr"></div>
     <label>Group WhatsApp line</label>
     <input type="text" id="set-wa" value="${esc(S.wa||'')}" placeholder="447700900000 (digits only, country code first)">
     <p class="tiny" style="margin-top:6px">${S.wa?`Live link: wa.me/${esc(S.wa)}. Noor wires this into content packs and CTAs.`:'One number, one WhatsApp Business profile ("Lyrīon Group") serving all brands via quick replies.'}</p>
+    <div class="btnrow" style="margin-top:10px">
+      <button class="btn gold" style="min-height:44px" onclick="saveWa(true)">Save</button>
+    </div>
 
     <div class="hr"></div>
     <div class="eyebrow">The distribution engine</div>
-    <label>Worker address</label>
-    <input type="url" id="set-engine" value="${esc(S.engine||'')}" placeholder="https://9inth-house-engine.workers.dev">
-    <label>Desk token</label>
-    <input type="password" id="set-token" value="${esc(S.engineToken||'')}" placeholder="the DESK_ADMIN_TOKEN secret">
-    <p class="tiny" style="margin-top:6px">Held on this device only. It lets this desk ask the engine to act, and nothing else: the keys for Anthropic, GitHub and the distribution rail never leave the Worker.</p>
-    <div class="btnrow" style="margin-top:10px">
-      <button class="btn ghost" style="min-height:44px" onclick="saveEngine()">Save and connect</button>
-      <button class="btn ghost" style="min-height:44px" onclick="prepareStorage()">Prepare storage</button>
-    </div>
     <div class="btnrow" style="margin-top:8px">
+      <button class="btn ghost" style="min-height:44px" onclick="prepareStorage()">Prepare storage</button>
       <button class="btn ghost" style="min-height:44px" onclick="enablePush()">Turn on notifications</button>
       <button class="btn ghost" style="min-height:44px" onclick="testPush()">Send a test</button>
     </div>
@@ -1247,11 +1327,18 @@ function openSettings(){
 
     <div class="hr"></div>
     <div class="btnrow">
-      <button class="btn gold" style="min-height:44px" onclick="saveEngine(true)">Save</button>
       <button class="btn ghost" onclick="exportState()">Export firm data</button>
       <button class="btn ghost" style="color:var(--rust)" onclick="if(confirm('Dissolve the firm and start over?')){localStorage.removeItem(LS_KEY);S=defaultState();closeModal();render();}">Reset</button>
     </div>
   `);
+}
+function saveWa(closeAfter){
+  const el = document.getElementById('set-wa');
+  if(el) S.wa = el.value.replace(/[^0-9]/g, '');
+  save();
+  if(closeAfter) closeModal();
+  render();
+  toast('Saved.');
 }
 function exportState(){
   const blob = new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
@@ -1277,13 +1364,13 @@ async function syncAutopilot(){
     if(added){ S.lastSync = (ap.generated||new Date().toISOString()); save(); render(); }
   }catch(e){ /* autopilot not deployed yet - silent */ }
 }
-syncAutopilot();
 
 /* ============ THE MORNING QUEUE ============ */
 /* The approval surface for the cross venture distribution engine. Generation and
    publishing both happen on the Worker; this screen only ever asks it to act. The
-   desk holds one credential, the desk token, and it cannot reach Anthropic, GitHub
-   or the distribution rail with it. */
+   desk holds no credential at all: the session cookie set at login is sent
+   automatically because /api is same-origin, and it cannot reach Anthropic,
+   GitHub or the distribution rail directly. */
 
 const Q = {
   posts: [], ventures: [], summary: [], platforms: {}, categories: {},
@@ -1293,24 +1380,68 @@ const Q = {
   storage: true
 };
 
-const engineBase = () => String(S.engine || '').trim().replace(/\/+$/, '');
-const engineReady = () => Boolean(engineBase() && S.engineToken);
+// Kept as a function, not folded into a plain AUTHED check, so every existing
+// call site (loadQueue, flushPending, the visibility/online listeners, the
+// final boot line) reads unchanged: the only thing that changed underneath is
+// what "ready" means now.
+const engineReady = () => AUTHED === true;
 
-async function engine(path, body, method){
-  if(!engineReady()) throw new Error('The engine address and desk token are not set yet. Open Settings.');
-  const res = await fetch(engineBase() + path, {
-    method: method || (body ? 'POST' : 'GET'),
-    headers: Object.assign({'Authorization':'Bearer ' + S.engineToken}, body ? {'Content-Type':'application/json'} : {}),
-    body: body ? JSON.stringify(body) : undefined,
-    cache: 'no-store'
-  });
-  let data = {};
-  try{ data = await res.json(); }catch(e){ data = {}; }
-  if(res.status === 401) throw new Error('The desk token was refused. Check it in Settings.');
-  if(res.status === 503 && data.error) throw new Error(data.error);
-  if(!res.ok && !data.error) throw new Error('The engine answered ' + res.status + '.');
-  if(data.error && data.ok === false) throw new Error(data.error);
-  return data;
+// One call site for every /api request the admin makes, AI included. A
+// timeout on every call, a single opt-in retry for reads where a repeat is
+// harmless, and one place that turns a 401 into "go back to the login
+// screen" instead of a dead end, so nothing downstream has to know the
+// difference between "not signed in" and "any other failure."
+async function engine(path, body, method, opts){
+  opts = opts || {};
+  const timeoutMs = opts.timeoutMs || 20000;
+  const attempts = 1 + (opts.retries || 0);
+  let lastErr;
+  for(let attempt = 1; attempt <= attempts; attempt++){
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    try{
+      const res = await fetch('/api' + path, {
+        method: method || (body ? 'POST' : 'GET'),
+        headers: body ? {'Content-Type':'application/json'} : {},
+        body: body ? JSON.stringify(body) : undefined,
+        credentials: 'same-origin',
+        cache: 'no-store',
+        signal: ctrl.signal
+      });
+      clearTimeout(timer);
+      let data = {};
+      try{ data = await res.json(); }catch(e){ data = {}; }
+      if(res.status === 401 && path !== '/auth/login'){
+        AUTHED = false;
+        LOGIN_MSG = 'Your session expired. Sign in again.';
+        render();
+        throw new Error(LOGIN_MSG);
+      }
+      if(res.status === 429 && data.error) throw new Error(data.error);
+      if(res.status === 503 && data.error) throw new Error(data.error);
+      if(!res.ok && !data.error) throw new Error('The house answered with an error (status ' + res.status + '). Try again shortly.');
+      if(data.error && data.ok === false) throw new Error(data.error);
+      return data;
+    }catch(e){
+      clearTimeout(timer);
+      // A timeout, or the browser's own network-level fetch failure (Chrome
+      // says "Failed to fetch", Safari/iOS says "Load failed") are the only
+      // cases with no real response to read a reason from, so they are the
+      // only ones rewritten into a plain-English message here. Anything else
+      // caught in this block is already one of the specific errors thrown
+      // above, from a real HTTP answer, and is never retried.
+      const isTimeout = e && e.name === 'AbortError';
+      const rawMsg = e && e.message;
+      const isNetworkLevel = isTimeout || rawMsg === 'Failed to fetch' || rawMsg === 'Load failed';
+      lastErr = isTimeout
+        ? new Error('The house did not answer in time. Check your connection and try again.')
+        : isNetworkLevel
+          ? new Error('Could not reach the house. Check your connection and try again.')
+          : (e instanceof Error ? e : new Error(String(e)));
+      if(!isNetworkLevel || attempt >= attempts) throw lastErr;
+    }
+  }
+  throw lastErr;
 }
 
 /* ---------- offline queue ---------- */
@@ -1346,12 +1477,11 @@ async function flushPending(){
 /* ---------- loading ---------- */
 
 async function loadQueue(quiet){
-  if(!engineReady()){ Q.loaded = true; Q.error = ''; if(!quiet) render(); return; }
   Q.loading = true; Q.error = '';
   if(!quiet) render();
   try{
     await flushPending();
-    const data = await engine('/social/queue');
+    const data = await engine('/social/queue', null, 'GET', { retries: 1, timeoutMs: 15000 });
     Q.posts = data.posts || [];
     Q.ventures = data.ventures || [];
     Q.summary = data.summary || [];
@@ -1361,7 +1491,7 @@ async function loadQueue(quiet){
     Q.makeReady = Boolean(data.makeReady);
     Q.storage = data.storage !== false;
   }catch(e){
-    Q.error = e.message || String(e);
+    Q.error = 'Loading the queue failed: ' + (e.message || String(e));
     if(/storage is not connected/i.test(Q.error)) Q.storage = false;
   }
   Q.loading = false; Q.loaded = true;
@@ -1375,17 +1505,6 @@ function platformLimit(key){ return (Q.platforms[key] && Q.platforms[key].limit)
 function categoryLabel(key){ return (Q.categories[key] && Q.categories[key].label) || key; }
 
 function vQueue(){
-  if(!engineReady()){
-    return `
-      <div class="eyebrow">The morning queue</div>
-      <div class="card">
-        <h3 class="serif" style="font-size:17px;margin-bottom:6px">Connect the engine</h3>
-        <p class="sub">The queue lives on the Worker. Give this device the Worker address and the desk token once, and the morning batch appears here.</p>
-        <div class="btnrow" style="margin-top:12px"><button class="btn gold wide" onclick="openSettings()">Open Settings</button></div>
-      </div>
-    `;
-  }
-
   const offline = !navigator.onLine;
   const pending = (S.pendingActions || []).length;
 
@@ -1417,9 +1536,9 @@ function vQueue(){
     ${stats ? `<div class="qstat">${stats}</div>` : ''}
 
     <div class="qhead">
-      <button class="btn gold" style="min-height:44px" onclick="approveAll()" ${Q.posts.length ? '' : 'disabled'}>Approve all</button>
-      <button class="btn ghost" style="min-height:44px" onclick="loadQueue()">${Q.loading ? '<span class="spin"></span>' : 'Refresh'}</button>
-      <button class="btn ghost" style="min-height:44px" onclick="generateNow()">Generate now</button>
+      <button class="btn gold" style="min-height:44px" onclick="approveAll()" ${Q.posts.length && !Q.loading ? '' : 'disabled'}>Approve all</button>
+      <button class="btn ghost" style="min-height:44px" onclick="loadQueue()" ${Q.loading ? 'disabled' : ''}>${Q.loading ? '<span class="spin"></span>' : 'Refresh'}</button>
+      <button class="btn ghost" style="min-height:44px" onclick="generateNow()" ${Q.loading ? 'disabled' : ''}>Generate now</button>
     </div>
 
     ${Q.loading && !Q.posts.length ? `<div class="card"><p class="sub"><span class="spin"></span> Reading the queue.</p></div>` : ''}
@@ -1478,7 +1597,7 @@ function qcard(p){
 
       ${editing
         ? `<div class="qacts">
-             <button class="btn jade" onclick="saveText('${p.id}')">Save</button>
+             <button class="btn jade" onclick="saveText('${p.id}', this)">Save</button>
              <button class="btn ghost" onclick="Q.editing['${p.id}']=false;render()">Cancel</button>
            </div>`
         : `<div class="qacts">
@@ -1582,7 +1701,7 @@ async function skip(id){
         Q.posts.unshift(restore);
         render();
         toast('Back in the queue.');
-      }catch(e){ toast('Could not put it back: ' + (e.message || e)); }
+      }catch(e){ toast(errMsg('Putting that post back', e)); }
     });
   }catch(e){
     delete Q.busy[id];
@@ -1608,14 +1727,15 @@ async function approveAll(){
     const out = await engine('/social/approve-all', {});
     toast(out.sent + ' sent' + (out.failed ? ', ' + out.failed + ' did not go' : '') + (out.remaining ? ', ' + out.remaining + ' still waiting' : '') + '.');
   }catch(e){
-    toast('That did not work: ' + (e.message || e));
+    toast(errMsg('Sending them all', e));
   }
   await loadQueue(true);
 }
 
-async function saveText(id){
+async function saveText(id, btn){
   const ta = document.getElementById('qt-' + id);
   if(!ta) return;
+  if(btn) btn.disabled = true;
   try{
     const out = await engine('/social/text', { id, text: ta.value });
     const post = Q.posts.find(p => p.id === id);
@@ -1624,7 +1744,8 @@ async function saveText(id){
     render();
     toast('Saved.');
   }catch(e){
-    toast(e.message || String(e));
+    if(btn) btn.disabled = false;
+    toast(errMsg('Saving that post', e));
   }
 }
 
@@ -1643,22 +1764,23 @@ function openSchedule(id){
     <input type="datetime-local" id="sch-when" value="${local}">
     <p class="tiny" style="margin-top:6px">Your own time zone. The engine sweeps for anything due on every shift, so it goes out at the next sweep after that time.</p>
     <div class="btnrow" style="margin-top:14px">
-      <button class="btn gold wide" style="min-height:44px" onclick="doSchedule('${id}')">Schedule it</button>
+      <button class="btn gold wide" style="min-height:44px" onclick="doSchedule('${id}', this)">Schedule it</button>
       <button class="btn ghost" style="min-height:44px" onclick="closeModal()">Cancel</button>
     </div>
   `);
 }
 
-async function doSchedule(id){
+async function doSchedule(id, btn){
   const input = document.getElementById('sch-when');
   if(!input || !input.value) return;
+  if(btn) btn.disabled = true;
   try{
     const out = await engine('/social/schedule', { id, when: new Date(input.value).toISOString() });
     const post = Q.posts.find(p => p.id === id);
     if(post){ post.status = 'scheduled'; post.scheduled_for = out.scheduled_for; }
     closeModal(); render();
     toast('Scheduled.');
-  }catch(e){ toast(e.message || String(e)); }
+  }catch(e){ if(btn) btn.disabled = false; toast(errMsg('Scheduling that post', e)); }
 }
 
 function openImage(id){
@@ -1671,22 +1793,23 @@ function openImage(id){
     <input type="url" id="img-url" value="${esc(post.image_url || '')}" placeholder="https://…">
     ${post.notes ? `<div class="qnote" style="margin-top:10px">${esc(post.notes)}</div>` : ''}
     <div class="btnrow" style="margin-top:14px">
-      <button class="btn gold wide" style="min-height:44px" onclick="doImage('${id}')">Save</button>
+      <button class="btn gold wide" style="min-height:44px" onclick="doImage('${id}', this)">Save</button>
       <button class="btn ghost" style="min-height:44px" onclick="closeModal()">Cancel</button>
     </div>
   `);
 }
 
-async function doImage(id){
+async function doImage(id, btn){
   const input = document.getElementById('img-url');
   if(!input) return;
+  if(btn) btn.disabled = true;
   try{
     await engine('/social/image', { id, image_url: input.value.trim() });
     const post = Q.posts.find(p => p.id === id);
     if(post) post.image_url = input.value.trim();
     closeModal(); render();
     toast('Image attached.');
-  }catch(e){ toast(e.message || String(e)); }
+  }catch(e){ if(btn) btn.disabled = false; toast(errMsg('Attaching that image', e)); }
 }
 
 async function generateNow(){
@@ -1696,7 +1819,7 @@ async function generateNow(){
     const out = await engine('/social/generate', {});
     toast(out.created ? out.created + ' queued.' : 'Nothing was due today.');
     for(const note of (out.notes || [])) console.log('Engine: ' + note);
-  }catch(e){ toast(e.message || String(e)); }
+  }catch(e){ toast(errMsg('Writing today’s posts', e)); }
   await loadQueue(true);
 }
 
@@ -1794,13 +1917,13 @@ function openVenture(v){
     <p class="sub">No deploy, no code. Saved straight to the registry.</p>
     ${ventureForm(v)}
     <div class="btnrow" style="margin-top:16px">
-      <button class="btn gold wide" style="min-height:44px" onclick="saveVenture()">Save</button>
+      <button class="btn gold wide" style="min-height:44px" onclick="saveVenture(this)">Save</button>
       <button class="btn ghost" style="min-height:44px" onclick="closeModal()">Cancel</button>
     </div>
   `);
 }
 
-async function saveVenture(){
+async function saveVenture(btn){
   const get = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
   const cadence = {}, mix = {}, platforms = [];
   for(const p of Object.keys(Q.platforms)){
@@ -1813,6 +1936,7 @@ async function saveVenture(){
     const w = Number(el.value || 0);
     if(w > 0) mix[c] = w;
   }
+  if(btn) btn.disabled = true;
   try{
     await engine('/social/ventures', {
       slug: get('v-slug'), name: get('v-name'), site_url: get('v-site'),
@@ -1822,7 +1946,7 @@ async function saveVenture(){
     closeModal();
     await loadQueue(true);
     toast('Saved to the registry.');
-  }catch(e){ toast(e.message || String(e)); }
+  }catch(e){ if(btn) btn.disabled = false; toast(errMsg('Saving that venture', e)); }
 }
 
 function openRegistry(){
@@ -1850,7 +1974,7 @@ async function toggleVenture(slug, active){
     closeModal();
     await loadQueue(true);
     toast(active ? 'Active again.' : 'Paused. Nothing more will be generated for it.');
-  }catch(e){ toast(e.message || String(e)); }
+  }catch(e){ toast(errMsg(active ? 'Reactivating that venture' : 'Pausing that venture', e)); }
 }
 
 /* ---------- notifications ---------- */
@@ -1896,22 +2020,7 @@ async function testPush(){
   try{
     const out = await engine('/social/push/test', {});
     toast(out.channel === 'push' ? 'Sent by push.' : out.channel === 'email' ? 'Push reached nobody, so it went by email.' : 'Nothing could be sent. Check the keys.');
-  }catch(e){ toast(e.message || String(e)); }
-}
-
-// Saves everything on the Settings sheet, including the two fields the older
-// Save button used to write, then reconnects if the engine details changed.
-function saveEngine(closeAfter){
-  const val = id => { const el = document.getElementById(id); return el ? el.value : null; };
-  const key = val('set-key'); if(key !== null) S.apiKey = key.trim();
-  const wa = val('set-wa'); if(wa !== null) S.wa = wa.replace(/[^0-9]/g, '');
-  const url = val('set-engine'); if(url !== null) S.engine = url.trim().replace(/\/+$/, '');
-  const token = val('set-token'); if(token !== null) S.engineToken = token.trim();
-  save();
-  if(closeAfter) closeModal();
-  render();
-  if(engineReady()) loadQueue(true);
-  else toast('Saved.');
+  }catch(e){ toast(errMsg('Sending the test notification', e)); }
 }
 
 async function prepareStorage(){
@@ -1919,7 +2028,7 @@ async function prepareStorage(){
     const out = await engine('/social/migrate', {});
     toast(out.message || 'Storage prepared.');
     await loadQueue(true);
-  }catch(e){ toast(e.message || String(e)); }
+  }catch(e){ toast(errMsg('Preparing storage', e)); }
 }
 
 /* ---------- boot ---------- */
@@ -1952,11 +2061,13 @@ window.addEventListener('online', async () => {
 });
 window.addEventListener('offline', () => { if(TAB === 'queue') render(); });
 
-// Land on the tab the notification or the shortcut asked for, before first paint.
+// Land on the tab the notification or the shortcut asked for, once signed in.
 applyHash();
+// Renders the login screen immediately (nothing to wait on for that), then
+// resolves whether there is already a valid session cookie; loadQueue only
+// ever fires once that answer is known.
 render();
-// The queue is fetched after first paint, so the shell is on screen immediately.
-if(engineReady()) loadQueue(true);
+checkSession();
 </script>
 </body>
 </html>
