@@ -24,6 +24,14 @@ export function validateForSend(post) {
     return problems;
   }
 
+  // A platform with no branch on the rail is queued for the copy alone. Approve
+  // must never reach the webhook for it, so this is checked and returned before
+  // any other validation, and well before the fetch further down.
+  if (platform.automated === false) {
+    problems.push(`${platform.label} is manual delivery: copy this text and post it yourself, it is never sent through the automated rail`);
+    return problems;
+  }
+
   const text = String(post.text || '').trim();
   if (!text) problems.push('the post has no text');
   if (text.length > platform.limit) {

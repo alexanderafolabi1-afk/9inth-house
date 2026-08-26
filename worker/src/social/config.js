@@ -24,7 +24,12 @@ export const PLATFORMS = {
     target: 240,
     imageRequired: false,
     hashtags: { max: 1, style: 'only where it is a real community tag' },
-    guidance: 'One idea, said flat and fast. No thread unless the idea genuinely needs a second post. Never open with a hook cliche.'
+    guidance: 'One idea, said flat and fast. No thread unless the idea genuinely needs a second post. Never open with a hook cliche.',
+    // No branch for this on the rail, by design: X is posted by hand from the
+    // queue, never through Make. See the automated check in distribute.js,
+    // which refuses to send anything on a platform marked automated: false
+    // before it ever reaches the webhook.
+    automated: false
   },
   instagram: {
     label: 'Instagram',
