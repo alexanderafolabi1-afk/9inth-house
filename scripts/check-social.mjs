@@ -159,9 +159,20 @@ await test('overlong copy is cut at a sentence rather than mid word', () => {
 /* ---------- send guards ---------- */
 
 await test('a post over the platform limit is refused before any call is made', () => {
-  const problems = validateForSend({ platform: 'x', category: 'short_form', text: 'a'.repeat(400) });
+  const problems = validateForSend({ platform: 'threads', category: 'short_form', text: 'a'.repeat(600) });
   assert.equal(problems.length, 1);
-  assert.ok(problems[0].includes('over the X limit'));
+  assert.ok(problems[0].includes('over the Threads limit'));
+});
+
+await test('a platform marked automated: false is refused before any other check, and before any call is made', () => {
+  const problems = validateForSend({ platform: 'x', category: 'short_form', text: 'fine' });
+  assert.equal(problems.length, 1);
+  assert.ok(problems[0].includes('manual delivery'));
+  // Even a post that would otherwise fail two ways still gets the one manual
+  // delivery reason, not a pile of checks against a send that can never happen.
+  const overlong = validateForSend({ platform: 'x', category: 'visual', text: 'a'.repeat(400) });
+  assert.equal(overlong.length, 1);
+  assert.ok(overlong[0].includes('manual delivery'));
 });
 
 await test('a post that needs an image is refused without one', () => {

@@ -1570,9 +1570,10 @@ function qcard(p){
     (Q.platforms[p.platform] && Q.platforms[p.platform].imageRequired) ||
     (Q.categories[p.category] && Q.categories[p.category].needsImage)
   );
+  const manual = Q.platforms[p.platform] && Q.platforms[p.platform].automated === false;
 
   return `<div class="qcard ${busy ? 'gone' : ''}" id="qc-${p.id}" data-id="${p.id}">
-    <div class="qhint"><span class="yes">Approve</span><span class="no">Skip</span></div>
+    <div class="qhint"><span class="yes">${manual ? 'Copy' : 'Approve'}</span><span class="no">Skip</span></div>
     <div class="qswipe">
       <div class="qmeta">
         <span class="qtag venture">${esc(p.venture)}</span>
@@ -1600,14 +1601,17 @@ function qcard(p){
              <button class="btn jade" onclick="saveText('${p.id}', this)">Save</button>
              <button class="btn ghost" onclick="Q.editing['${p.id}']=false;render()">Cancel</button>
            </div>`
-        : `<div class="qacts">
-             <button class="btn jade" onclick="approve('${p.id}')" ${busy ? 'disabled' : ''}>${p.status === 'failed' ? 'Retry' : 'Approve'}</button>
+        : `${manual ? `<div class="qnote">${esc(platformLabel(p.platform))} is manual delivery. Copy the text and post it yourself, it is never sent automatically.</div>` : ''}
+           <div class="qacts">
+             ${manual
+               ? `<button class="btn jade" onclick="copyManual('${p.id}')" ${busy ? 'disabled' : ''}>Copy text</button>`
+               : `<button class="btn jade" onclick="approve('${p.id}')" ${busy ? 'disabled' : ''}>${p.status === 'failed' ? 'Retry' : 'Approve'}</button>`}
              <span class="spacer"></span>
              <button class="btn danger" onclick="skip('${p.id}')" ${busy ? 'disabled' : ''}>Skip</button>
            </div>
            <div class="qmore">
              <button class="btn ghost" onclick="Q.editing['${p.id}']=true;render()">Edit</button>
-             <button class="btn ghost" onclick="openSchedule('${p.id}')">Schedule</button>
+             ${manual ? '' : `<button class="btn ghost" onclick="openSchedule('${p.id}')">Schedule</button>`}
              <button class="btn ghost" onclick="openImage('${p.id}')">Image</button>
            </div>`}
     </div>
@@ -1650,6 +1654,17 @@ function runUndo(){
 }
 
 /* ---------- actions ---------- */
+
+async function copyManual(id){
+  const post = Q.posts.find(p => p.id === id);
+  if(!post) return;
+  try{
+    await navigator.clipboard.writeText(post.text);
+    toast(platformLabel(post.platform) + ' copied. Paste it there yourself, it is never sent automatically.');
+  }catch(e){
+    toast('Could not copy. Select the text by hand.');
+  }
+}
 
 async function approve(id){
   const post = Q.posts.find(p => p.id === id);
@@ -1866,7 +1881,11 @@ function bindSwipe(){
     settled.classList.remove('dragging');
     settledLayer.style.transform = '';
     card = null; layer = null; id = null; dx = 0; decided = '';
-    if(travelled > SWIPE_TRIGGER) approve(settledId);
+    if(travelled > SWIPE_TRIGGER){
+      const post = Q.posts.find(p => p.id === settledId);
+      const manual = post && Q.platforms[post.platform] && Q.platforms[post.platform].automated === false;
+      if(manual) copyManual(settledId); else approve(settledId);
+    }
     else if(travelled < -SWIPE_TRIGGER) skip(settledId);
   };
 
