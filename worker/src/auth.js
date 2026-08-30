@@ -8,19 +8,32 @@
 // and this file hashes and stores it. See hashPassword/getStoredPasswordHash
 // below, and worker/src/index.js's POST /auth/setup for the one-time claim.
 //
-// The session is a stateless, signed cookie rather than a server-side
-// session store, so login does not depend on D1 being provisioned: it is a
-// timestamp, HMAC-signed with the SESSION_SECRET secret, and verified by
-// recomputing the signature. There is nothing to look up and nothing that
-// can leak from a database, only a secret that must not leak.
+// The session is a stateless, signed bearer token rather than a cookie or a
+// server-side session store, so login does not depend on D1 being
+// provisioned, or on a browser's cookie policy: it is a timestamp,
+// HMAC-signed with the SESSION_SECRET secret, handed back in the JSON body
+// of a successful /auth/setup or /auth/login, and verified by recomputing
+// the signature on whatever the client sends back in an Authorization:
+// Bearer header. There is nothing to look up and nothing that can leak from
+// a database, only a secret that must not leak.
+//
+// This was a cookie once. desk.html lives on 9thpoint.com and the Worker
+// answers on a different domain; a cookie set on one is a cross-site cookie
+// from the other's point of view no matter which SameSite value it carries,
+// and Safari on iOS blocks or evicts exactly that kind of cookie by
+// default, reliably enough that login never survived being closed and
+// reopened on a phone. A bearer token sent in a header has no cross-site
+// cookie policy to run into at all: the browser does not decide whether to
+// send an Authorization header the way it decides whether to send a
+// cookie, the client code does, on every request, regardless of which
+// domain served the page and which domain is answering it.
 //
 // Login attempts are rate limited and locked out per IP using the
 // LOGIN_ATTEMPTS KV binding. If that binding is absent, login is refused
 // outright rather than left unlimited: closed by default, the same rule
 // worker/src/social/api.js already applies to D1.
 
-const COOKIE_NAME = 'nh_session';
-const SESSION_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
+const SESSION_MAX_AGE = 60 * 60 * 24 * 30; // 30 days, long enough that signing in once covers weeks of daily use
 
 // Chosen against the Workers CPU budget, not against a recommendation sheet.
 //
@@ -35,7 +48,7 @@ const SESSION_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 // same screen kept working. That asymmetry is the signature of this fault.
 //
 // 25000 measures about 4.5 ms on the whole signed-in path, derivation and
-// session cookie together, which leaves better than double headroom for a
+// session token together, which leaves better than double headroom for a
 // slower edge CPU. It is a real reduction in resistance to an offline attack on
 // a stolen hash, and it is a deliberate trade: the hash lives in KV rather than
 // anywhere public, login is rate limited and locked out per IP, and there is
@@ -206,7 +219,7 @@ export async function verifyPassword(password, stored) {
   }
 }
 
-/* ---------- session cookie ---------- */
+/* ---------- session token ---------- */
 
 // Same KV namespace as the password hash, same reason: a value that has to
 // survive being pasted into a masked Cloudflare dashboard field turned out
@@ -282,43 +295,20 @@ async function verifySessionToken(token, env) {
   }
 }
 
-function readCookie(request, name) {
-  const header = request.headers.get('Cookie') || '';
-  for (const part of header.split(';')) {
-    const i = part.indexOf('=');
-    if (i < 0) continue;
-    if (part.slice(0, i).trim() === name) return part.slice(i + 1).trim();
-  }
-  return null;
+function readBearerToken(request) {
+  const header = request.headers.get('Authorization') || '';
+  const match = /^Bearer\s+(.+)$/i.exec(header.trim());
+  return match ? match[1].trim() : null;
 }
 
 // True only when the request carries a signature-valid, unexpired session
-// cookie. Every admin route calls this; nothing here trusts the front end.
+// token in its Authorization header. Every admin route calls this; nothing
+// here trusts the front end. The token itself is opaque to the caller: it
+// is not looked up anywhere, only verified against its own signature, so
+// this never touches KV or D1 and cannot fail because storage is down.
 export async function requireSession(request, env) {
-  const token = readCookie(request, COOKIE_NAME);
+  const token = readBearerToken(request);
   return verifySessionToken(token, env);
-}
-
-// desk.html tries the 9thpoint.com/api/* Route first (see ROUTE_BASE in
-// desk.html), which is a genuinely same-site request as far as this cookie
-// is concerned; SameSite=None still works perfectly well there, it is just
-// more permissive than that path strictly needs. It stops being optional
-// the moment a call falls back to this Worker's own workers.dev address
-// (ENGINE_BASE), which the Route used to require, once, when the Route
-// itself stopped answering entirely with no way to see or fix the DNS or
-// zone side of it from this repo: SameSite=Strict never sends on a
-// cross-site fetch, which would make login on that fallback path silently
-// useless, and SameSite=None requires being paired with Secure. One cookie
-// setting has to serve both paths at once, since which one a given session
-// ends up using is decided client side, so None is what both need. Path is
-// / rather than /api on the same reasoning: whichever host actually issues
-// this cookie, every route under it is part of the admin.
-export function sessionCookie(token) {
-  return `${COOKIE_NAME}=${token}; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=${SESSION_MAX_AGE}`;
-}
-
-export function clearedSessionCookie() {
-  return `${COOKIE_NAME}=; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=0`;
 }
 
 /* ---------- n8n machine token ---------- */
@@ -326,9 +316,10 @@ export function clearedSessionCookie() {
 // Same LOGIN_ATTEMPTS namespace, same reason as SESSION_SECRET_KV_KEY above:
 // generated inside the Worker and written from inside the Worker, so it
 // either works every time or the binding itself is absent, with no dashboard
-// paste to go wrong. n8n authenticates with this token as a bearer header
-// rather than the session cookie, since its HTTP Request node is a server
-// calling this Worker directly, not a browser that can hold a cookie.
+// paste to go wrong. A separate bearer token from the session one above on
+// purpose: n8n's HTTP Request node is a server calling this Worker
+// directly, not the desk admin signed in as the owner, and the two should
+// be revocable independently of each other.
 const N8N_TOKEN_KV_KEY = 'n8n:token:v1';
 
 // Generated once and persisted, same race as getOrCreateSessionSecret: two

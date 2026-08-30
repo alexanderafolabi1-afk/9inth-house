@@ -21,7 +21,7 @@
 // newer version of this file on every launch and every time it regains
 // focus, and reloads itself once a new one has taken over.
 
-const VERSION = 'nh-desk-v11';
+const VERSION = 'nh-desk-v12';
 const RUNTIME = `${VERSION}-runtime`;
 
 // Cached by content hash below, not cached-first by path. Never desk.html,
@@ -67,11 +67,11 @@ self.addEventListener('message', (event) => {
 });
 
 function isApiRequest(url) {
-  // desk.html tries the same-site 9thpoint.com/api/* Route first (see
-  // ROUTE_BASE there) and falls back to the Worker's own workers.dev
-  // address (ENGINE_BASE) if that Route does not answer, so both are
-  // excluded by name here, explicitly, rather than relying on the /api/*
-  // one simply not matching a same origin path below.
+  // desk.html calls the Worker directly on its own workers.dev address (see
+  // ENGINE_BASE there), so that is excluded by name here, explicitly. The
+  // /api/* path is excluded too, on the chance anything still reaches this
+  // Worker through the 9thpoint.com Route directly (curl, a bookmark),
+  // rather than relying on it simply not matching a same origin path below.
   if (url.hostname.endsWith('.workers.dev')) return true;
   if (url.pathname === '/social' || url.pathname.startsWith('/social/')) return true;
   if (url.pathname === '/api' || url.pathname.startsWith('/api/')) return true;
@@ -155,7 +155,7 @@ self.addEventListener('fetch', (event) => {
   // The admin API, including auth. Never cached, never intercepted, in
   // either direction: an approval must reach the engine or fail loudly, a
   // stale queue would show posts that already went, and a cached session
-  // check could tell the app it is still signed in when the cookie expired.
+  // check could tell the app it is still signed in when the token expired.
   if (isApiRequest(url)) return;
 
   // desk.html itself, on a navigation or a direct fetch (the installed

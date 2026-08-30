@@ -553,7 +553,7 @@ function ledgerForget(i){ if(S.ledger && i >= 0 && i < S.ledger.length){ S.ledge
 /* The browser never talks to Anthropic. It sends the system/user prompt (built
    here from character bios and firm state, none of it secret) to the Worker's
    /desk/ask, which holds ANTHROPIC_API_KEY and is the only thing that calls
-   Anthropic. Same session-cookie auth, same engine() helper, as every other
+   Anthropic. Same session-token auth, same engine() helper, as every other
    admin action. */
 // Every partner the desk speaks to comes through here, and every one of them
 // was being cut off before it could answer.
@@ -685,7 +685,8 @@ async function doSetup(){
   if(password !== confirm){ LOGIN_MSG = 'Those did not match.'; render(); return; }
   btn.innerHTML = '<i class="spin"></i> Creating…'; btn.disabled = true;
   try{
-    await engine('/auth/setup', { password, confirm }, 'POST', { timeoutMs: 15000 });
+    const data = await engine('/auth/setup', { password, confirm }, 'POST', { timeoutMs: 15000 });
+    storeToken(data.token);
     AUTHED = true; NEEDS_SETUP = false; LOGIN_MSG = '';
     render();
     afterLogin();
@@ -747,7 +748,8 @@ async function doLogin(){
   if(!password){ LOGIN_MSG = 'Enter the password.'; render(); return; }
   btn.innerHTML = '<i class="spin"></i> Signing in…'; btn.disabled = true;
   try{
-    await engine('/auth/login', { password }, 'POST', { timeoutMs: 15000 });
+    const data = await engine('/auth/login', { password }, 'POST', { timeoutMs: 15000 });
+    storeToken(data.token);
     AUTHED = true; LOGIN_MSG = '';
     render();
     afterLogin();
@@ -761,6 +763,7 @@ async function doLogin(){
 
 async function logout(){
   try{ await engine('/auth/logout', {}, 'POST', { timeoutMs: 10000 }); }catch(e){ /* clearing client state regardless */ }
+  storeToken(null);
   AUTHED = false; LOGIN_MSG = '';
   closeModal();
   render();
@@ -786,8 +789,9 @@ async function checkSession(){
 }
 
 // Runs once, after the session is confirmed (fresh login or a page load that
-// finds a still-valid cookie). Everything that needs the engine and used to
-// fire unconditionally at boot now waits for this instead.
+// finds a still-valid token already in localStorage). Everything that needs
+// the engine and used to fire unconditionally at boot now waits for this
+// instead.
 function afterLogin(){
   syncAutopilot();
   loadQueue(true);
@@ -1795,9 +1799,9 @@ async function syncAutopilot(){
 /* ============ THE MORNING QUEUE ============ */
 /* The approval surface for the cross venture distribution engine. Generation and
    publishing both happen on the Worker; this screen only ever asks it to act. The
-   desk holds no credential at all: the session cookie set at login is sent
-   automatically because /api is same-origin, and it cannot reach Anthropic,
-   GitHub or the distribution rail directly. */
+   desk holds one credential, the session token minted at login and attached as
+   an Authorization header on every call (see engine() above), and it cannot
+   reach Anthropic, GitHub or the distribution rail directly. */
 
 const Q = {
   posts: [], ventures: [], summary: [], platforms: {}, categories: {},
@@ -1822,52 +1826,51 @@ const engineReady = () => AUTHED === true;
 // answered before the request reached it. Saying "the house answered with an
 // error" in that case points the owner at the wrong thing entirely, and at
 // something they cannot fix, so this says what actually happened and ends
-// with one line worth reporting verbatim. By the time this is ever called,
-// the ROUTE_BASE fallback above has already run and failed too, so API_BASE
-// here is always ENGINE_BASE; this should now only fire if the Worker itself
-// is not deployed, both addresses have changed, or something answers on the
-// Worker's own workers.dev address that is not the Worker.
+// with one line worth reporting verbatim.
 function notFromEngine(status, ctype, method, path){
   const kind = String(ctype || '').split(';')[0] || 'no type given';
   return 'That request never reached the engine. Something else answered it instead, with a '
     + status + '. Nothing is wrong with what you typed, and trying again will not help. Report this line '
-    + 'as it stands: ' + method + ' ' + API_BASE + path + ' answered ' + status + ' as ' + kind + '.';
+    + 'as it stands: ' + method + ' ' + ENGINE_BASE + path + ' answered ' + status + ' as ' + kind + '.';
 }
 
-// The Worker answers on both this address and, through Cloudflare's Route,
-// on 9thpoint.com/api/*. Which one desk.html actually uses matters for the
-// session cookie, not only for reachability: this address is a different
-// site from 9thpoint.com as far as a browser is concerned, so the cookie
-// it sets has to be SameSite=None to be sent back at all, which is exactly
-// the shape of cookie Safari's Intelligent Tracking Prevention treats with
-// the most suspicion, on the phone far more aggressively than on the
-// desktop build of the same browser. A cookie set through the Route never
-// has that problem, because nothing about that request is cross-site in
-// the first place. This address is what ROUTE_BASE below falls back to,
-// kept for exactly the failure it was built for: the Route sits in front of
-// DNS and zone configuration this page has no way to see or fix if it stops
-// resolving, and it has, before. Depending on the Worker being deployed and
-// nothing else in between is what makes it a fallback worth having, not
-// what makes it the first choice.
+// Every call from desk.html goes to the Worker's own address, directly.
+// Not the site's own domain, routed through Cloudflare to the Worker: that
+// path sits in front of DNS and zone configuration this repo has no way to
+// see or fix, has answered with a bare 404 before, and does not need to
+// work at all any more, since authentication no longer depends on being
+// same-site with it. One base,
+// used every time, is also just simpler to reason about than two.
 const ENGINE_BASE = 'https://9inth-house-engine.alexanderafolabi1.workers.dev';
 
-// Tried first, every session. 9thpoint.com's DNS is confirmed on the same
-// Cloudflare account the Worker deploys to, and the Route is left connected
-// in wrangler.toml for exactly this. A same-site request needs no CORS
-// headers and sets a same-site cookie, which is the actual fix for the
-// mobile Safari case: signed in on a laptop, "session expired" on the
-// phone, every single time, because the cross-site cookie ENGINE_BASE has
-// to use was never reliably kept by that browser to begin with. See
-// ROUTE_UNAVAILABLE below for what happens if this address stops
-// resolving again the way it did once before.
-const ROUTE_BASE = 'https://9thpoint.com/api';
+// The session token, held here and in localStorage, not a cookie. desk.html
+// lives on 9thpoint.com; the Worker answers on the address above, a
+// different site, and a cookie set across that boundary is a cross-site
+// cookie no matter how it is configured. Mobile Safari does not reliably
+// keep that kind of cookie: signed in on a laptop, "session expired" on the
+// phone, every time, regardless of how many times the page was closed and
+// reopened. A bearer token in an Authorization header has no such policy to
+// run into; the browser does not decide whether to send it, this code does,
+// on every request, on every browser, the same way. localStorage rather
+// than memory alone so it survives closing the PWA and reopening it later,
+// which is the whole point of not signing in every morning.
+const TOKEN_KEY = 'nh_session_token';
+let SESSION_TOKEN = null;
+try { SESSION_TOKEN = localStorage.getItem(TOKEN_KEY) || null; } catch (e) { SESSION_TOKEN = null; }
+
+function storeToken(token){
+  SESSION_TOKEN = token || null;
+  try {
+    if (token) localStorage.setItem(TOKEN_KEY, token);
+    else localStorage.removeItem(TOKEN_KEY);
+  } catch (e) { /* private browsing or storage disabled: the token still works for this load */ }
+}
 
 // Something in front of the engine used to pass GET through and refuse POST,
-// which made every action on this desk fail, not just signing in. Independent
-// of which base a call is using: where a POST is refused for this reason on
-// whichever one that is, the same call is sent again as a GET carrying the
-// method and the body in headers, and the engine rebuilds the real request
-// from them.
+// which made every action on this desk fail, not just signing in. Where a
+// POST is refused for this reason, the same call is sent again as a GET
+// carrying the method and the body in headers, and the engine rebuilds the
+// real request from them.
 //
 // Off until a POST has actually failed, and remembered for the rest of the
 // session once it has, so a desk on a working connection never uses it and one
@@ -1875,17 +1878,6 @@ const ROUTE_BASE = 'https://9thpoint.com/api';
 // a header rather than the query string on purpose: a password in a URL ends up
 // in history, logs and referrers.
 let TUNNEL = false;
-
-// Which of ROUTE_BASE and ENGINE_BASE this session is actually using, decided
-// once, on the first call, and kept for every call after that. It has to be
-// sticky: the two bases are different sites as far as cookies go, so a
-// session cookie set through one is never sent to the other, and switching
-// mid-session would look exactly like being signed out. False for the whole
-// session means the Route answered on the very first try; true means it did
-// not, and every call after that first one goes straight to ENGINE_BASE
-// without paying the cost of trying the Route again.
-let ROUTE_UNAVAILABLE = false;
-let API_BASE = ROUTE_BASE;
 
 async function engine(path, body, method, opts){
   opts = opts || {};
@@ -1900,23 +1892,18 @@ async function engine(path, body, method, opts){
       const useTunnel = TUNNEL && wanted !== 'GET';
       const headers = {};
       if(body && !useTunnel) headers['Content-Type'] = 'application/json';
+      if(SESSION_TOKEN) headers['Authorization'] = 'Bearer ' + SESSION_TOKEN;
       if(useTunnel){
         headers['X-NH-Method'] = wanted;
         if(body) headers['X-NH-Body'] = JSON.stringify(body);
       }
-      const res = await fetch(API_BASE + path, {
+      const res = await fetch(ENGINE_BASE + path, {
         method: useTunnel ? 'GET' : wanted,
         headers,
         body: (body && !useTunnel) ? JSON.stringify(body) : undefined,
-        // credentials: 'include' matters differently depending on which base
-        // this is. Same-origin (ROUTE_BASE) sends the cookie regardless of
-        // this setting; it only does something on ENGINE_BASE, a genuinely
-        // cross-site request, where it is what makes the SameSite=None
-        // session cookie travel at all, matching the Worker's own
-        // Access-Control-Allow-Credentials. Included unconditionally rather
-        // than branched on API_BASE, since it is harmless on the same-origin
-        // path and required on the other one.
-        credentials: 'include',
+        // Nothing here asks the browser to send or accept a cookie. There is
+        // none: the Authorization header above is what carries the session, and
+        // headers go out regardless of this setting.
         cache: 'no-store',
         signal: ctrl.signal
       });
@@ -1931,21 +1918,11 @@ async function engine(path, body, method, opts){
       let data = {};
       try{ data = raw ? JSON.parse(raw) : {}; }catch(e){ data = {}; }
       const fromEngine = ctype.indexOf('application/json') !== -1;
-      // The Route answering with something that is not the engine (a static
-      // 404, a parked page, DNS not resolving the way it is meant to) is
-      // indistinguishable, from here, from the Route being broken outright,
-      // and it has been broken outright before. Rather than report that as a
-      // session problem or a generic error, switch to the known-working
-      // fallback and send this exact call again. Only while still on
-      // ROUTE_BASE: once this session is already on ENGINE_BASE, a bad
-      // response is a real error, not a routing one.
-      if(!fromEngine && API_BASE === ROUTE_BASE && !ROUTE_UNAVAILABLE){
-        ROUTE_UNAVAILABLE = true;
-        API_BASE = ENGINE_BASE;
-        clearTimeout(timer);
-        return await engine(path, body, method, opts);
-      }
       if(res.status === 401 && path !== '/auth/login'){
+        // Expired, revoked, or never set: any of the three means this token
+        // is no good any more, so it is discarded rather than sent again on
+        // every call from here on. A fresh sign-in mints a new one.
+        storeToken(null);
         AUTHED = false;
         LOGIN_MSG = 'Your session expired. Sign in again.';
         render();
@@ -1979,19 +1956,6 @@ async function engine(path, body, method, opts){
       const isTimeout = e && e.name === 'AbortError';
       const rawMsg = e && e.message;
       const isNetworkLevel = isTimeout || rawMsg === 'Failed to fetch' || rawMsg === 'Load failed';
-
-      // DNS for the Route not resolving, or Cloudflare refusing the zone,
-      // surfaces here rather than as a real HTTP answer, the same as it did
-      // the one time this actually happened. Same fallback as the non-JSON
-      // case above, only reached here when the failure happens before any
-      // response comes back at all. A timeout is excluded on purpose: the
-      // Route did answer, eventually, or is about to, and switching base
-      // would only start the same slow wait over again on the other one.
-      if(isNetworkLevel && !isTimeout && API_BASE === ROUTE_BASE && !ROUTE_UNAVAILABLE){
-        ROUTE_UNAVAILABLE = true;
-        API_BASE = ENGINE_BASE;
-        return await engine(path, body, method, opts);
-      }
 
       // The gap the tunnel had left. It only engaged on a reply that was not
       // JSON, which assumes something answered. A method the edge refuses can
@@ -2725,8 +2689,8 @@ window.addEventListener('offline', () => { if(TAB === 'queue') render(); });
 // Land on the tab the notification or the shortcut asked for, once signed in.
 applyHash();
 // Renders the login screen immediately (nothing to wait on for that), then
-// resolves whether there is already a valid session cookie; loadQueue only
-// ever fires once that answer is known.
+// resolves whether the token already in localStorage is still valid;
+// loadQueue only ever fires once that answer is known.
 render();
 checkSession();
 </script>
