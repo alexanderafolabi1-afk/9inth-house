@@ -30,19 +30,31 @@ const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8', 'cache
 
 // One place decides who may call this API from a browser. Anything not on the
 // list gets no CORS headers at all, which is what a browser needs in order to
-// refuse the response.
-function allowedOrigins(env) {
+// refuse the response. Exported because desk.html now calls this Worker on
+// its own workers.dev address directly rather than through a same-site
+// Route, so every route in the Worker needs these headers, not only the
+// ones under /social; index.js applies this same function to everything it
+// answers, see the fetch wrapper there.
+export function allowedOrigins(env) {
   const raw = env.DESK_ORIGIN || 'https://9thpoint.com,https://www.9thpoint.com';
   return raw.split(',').map((s) => s.trim()).filter(Boolean);
 }
 
-function corsHeaders(request, env) {
+export function corsHeaders(request, env) {
   const origin = request.headers.get('Origin');
   const headers = { 'Vary': 'Origin' };
   if (origin && allowedOrigins(env).includes(origin)) {
     headers['Access-Control-Allow-Origin'] = origin;
+    // Required alongside credentials: 'include' on the fetch and
+    // SameSite=None on the session cookie (see sessionCookie in auth.js):
+    // without this the browser neither sends the cookie nor accepts a
+    // Set-Cookie back, on a request that is now genuinely cross-site.
+    headers['Access-Control-Allow-Credentials'] = 'true';
     headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS';
-    headers['Access-Control-Allow-Headers'] = 'Authorization, Content-Type';
+    // X-NH-Method/X-NH-Body: the method-tunnel fallback in desk.html's
+    // engine() still exists as a second line of defence and needs these
+    // allowed if it is ever the one that ends up firing.
+    headers['Access-Control-Allow-Headers'] = 'Authorization, Content-Type, X-NH-Method, X-NH-Body';
     headers['Access-Control-Max-Age'] = '86400';
   }
   return headers;

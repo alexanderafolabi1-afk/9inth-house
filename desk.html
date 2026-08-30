@@ -1523,27 +1523,34 @@ const engineReady = () => AUTHED === true;
 // harmless, and one place that turns a 401 into "go back to the login
 // screen" instead of a dead end, so nothing downstream has to know the
 // difference between "not signed in" and "any other failure."
-// A reply that is not JSON never came from the engine: the site host answered
-// it instead, before the request got that far. Saying "the house answered with
-// an error" in that case points the owner at the wrong thing entirely, and at
-// something they cannot fix, so this says what actually happened and ends with
-// one line worth reporting verbatim. The commonest cause is a method the site
-// host will not pass through: the pages here are served as a static site, which
-// answers GET but refuses POST outright, so a read can succeed on a path where
-// the matching write is refused before the engine ever sees it.
+// A reply that is not JSON never came from the engine: something else
+// answered before the request reached it. Saying "the house answered with an
+// error" in that case points the owner at the wrong thing entirely, and at
+// something they cannot fix, so this says what actually happened and ends
+// with one line worth reporting verbatim. desk.html calls the Worker on its
+// own workers.dev address directly (see ENGINE_BASE), bypassing the
+// 9thpoint.com/api/* Route entirely, so this should now only ever fire if
+// the Worker itself is not deployed or that address has changed.
 function notFromEngine(status, ctype, method, path){
   const kind = String(ctype || '').split(';')[0] || 'no type given';
-  const host = (typeof location !== 'undefined' && location.host) ? location.host : 'this site';
-  return 'That request never reached the engine. The website answered it instead, with a '
-    + status + '. Nothing is wrong with what you typed, and trying again will not help: the engine '
-    + 'is not wired to ' + method + ' on ' + host + '/api. Report this line as it stands: '
-    + method + ' /api' + path + ' answered ' + status + ' as ' + kind + '.';
+  return 'That request never reached the engine. Something else answered it instead, with a '
+    + status + '. Nothing is wrong with what you typed, and trying again will not help. Report this line '
+    + 'as it stands: ' + method + ' ' + ENGINE_BASE + path + ' answered ' + status + ' as ' + kind + '.';
 }
 
-// Something in front of the engine passes GET through and refuses POST, which
-// makes every action on this desk fail, not just signing in. Where that happens
-// the same call is sent again as a GET carrying the method and the body in
-// headers, and the engine rebuilds the real request from them.
+// Called directly on the Worker's own workers.dev address rather than
+// through the 9thpoint.com/api/* Route: that Route sits in front of DNS and
+// zone configuration this page has no way to see or fix if it stops
+// resolving, and it did, for every method, not just POST. This address only
+// depends on the Worker itself being deployed, nothing else in between.
+const ENGINE_BASE = 'https://9inth-house-engine.alexanderafolabi1.workers.dev';
+
+// Something in front of the engine used to pass GET through and refuse POST,
+// which made every action on this desk fail, not just signing in. Kept as a
+// second line of defence now that ENGINE_BASE bypasses that layer entirely:
+// where a POST is still refused for some other reason, the same call is sent
+// again as a GET carrying the method and the body in headers, and the engine
+// rebuilds the real request from them.
 //
 // Off until a POST has actually failed, and remembered for the rest of the
 // session once it has, so a desk on a working connection never uses it and one
@@ -1569,11 +1576,15 @@ async function engine(path, body, method, opts){
         headers['X-NH-Method'] = wanted;
         if(body) headers['X-NH-Body'] = JSON.stringify(body);
       }
-      const res = await fetch('/api' + path, {
+      const res = await fetch(ENGINE_BASE + path, {
         method: useTunnel ? 'GET' : wanted,
         headers,
         body: (body && !useTunnel) ? JSON.stringify(body) : undefined,
-        credentials: 'same-origin',
+        // Genuinely cross-site now (9thpoint.com calling a workers.dev
+        // address), so the cookie only travels with credentials: 'include',
+        // matching the Worker's Access-Control-Allow-Credentials and the
+        // SameSite=None session cookie. same-origin would silently drop it.
+        credentials: 'include',
         cache: 'no-store',
         signal: ctrl.signal
       });

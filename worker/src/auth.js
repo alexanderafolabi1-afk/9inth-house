@@ -264,14 +264,21 @@ export async function requireSession(request, env) {
   return verifySessionToken(token, env);
 }
 
-// Path scoped to /api: the cookie is never needed on, or sent with, a plain
-// page load, only on calls to the admin API.
+// desk.html now calls this Worker on its own workers.dev address directly
+// (see ENGINE_BASE in desk.html), not through the 9thpoint.com/api/* Route:
+// that Route stopped answering at all, GET included, with no way to see or
+// fix the DNS or zone side of it from this repo. That makes this a genuinely
+// cross-site request from the cookie's point of view, so SameSite=Strict,
+// which never sends on a cross-site fetch, would make login silently
+// useless again; SameSite=None is required here, and browsers require it to
+// be paired with Secure. Path is / rather than /api, since this cookie's
+// host is the Worker's own domain, where every route is part of the admin.
 export function sessionCookie(token) {
-  return `${COOKIE_NAME}=${token}; HttpOnly; Secure; SameSite=Strict; Path=/api; Max-Age=${SESSION_MAX_AGE}`;
+  return `${COOKIE_NAME}=${token}; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=${SESSION_MAX_AGE}`;
 }
 
 export function clearedSessionCookie() {
-  return `${COOKIE_NAME}=; HttpOnly; Secure; SameSite=Strict; Path=/api; Max-Age=0`;
+  return `${COOKIE_NAME}=; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=0`;
 }
 
 /* ---------- login rate limiting ---------- */

@@ -8,7 +8,7 @@
 // this app, and the admin API is never cached: a cached approval or a cached queue
 // would be worse than no cache at all.
 
-const VERSION = 'nh-desk-v4';
+const VERSION = 'nh-desk-v5';
 const SHELL = `${VERSION}-shell`;
 const RUNTIME = `${VERSION}-runtime`;
 
@@ -86,7 +86,11 @@ self.addEventListener('fetch', (event) => {
   // The admin API, including auth. Never cached, never intercepted: an approval
   // must reach the engine or fail loudly, a stale queue would show posts that
   // already went, and a cached session check could tell the app it is still
-  // signed in when the cookie has expired.
+  // signed in when the cookie has expired. desk.html now calls the Worker on
+  // its own workers.dev address (see ENGINE_BASE there) rather than this
+  // origin's /api/*, so that is excluded by name too, explicitly, rather
+  // than relying on it simply not matching a same-origin path below.
+  if (url.hostname.endsWith('.workers.dev')) return;
   if (url.pathname === '/social' || url.pathname.startsWith('/social/')) return;
   if (url.pathname === '/api' || url.pathname.startsWith('/api/')) return;
 

@@ -23,7 +23,7 @@ import { runGeneration } from './social/generate.js';
 import { publishPost } from './social/distribute.js';
 import { captureMetrics } from './social/metrics.js';
 import { notifyOwner } from './social/push.js';
-import { isSocialRoute, handleSocial } from './social/api.js';
+import { isSocialRoute, handleSocial, corsHeaders } from './social/api.js';
 import { SENDABLE } from './social/config.js';
 import {
   requireSession, mintSession, verifyPassword, sessionCookie, clearedSessionCookie,
@@ -1307,18 +1307,31 @@ export default {
     );
   },
   async fetch(request, env, ctx) {
+    // desk.html now calls this Worker on its own workers.dev address
+    // directly rather than through the 9thpoint.com/api/* Route, which
+    // stopped answering at all (GET included). That makes this a genuinely
+    // cross-origin request, so it needs real CORS, not just the /social
+    // routes' own copy of it. OPTIONS is answered here, before any routing,
+    // and everything else this function returns gets the same headers
+    // merged on afterwards, see respond() and its call at the end below.
+    if (request.method === 'OPTIONS') {
+      return new Response(null, { status: 204, headers: corsHeaders(request, env) });
+    }
+    const respond = async () => {
     const url = new URL(request.url);
 
-    // The admin lives on 9thpoint.com and the Worker is attached to
-    // 9thpoint.com/api/* by a Cloudflare Route so the session cookie is
-    // same-site (see worker/wrangler.toml). That means every request the
-    // browser makes arrives with an /api prefix; the .workers.dev domain
-    // (kept live for curl and the Author Desk trigger) sends the bare path.
-    // Stripping the prefix once here, rather than in every downstream
-    // handler, lets both keep working unmodified.
+    // desk.html calls this Worker on its own workers.dev address directly
+    // now (see ENGINE_BASE there), with a bare path, no /api prefix. The
+    // 9thpoint.com/api/* Route is left connected in wrangler.toml in case it
+    // ever starts resolving again, and curl or the Author Desk trigger may
+    // still reach the Worker through it with the prefix, so it is still
+    // stripped here rather than assumed absent, at no cost to the path this
+    // Worker actually depends on now.
     const apiPath = url.pathname.replace(/^\/api(?=\/|$)/, '') || '/';
 
-    // Method tunnelling, and the reason it has to exist.
+    // Method tunnelling, kept as a second line of defence even now that
+    // desk.html talks to workers.dev directly rather than through whatever
+    // sat in front of the Route. The reason it originally had to exist:
     //
     // Something in front of this Worker passes GET through and refuses POST.
     // A GET to /api/auth/session is answered here; the POST to /api/auth/setup
@@ -1571,5 +1584,11 @@ export default {
       'Ninth House Autopilot Worker. Mostly a Cron Trigger worker. POST /author-desk/media-pack (bearer token) redoes the Author Desk press kit. Everything under /social and /desk, and /auth/session, /auth/setup, /auth/login, /auth/logout, /auth/change-password, back the admin at desk.html and are session-cookie authenticated (setup and login are the two that work with no session yet). See /worker/README.md for deploy and secret setup.',
       { status: 200, headers: { 'content-type': 'text/plain' } }
     );
+    };
+
+    const res = await respond();
+    const headers = new Headers(res.headers);
+    for (const [key, value] of Object.entries(corsHeaders(request, env))) headers.set(key, value);
+    return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
   }
 };
