@@ -12,6 +12,7 @@ import assert from 'node:assert/strict';
 
 import { SCHEMA_SQL, validateVenture } from '../worker/src/social/db.js';
 import { PLATFORMS, CATEGORIES, imageRequired, socialCategories } from '../worker/src/social/config.js';
+import { senderFor } from '../worker/src/social/senders/index.js';
 import { stripDashPunctuation, hasDashPunctuation, sanitiseSocialText, extractDirectives, trimHashtags } from '../worker/src/social/text.js';
 import { slotsDueToday, pickCategory, trimToLimit, buildBias } from '../worker/src/social/generate.js';
 import { validateForSend, buildPayload, readExternalId } from '../worker/src/social/distribute.js';
@@ -205,7 +206,15 @@ await test('an id is read from the rail answer, and "true" is not mistaken for o
 
 await test('no module branches on a platform name', () => {
   const names = Object.keys(PLATFORMS);
-  const files = ['api.js', 'db.js', 'distribute.js', 'generate.js', 'metrics.js', 'push.js', 'text.js'];
+  // The generic machinery. Two files are deliberately absent and must stay
+  // absent: senders/index.js is the registry that maps a delivery name to an
+  // adapter, and senders/linkedin.js is an adapter whose whole job is to know
+  // one platform. Both sit on the same footing as config.js. Everything here
+  // routes on data and must never learn which platform it is carrying.
+  const files = [
+    'api.js', 'db.js', 'distribute.js', 'generate.js', 'metrics.js', 'push.js', 'text.js',
+    'senders/webhook.js'
+  ];
   for (const file of files) {
     const src = readFileSync(`worker/src/social/${file}`, 'utf8');
     // Strip comments before looking, so prose about LinkedIn is not a false positive.
@@ -217,6 +226,21 @@ await test('no module branches on a platform name', () => {
       );
     }
   }
+});
+
+await test('every platform resolves to a sender that exists', () => {
+  for (const [key, platform] of Object.entries(PLATFORMS)) {
+    const { name, sender } = senderFor(platform);
+    assert.ok(sender, `platform "${key}" asks for delivery "${name}", which has no sender in senders/index.js`);
+    assert.equal(typeof sender.send, 'function', `the "${name}" sender has no send function`);
+  }
+});
+
+await test('distribute.js no longer holds the rail endpoint or builds its payload', () => {
+  const src = readFileSync('worker/src/social/distribute.js', 'utf8');
+  const code = src.replace(/\/\/[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
+  assert.ok(!code.includes('MAKE_WEBHOOK_URL'), 'the rail endpoint belongs to the webhook sender, not to distribute.js');
+  assert.ok(code.includes('senderFor'), 'distribute.js should pick its delivery through senderFor');
 });
 
 await test('the venture validator rejects unknown platforms and unbacked cadence', () => {

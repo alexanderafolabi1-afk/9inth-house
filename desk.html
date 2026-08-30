@@ -1452,6 +1452,10 @@ function closeModal(){
   }
 }
 function openSettings(){
+  // Fetched once per session, the first time Settings is opened, then the panel
+  // is redrawn with it. Doing it here rather than at sign in keeps one more
+  // request off the critical path of getting into the desk.
+  if(!LI_TRIED){ LI_TRIED = true; loadLinkedIn().then(openSettings); }
   modal(`
     <h2>Firm Settings</h2>
     <div class="eyebrow">Account</div>
@@ -1491,6 +1495,27 @@ function openSettings(){
     <p class="tiny" style="margin-top:6px">${'Notification' in window ? (Notification.permission === 'granted' ? 'Notifications are allowed on this device.' : Notification.permission === 'denied' ? 'Notifications are blocked on this device, so the engine will fall back to email. Allow them in the browser site settings.' : 'Notifications have not been asked for yet on this device.') : 'This browser does not do notifications, so the engine will fall back to email.'}</p>
 
     <div class="hr"></div>
+    <div class="eyebrow">LinkedIn posting</div>
+    <p class="tiny" style="margin-top:2px">LinkedIn is posted directly by the engine, not through the rail, so it costs nothing per post. Paste an access token from your LinkedIn app here. It is stored on the Worker and never shown again.</p>
+    ${LI_MSG ? `<p class="sub" style="color:${LI_OK ? 'var(--gold)' : 'var(--rust)'};margin-top:4px">${esc(LI_MSG)}</p>` : ''}
+    ${LI_STATUS && LI_STATUS.tokenSet ? `<p class="tiny" style="margin-top:6px;color:var(--gold)">A token is stored, ending ${esc(LI_STATUS.tokenTail)}. Pasting a new one replaces it.</p>` : `<p class="tiny" style="margin-top:6px">No token stored yet, so nothing can post to LinkedIn.</p>`}
+
+    <label style="margin-top:10px">Access token</label>
+    ${pwField('li-token', 'off')}
+
+    <label>Page to post as</label>
+    <input type="text" id="li-default" placeholder="urn:li:organization:1234567" value="${esc(LI_STATUS && LI_STATUS.defaultAuthor || '')}">
+    <p class="tiny" style="margin-top:6px">Your company page ID. Every venture posts as this page unless you list one below.</p>
+
+    <label>Different page per venture, optional</label>
+    <input type="text" id="li-authors" placeholder='{"glotemp":"urn:li:organization:1234567"}' value="${esc(LI_STATUS && LI_STATUS.authors || '')}">
+    <p class="tiny" style="margin-top:6px">Leave empty unless a venture has its own page. A venture with no page of its own, and no page above, is refused rather than posted somewhere wrong.</p>
+
+    <div class="btnrow" style="margin-top:10px">
+      <button class="btn gold" id="li-save" style="min-height:44px" onclick="saveLinkedIn()">Save LinkedIn credentials</button>
+    </div>
+
+    <div class="hr"></div>
     <div class="eyebrow">n8n integration</div>
     <p class="tiny" style="margin-top:2px">A bearer token for n8n's HTTP Request node, separate from your sign-in password. Routes: <code>/n8n/queue</code> (GET), <code>/n8n/queue/push</code> (POST), <code>/n8n/generate</code> (POST), with header <code>Authorization: Bearer &lt;token&gt;</code>.</p>
     ${N8N_MSG ? `<p class="sub" style="color:var(--rust);margin-top:4px">${esc(N8N_MSG)}</p>` : ''}
@@ -1525,6 +1550,43 @@ function openSettings(){
     </div>
   `);
 }
+let LI_STATUS = null;
+let LI_TRIED = false;
+let LI_MSG = '';
+let LI_OK = false;
+
+// Read on opening Settings. Never asks for the token back, because the engine
+// does not hand it back: only whether one is held and its last four characters,
+// which is enough to tell a rotation happened without exposing anything.
+async function loadLinkedIn(){
+  try{
+    const data = await engine('/social/credentials', null, 'GET');
+    LI_STATUS = (data.deliveries && data.deliveries.linkedin) || null;
+  }catch(e){
+    LI_STATUS = null;
+  }
+}
+
+async function saveLinkedIn(){
+  const btn = document.getElementById('li-save');
+  if(!btn || btn.disabled) return;
+  const token = (document.getElementById('li-token') || {}).value || '';
+  const defaultAuthor = (document.getElementById('li-default') || {}).value || '';
+  const authors = (document.getElementById('li-authors') || {}).value || '';
+  if(!token.trim()){ LI_MSG = 'Paste the access token from LinkedIn first.'; LI_OK = false; openSettings(); return; }
+  btn.innerHTML = '<i class="spin"></i> Saving…'; btn.disabled = true;
+  try{
+    const data = await engine('/social/credentials', { delivery: 'linkedin', token, defaultAuthor, authors }, 'POST', { timeoutMs: 15000 });
+    LI_STATUS = data.status || LI_STATUS;
+    LI_MSG = 'Saved. LinkedIn can post from the next shift.';
+    LI_OK = true;
+  }catch(e){
+    LI_MSG = e.message || 'Could not save those credentials.';
+    LI_OK = false;
+  }
+  openSettings();
+}
+
 let N8N_TOKEN = null;
 let N8N_MSG = '';
 async function revealN8nToken(){
