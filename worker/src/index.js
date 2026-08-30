@@ -28,7 +28,7 @@ import { SENDABLE } from './social/config.js';
 import {
   requireSession, mintSession, verifyPassword, sessionCookie, clearedSessionCookie,
   rateLimitConfigured, checkLockout, recordFailure, resetAttempts,
-  hashPassword, getStoredPasswordHash, setStoredPasswordHash
+  hashPassword, getStoredPasswordHash, setStoredPasswordHash, hashIsVerifiable
 } from './auth.js';
 
 const REPO = 'alexanderafolabi1-afk/9inth-house';
@@ -1323,7 +1323,12 @@ export default {
 
     if (apiPath === '/auth/session' && request.method === 'GET') {
       const authed = await requireSession(routed, env);
-      const needsSetup = !(await getStoredPasswordHash(env));
+      // A stored hash that cannot be verified on this plan locks the desk
+      // against its owner permanently, so it is reported as needing setup
+      // rather than as a password to sign in with. That reopens the first run
+      // screen, and /auth/setup below writes the new password over the dead one.
+      const storedForSession = await getStoredPasswordHash(env);
+      const needsSetup = !storedForSession || !hashIsVerifiable(storedForSession);
       return apiJson({ ok: true, authed, needsSetup });
     }
 
@@ -1369,7 +1374,11 @@ export default {
       if (!rateLimitConfigured(env)) {
         return apiJson({ ok: false, error: 'Login rate limiting is not configured on this Worker yet. See worker/README.md.' }, 503);
       }
-      if (await getStoredPasswordHash(env)) {
+      // Only a password that can actually be used blocks the claim. An
+      // unverifiable one is dead weight: nobody can sign in with it, so
+      // refusing to overwrite it would brick the desk rather than protect it.
+      const claimed = await getStoredPasswordHash(env);
+      if (claimed && hashIsVerifiable(claimed)) {
         return apiJson({ ok: false, error: 'A password is already set. Sign in instead.' }, 403);
       }
       let body = {};
@@ -1389,7 +1398,8 @@ export default {
       // guarantee against a race. Whichever request writes last wins the
       // password; the loser's client sees success but a later login with
       // their password will simply fail, exactly as if they had mistyped it.
-      if (await getStoredPasswordHash(env)) {
+      const claimedNow = await getStoredPasswordHash(env);
+      if (claimedNow && hashIsVerifiable(claimedNow)) {
         return apiJson({ ok: false, error: 'A password is already set. Sign in instead.' }, 403);
       }
       await setStoredPasswordHash(env, hash);
@@ -1407,6 +1417,15 @@ export default {
       const storedHash = await getStoredPasswordHash(env);
       if (!storedHash) {
         return apiJson({ ok: false, error: 'No password has been set up yet.' }, 409);
+      }
+      // Checked before the derivation, not discovered by being killed during
+      // one. Without this the request exceeds the CPU limit, falls through to
+      // the site host and answers a bare 404 that explains nothing.
+      if (!hashIsVerifiable(storedHash)) {
+        return apiJson({
+          ok: false,
+          error: 'The stored password cannot be checked on this plan, so nobody can sign in with it. Reload this page and set a new password.'
+        }, 409);
       }
       const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
       const lock = await checkLockout(env, ip);
@@ -1442,6 +1461,12 @@ export default {
       if (!(await requireSession(routed, env))) return apiJson({ ok: false, error: 'Not signed in.' }, 401);
       const storedHash = await getStoredPasswordHash(env);
       if (!storedHash) return apiJson({ ok: false, error: 'No password is set up yet.' }, 409);
+      if (!hashIsVerifiable(storedHash)) {
+        return apiJson({
+          ok: false,
+          error: 'The stored password cannot be checked on this plan, so the current one cannot be confirmed. Sign out and set a new password.'
+        }, 409);
+      }
       let body = {};
       try { body = await routed.json(); } catch (e) { /* handled below */ }
       const currentPassword = String(body.currentPassword || '');

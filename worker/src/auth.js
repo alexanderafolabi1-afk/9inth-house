@@ -48,6 +48,38 @@ const SESSION_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 // it never invalidates an existing password; that password keeps its old count
 // until it is next changed.
 const PBKDF2_ITERATIONS = 25000;
+
+// The most expensive stored hash this Worker will agree to verify.
+//
+// verifyPassword takes its iteration count from the stored hash rather than
+// from the constant above, which is what lets an existing password survive a
+// change to that constant. The other edge of that is the trap this exists to
+// close: a hash written at a count the plan cannot execute can never be
+// verified, so every sign in attempt is killed mid-derivation and the desk is
+// locked permanently, against the owner as much as anyone. Worse, it does not
+// present as a locked door: the request dies and falls through to the site
+// host, so the screen shows a bare 404 and nothing anywhere says why.
+//
+// Anchored to PBKDF2_ITERATIONS deliberately, so that raising that constant on
+// a paid plan raises this with it. Left as a bare number, raising the write
+// count above a fixed ceiling would make this Worker reject the very hashes it
+// had just written, and the desk would reset itself on the next sign in.
+const MAX_VERIFIABLE_ITERATIONS = Math.max(40000, PBKDF2_ITERATIONS);
+
+// Whether a stored hash can be checked at all on this plan, asked before any
+// derivation is attempted rather than discovered by being killed part way
+// through one. A false answer means nobody can sign in with it, the owner
+// included, so the callers treat it as no usable password rather than as a
+// wrong one: see /auth/session and /auth/setup in index.js, where it reopens
+// the first run screen so a new password can be set over the dead one.
+export function hashIsVerifiable(stored) {
+  if (!stored) return false;
+  const parts = String(stored).trim().split('$');
+  if (parts.length !== 4 || parts[0] !== 'pbkdf2') return false;
+  const iterations = Number(parts[1]);
+  if (!Number.isFinite(iterations) || iterations <= 0) return false;
+  return iterations <= MAX_VERIFIABLE_ITERATIONS;
+}
 const LOCKOUT_THRESHOLD = 5;
 const LOCKOUT_SECONDS = 15 * 60;
 const ATTEMPTS_TTL_SECONDS = 60 * 60;
@@ -131,6 +163,12 @@ export async function verifyPassword(password, stored) {
   if (parts.length !== 4 || parts[0] !== 'pbkdf2') return false;
   const iterations = Number(parts[1]);
   if (!Number.isFinite(iterations) || iterations <= 0) return false;
+  // Refused before the derivation rather than during it. Attempting this is
+  // what killed the request and produced the unexplained 404; callers are
+  // expected to have asked hashIsVerifiable first and routed the owner to set
+  // a new password, so reaching here means a path that did not, and returning
+  // false is the safe end of it.
+  if (iterations > MAX_VERIFIABLE_ITERATIONS) return false;
   // b64urlDecode calls atob, which throws on anything that is not valid
   // base64url rather than returning a value, so a malformed stored hash (the
   // same paste artifact case) is caught here and treated as a login that
