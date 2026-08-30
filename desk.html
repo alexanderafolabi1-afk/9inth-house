@@ -1540,19 +1540,39 @@ function notFromEngine(status, ctype, method, path){
     + method + ' /api' + path + ' answered ' + status + ' as ' + kind + '.';
 }
 
+// Something in front of the engine passes GET through and refuses POST, which
+// makes every action on this desk fail, not just signing in. Where that happens
+// the same call is sent again as a GET carrying the method and the body in
+// headers, and the engine rebuilds the real request from them.
+//
+// Off until a POST has actually failed, and remembered for the rest of the
+// session once it has, so a desk on a working connection never uses it and one
+// on a broken edge only pays the cost of discovering it once. The body rides in
+// a header rather than the query string on purpose: a password in a URL ends up
+// in history, logs and referrers.
+let TUNNEL = false;
+
 async function engine(path, body, method, opts){
   opts = opts || {};
   const timeoutMs = opts.timeoutMs || 20000;
   const attempts = 1 + (opts.retries || 0);
+  const wanted = method || (body ? 'POST' : 'GET');
   let lastErr;
   for(let attempt = 1; attempt <= attempts; attempt++){
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), timeoutMs);
     try{
+      const useTunnel = TUNNEL && wanted !== 'GET';
+      const headers = {};
+      if(body && !useTunnel) headers['Content-Type'] = 'application/json';
+      if(useTunnel){
+        headers['X-NH-Method'] = wanted;
+        if(body) headers['X-NH-Body'] = JSON.stringify(body);
+      }
       const res = await fetch('/api' + path, {
-        method: method || (body ? 'POST' : 'GET'),
-        headers: body ? {'Content-Type':'application/json'} : {},
-        body: body ? JSON.stringify(body) : undefined,
+        method: useTunnel ? 'GET' : wanted,
+        headers,
+        body: (body && !useTunnel) ? JSON.stringify(body) : undefined,
         credentials: 'same-origin',
         cache: 'no-store',
         signal: ctrl.signal
@@ -1576,7 +1596,18 @@ async function engine(path, body, method, opts){
       }
       if(res.status === 429 && data.error) throw new Error(data.error);
       if(res.status === 503 && data.error) throw new Error(data.error);
-      if(!res.ok && !fromEngine) throw new Error(notFromEngine(res.status, ctype, method || (body ? 'POST' : 'GET'), path));
+      // A reply that is not JSON did not come from the engine, so the request
+      // never got there. For anything other than a GET that means the edge
+      // refused the method, which the tunnel can get around, so turn it on and
+      // send the same call again rather than reporting a failure the owner can
+      // do nothing about. Tried once: if the tunnel fails too, the honest
+      // message below is the right answer.
+      if(!res.ok && !fromEngine && wanted !== 'GET' && !TUNNEL){
+        TUNNEL = true;
+        clearTimeout(timer);
+        return await engine(path, body, method, opts);
+      }
+      if(!res.ok && !fromEngine) throw new Error(notFromEngine(res.status, ctype, wanted, path));
       if(!res.ok && !data.error) throw new Error('The house answered with an error (status ' + res.status + '). Try again shortly.');
       if(data.error && data.ok === false) throw new Error(data.error);
       return data;

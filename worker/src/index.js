@@ -1317,11 +1317,40 @@ export default {
     // Stripping the prefix once here, rather than in every downstream
     // handler, lets both keep working unmodified.
     const apiPath = url.pathname.replace(/^\/api(?=\/|$)/, '') || '/';
-    const routed = apiPath === url.pathname
-      ? request
-      : new Request(new URL(apiPath + url.search, url), request);
 
-    if (apiPath === '/auth/session' && request.method === 'GET') {
+    // Method tunnelling, and the reason it has to exist.
+    //
+    // Something in front of this Worker passes GET through and refuses POST.
+    // A GET to /api/auth/session is answered here; the POST to /api/auth/setup
+    // that the very same screen submits never arrives, and comes back as a bare
+    // 404 with no content type, which is the shape of a static host answering a
+    // method it does not serve rather than anything this Worker returned. That
+    // makes the entire desk unusable, not just login: every action on it is a
+    // POST.
+    //
+    // So the desk may carry the method and the body in headers on a GET, and
+    // this rebuilds the real request from them. Everything downstream is
+    // unchanged and cannot tell the difference. The body travels as a header
+    // rather than a query string deliberately: a password in a URL ends up in
+    // access logs, browser history and referrers, and a header does not.
+    //
+    // This is a workaround for someone else's edge, not a design. If the POST
+    // path is ever fixed, the desk stops using the tunnel on its own, because it
+    // only reaches for it after a POST has actually failed.
+    const tunnelledMethod = request.method === 'GET' ? (request.headers.get('X-NH-Method') || '') : '';
+    const effective = tunnelledMethod
+      ? new Request(url.toString(), {
+          method: tunnelledMethod.toUpperCase(),
+          headers: request.headers,
+          body: request.headers.get('X-NH-Body') || undefined
+        })
+      : request;
+
+    const routed = apiPath === url.pathname
+      ? effective
+      : new Request(new URL(apiPath + url.search, url), effective);
+
+    if (apiPath === '/auth/session' && effective.method === 'GET') {
       const authed = await requireSession(routed, env);
       // A stored hash that cannot be verified on this plan locks the desk
       // against its owner permanently, so it is reported as needing setup
@@ -1342,7 +1371,7 @@ export default {
     // last set, or something else, a stale version, a different environment,
     // a save that did not really take. Worth removing once that question is
     // settled and login is confirmed working end to end.
-    if (apiPath === '/auth/diagnostic' && request.method === 'GET') {
+    if (apiPath === '/auth/diagnostic' && effective.method === 'GET') {
       const fingerprint = async (v) => {
         if (!v) return null;
         const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(v)));
@@ -1370,7 +1399,7 @@ export default {
     // exists this always refuses, so the claim can only ever happen once -
     // there is no separate "reset" path here on purpose; a lost password is
     // recovered by deleting the KV key directly, not by this endpoint.
-    if (apiPath === '/auth/setup' && request.method === 'POST') {
+    if (apiPath === '/auth/setup' && effective.method === 'POST') {
       if (!env.SESSION_SECRET) {
         return apiJson({ ok: false, error: 'Setup is not configured on this Worker yet. See worker/README.md.' }, 503);
       }
@@ -1410,7 +1439,7 @@ export default {
       return apiJson({ ok: true }, 200, { 'Set-Cookie': sessionCookie(token) });
     }
 
-    if (apiPath === '/auth/login' && request.method === 'POST') {
+    if (apiPath === '/auth/login' && effective.method === 'POST') {
       if (!env.SESSION_SECRET) {
         return apiJson({ ok: false, error: 'Login is not configured on this Worker yet. See worker/README.md.' }, 503);
       }
@@ -1430,7 +1459,7 @@ export default {
           error: 'The stored password cannot be checked on this plan, so nobody can sign in with it. Reload this page and set a new password.'
         }, 409);
       }
-      const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+      const ip = effective.headers.get('CF-Connecting-IP') || 'unknown';
       const lock = await checkLockout(env, ip);
       if (lock.locked) {
         return apiJson(
@@ -1452,7 +1481,7 @@ export default {
       return apiJson({ ok: true }, 200, { 'Set-Cookie': sessionCookie(token) });
     }
 
-    if (apiPath === '/auth/logout' && request.method === 'POST') {
+    if (apiPath === '/auth/logout' && effective.method === 'POST') {
       return apiJson({ ok: true }, 200, { 'Set-Cookie': clearedSessionCookie() });
     }
 
@@ -1460,7 +1489,7 @@ export default {
     // admin instead of ever touching Cloudflare. Requires the current
     // password (not just an active session) so a device left signed in is
     // not, by itself, enough to take over the account.
-    if (apiPath === '/auth/change-password' && request.method === 'POST') {
+    if (apiPath === '/auth/change-password' && effective.method === 'POST') {
       if (!(await requireSession(routed, env))) return apiJson({ ok: false, error: 'Not signed in.' }, 401);
       const storedHash = await getStoredPasswordHash(env);
       if (!storedHash) return apiJson({ ok: false, error: 'No password is set up yet.' }, 409);
@@ -1492,7 +1521,7 @@ export default {
     // thin, authenticated proxy: the character personas, business context and
     // prompts are assembled client-side (none of that is secret), and this
     // route is the only place ANTHROPIC_API_KEY is ever read.
-    if (apiPath === '/desk/ask' && request.method === 'POST') {
+    if (apiPath === '/desk/ask' && effective.method === 'POST') {
       if (!(await requireSession(routed, env))) return apiJson({ ok: false, error: 'Not signed in.' }, 401);
       if (!env.ANTHROPIC_API_KEY) return apiJson({ ok: false, error: 'ANTHROPIC_API_KEY is not set on the Worker' }, 503);
       let body = {};
@@ -1525,9 +1554,9 @@ export default {
     // a machine path, deliberately separate from the session cookie: whoever
     // triggers it (a script, a curl call from the CEO's terminal) has no browser
     // session to carry.
-    if (apiPath === '/author-desk/media-pack' && request.method === 'POST') {
+    if (apiPath === '/author-desk/media-pack' && effective.method === 'POST') {
       const expected = env.AUTHOR_DESK_TRIGGER_TOKEN;
-      const provided = request.headers.get('Authorization') || '';
+      const provided = effective.headers.get('Authorization') || '';
       if (!expected || provided !== `Bearer ${expected}`) {
         return new Response('Unauthorized', { status: 401 });
       }
