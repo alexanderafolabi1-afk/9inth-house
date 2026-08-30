@@ -22,6 +22,7 @@ import {
 import { publishPost } from './distribute.js';
 import { credentialDeliveries, credentialStatusFor, writeCredentialsFor } from './senders/index.js';
 import { getWebhookUrl, setWebhookUrl, describeWebhookUrl } from '../n8n.js';
+import { getAnthropicKey, setAnthropicKey, anthropicKeyStatus, describeAnthropicKey } from '../aikey.js';
 import { runGeneration } from './generate.js';
 import { ingestMetrics, ventureSummary } from './metrics.js';
 import { getVapidKeys, pushConfigured, notifyOwner } from './push.js';
@@ -110,7 +111,16 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
   }
 
   const db = env.DB;
-  const noStoreNeeded = ['/social/push/keys', '/social/selfcheck', '/social/n8n-token', '/social/n8n-token/regenerate'];
+  // Routes that touch the queue need the database. Credentials and settings do
+  // not, and must not be gated on it: they live in KV, and locking the screens
+  // that configure the house behind the database means a house that cannot be
+  // configured on the day the database is the thing that is wrong. The Anthropic
+  // key is the sharpest case, since nothing in the house can think without it.
+  const noStoreNeeded = [
+    '/social/push/keys', '/social/selfcheck',
+    '/social/n8n-token', '/social/n8n-token/regenerate',
+    '/social/anthropic-key', '/social/credentials', '/social/n8n-webhook'
+  ];
   const needsStore = !noStoreNeeded.includes(path);
   if (needsStore && !hasStore(env)) return noStore(request, env);
 
@@ -138,7 +148,7 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
           n8n: Boolean(env.LOGIN_ATTEMPTS),
           emailFallback: Boolean(env.NOTIFY_EMAIL_WEBHOOK),
           metricsWebhook: Boolean(env.METRICS_WEBHOOK_URL),
-          anthropic: Boolean(env.ANTHROPIC_API_KEY),
+          anthropic: Boolean(await getAnthropicKey(env)),
           loginRateLimit: Boolean(env.LOGIN_ATTEMPTS),
           platforms: platformKeys(),
           dashRuleHolds: !hasDashPunctuation(probe),
@@ -261,7 +271,7 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
       /* ---- generation, run by hand ---- */
 
       case 'POST /social/generate': {
-        if (!env.ANTHROPIC_API_KEY) return json(request, env, { ok: false, error: 'ANTHROPIC_API_KEY is not set on the Worker' }, 503);
+        if (!(await getAnthropicKey(env))) return json(request, env, { ok: false, error: 'No Anthropic key is stored yet. Open the desk Settings, find the Anthropic key panel, and paste one in.' }, 503);
         const articles = typeof gatherArticles === 'function' ? await gatherArticles(env) : [];
         const result = await runGeneration(env, db, { ask, articles, now: new Date() });
         return json(request, env, { ok: true, created: result.created.length, notes: result.notes, posts: result.created });
@@ -395,6 +405,30 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
           return json(request, env, { ok: false, error: 'LOGIN_ATTEMPTS is not bound, so there is nowhere to store credentials. See worker/README.md.' }, 503);
         }
         return json(request, env, { ok: true, status: await credentialStatusFor(env, delivery) });
+      }
+
+      // The key every partner in the house runs on. Read only, and never the
+      // key itself: whether one is held and its last four characters, which is
+      // enough to see a rotation took without handing a browser something that
+      // can spend money.
+      case 'GET /social/anthropic-key': {
+        return json(request, env, { ok: true, status: await anthropicKeyStatus(env) });
+      }
+
+      // Checked before it is stored. A key with a stray line break, or half
+      // copied, or from another service, otherwise looks saved and then fails
+      // hours later on a shift nobody is watching.
+      case 'POST /social/anthropic-key': {
+        const key = String(body.key || '');
+        const check = describeAnthropicKey(key);
+        if (!check.ok) {
+          return json(request, env, { ok: false, error: check.problems.join(' ') }, 400);
+        }
+        const written = await setAnthropicKey(env, key);
+        if (!written) {
+          return json(request, env, { ok: false, error: 'LOGIN_ATTEMPTS is not bound, so there is nowhere to store the key. See worker/README.md.' }, 503);
+        }
+        return json(request, env, { ok: true, status: await anthropicKeyStatus(env), warnings: check.warnings });
       }
 
       // The address the engine tells n8n things on, as opposed to the token
