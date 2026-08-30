@@ -519,6 +519,12 @@ cannot route yet would only fill your morning with things that cannot be sent.
 
 ## Checking it yourself
 
+A note for anyone reading this after a login secret was set via the dashboard
+and the Worker still answered "Login is not configured": pushing any change
+to this file forces a fresh deploy, which has been observed to be the fix
+when a dashboard-added secret does not appear to be picked up by the
+already-running Worker.
+
 ```
 curl https://YOUR-WORKER-ADDRESS/social/selfcheck \
   -H "Authorization: Bearer YOUR-DESK-ADMIN-TOKEN"
