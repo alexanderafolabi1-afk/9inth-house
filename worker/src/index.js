@@ -1319,6 +1319,34 @@ export default {
       return apiJson({ ok: true, authed: await requireSession(routed, env) });
     }
 
+    // Read only, reveals nothing that could sign anyone in: a length and a
+    // one way fingerprint, not the secret and not the password. Exists only
+    // to answer one question directly instead of by trial and error, whether
+    // the value actually bound to this Worker right now is the one that was
+    // last set, or something else, a stale version, a different environment,
+    // a save that did not really take. Worth removing once that question is
+    // settled and login is confirmed working end to end.
+    if (apiPath === '/auth/diagnostic' && request.method === 'GET') {
+      const fingerprint = async (v) => {
+        if (!v) return null;
+        const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(v)));
+        return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 12);
+      };
+      return apiJson({
+        ok: true,
+        adminPasswordHash: {
+          set: Boolean(env.ADMIN_PASSWORD_HASH),
+          length: env.ADMIN_PASSWORD_HASH ? String(env.ADMIN_PASSWORD_HASH).length : 0,
+          fingerprint: await fingerprint(env.ADMIN_PASSWORD_HASH)
+        },
+        sessionSecret: {
+          set: Boolean(env.SESSION_SECRET),
+          length: env.SESSION_SECRET ? String(env.SESSION_SECRET).length : 0
+        },
+        loginAttemptsKvBound: Boolean(env.LOGIN_ATTEMPTS)
+      });
+    }
+
     if (apiPath === '/auth/login' && request.method === 'POST') {
       if (!env.ADMIN_PASSWORD_HASH || !env.SESSION_SECRET) {
         return apiJson({ ok: false, error: 'Login is not configured on this Worker yet. See worker/README.md.' }, 503);
