@@ -1,21 +1,32 @@
 // Service worker for the Ninth House desk.
 //
-// Two jobs. It caches the admin shell so the app opens instantly from the home
-// screen, including with no signal, and it receives the morning push so the owner
-// is told the batch is waiting without opening anything.
+// desk.html was once cached stale-while-revalidate: served instantly from
+// whatever was in the cache, refetched in the background only afterward. On
+// a device that stayed on an old copy, that old copy kept calling endpoints
+// a later deploy had already removed, and login broke, silently, with
+// nothing on screen to say why. That is fixed here structurally, not by
+// raising a version number: desk.html and the admin API are never read from
+// the cache while the network can be asked at all. The network is tried
+// first, every time; the cache only ever answers when that attempt fails
+// outright, as a genuine offline fallback, never as a way to skip asking.
 //
-// It deliberately keeps its hands off everything else. The public site at / is not
-// this app, and the admin API is never cached: a cached approval or a cached queue
-// would be worse than no cache at all.
+// Static assets, the manifest and the icons, are cached too, but keyed by a
+// hash of their own bytes rather than by their path. A changed file is a
+// different cache entry on its own, so it does not depend on anyone
+// remembering to bump VERSION when an icon changes.
+//
+// This file also takes over as fast as it can: skipWaiting on install,
+// clients.claim on activate, so a new deploy does not wait for every open
+// tab to close first. desk.html is the other half of that: it checks for a
+// newer version of this file on every launch and every time it regains
+// focus, and reloads itself once a new one has taken over.
 
-const VERSION = 'nh-desk-v12';
-const SHELL = `${VERSION}-shell`;
+const VERSION = 'nh-desk-v13';
 const RUNTIME = `${VERSION}-runtime`;
 
-// The shell. Everything here is same origin and safe to serve stale, because the
-// app fetches its actual data from the engine at runtime.
-const SHELL_ASSETS = [
-  '/desk.html',
+// Cached by content hash below, not cached-first by path. Never desk.html,
+// never anything under /api or /social: see the fetch handler.
+const STATIC_ASSET_PATHS = [
   '/manifest.webmanifest',
   '/favicon.svg',
   '/icons/icon-192.png',
@@ -25,92 +36,113 @@ const SHELL_ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil((async () => {
-    const cache = await caches.open(SHELL);
-    // Added one at a time rather than with addAll, so one missing file cannot fail
-    // the whole install and leave the app with no offline shell at all.
-    await Promise.all(SHELL_ASSETS.map(async (url) => {
-      try {
-        await cache.add(new Request(url, { cache: 'reload' }));
-      } catch (e) {
-        // Nothing to do about it here, and it must not stop the install.
-      }
-    }));
-    await self.skipWaiting();
-  })());
+  // Nothing to pre-warm: desk.html is never written to the cache ahead of
+  // time, only ever as a byproduct of a real network fetch succeeding (see
+  // networkFirst below), and static assets are fetched and hashed lazily,
+  // on first request. Skipping straight to activating is what lets a tab
+  // that is already open pick up this version without waiting to be closed.
+  event.waitUntil(self.skipWaiting());
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
+    // Every cache that is not this exact version's, including a SHELL or
+    // RUNTIME cache any earlier build of this file left behind, is a
+    // previous deploy's leftovers. Deleting all of them, unconditionally,
+    // on every activation, is what lets a device already stuck on a stale
+    // desk.html recover the moment this version takes over, with no
+    // reinstall and nothing for the owner to clear by hand.
     const keys = await caches.keys();
-    await Promise.all(keys.filter((k) => k !== SHELL && k !== RUNTIME).map((k) => caches.delete(k)));
+    await Promise.all(keys.filter((k) => k !== RUNTIME).map((k) => caches.delete(k)));
     await self.clients.claim();
   })());
 });
 
 // The page asks for this after it has told the owner an update is waiting.
+// Kept even though install already calls skipWaiting on its own, since a
+// future version of this file may reintroduce a waiting step and this is
+// the one line that would need to still be here for it to work.
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
-function isShellRequest(url) {
-  return SHELL_ASSETS.includes(url.pathname) || url.pathname === '/desk.html';
+function isApiRequest(url) {
+  // desk.html tries the same-site 9thpoint.com/api/* Route first (see
+  // ROUTE_BASE there) and falls back to the Worker's own workers.dev
+  // address (ENGINE_BASE) if that Route does not answer, so both are
+  // excluded by name here, explicitly, rather than relying on the /api/*
+  // one simply not matching a same origin path below.
+  if (url.hostname.endsWith('.workers.dev')) return true;
+  if (url.pathname === '/social' || url.pathname.startsWith('/social/')) return true;
+  if (url.pathname === '/api' || url.pathname.startsWith('/api/')) return true;
+  return false;
+}
+
+function isStaticAsset(url) {
+  return url.origin === self.location.origin && STATIC_ASSET_PATHS.includes(url.pathname);
 }
 
 function isFont(url) {
   return url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com';
 }
 
-// The admin page itself, which is the one thing here that changes often.
-//
-// Cache first was wrong for it, and cost a deploy that reached the Worker and
-// then appeared to have done nothing. The update path in desk.html only fires
-// when THIS file's bytes differ, so a change to desk.html alone left the old
-// page being served with nothing to notice it: the panel that had just been
-// added was in the deployed page and absent from the screen. Remembering to
-// bump VERSION on every desk.html change is not a mechanism, it is a thing to
-// forget once.
-//
-// Network first closes it. A deploy is picked up on the next open whether or
-// not this file changed, and the cache is still there for a bad connection or
-// no connection at all. The wait is bounded so a slow network cannot leave the
-// app hanging on a blank screen when a perfectly good copy is already held:
-// after the timeout the cached page is served, and the network copy still
-// lands in the cache for next time.
-async function networkFirst(request, cacheName, timeoutMs = 2500) {
-  const cache = await caches.open(cacheName);
-  const network = fetch(request).then((res) => {
-    if (res && res.ok) cache.put(request, res.clone()).catch(() => {});
-    return res;
-  }).catch(() => null);
-
-  const timeout = new Promise((resolve) => setTimeout(() => resolve(null), timeoutMs));
-  const fresh = await Promise.race([network, timeout]);
-  if (fresh && fresh.ok) return fresh;
-
-  const cached = await cache.match(request);
-  if (cached) return cached;
-
-  // Nothing cached and the race gave up. Wait out the real request rather than
-  // failing on a slow connection with nothing to fall back on.
-  const eventual = await network;
-  if (eventual) return eventual;
-  throw new Error('offline and nothing cached');
+async function sha256Hex(buffer) {
+  const digest = await crypto.subtle.digest('SHA-256', buffer);
+  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-// Serve what is cached at once, then refresh it in the background. The shell opens
-// instantly and still updates itself on the next open.
-async function staleWhileRevalidate(request, cacheName) {
-  const cache = await caches.open(cacheName);
-  const cached = await cache.match(request);
-  const network = fetch(request).then((res) => {
-    if (res && (res.ok || res.type === 'opaque')) cache.put(request, res.clone()).catch(() => {});
-    return res;
-  }).catch(() => null);
-  if (cached) return cached;
-  const fresh = await network;
-  if (fresh) return fresh;
-  throw new Error('offline and nothing cached');
+// The network is asked every single time, with no HTTP cache in between
+// either (cache: 'no-store'); the Cache Storage entry is only ever read in
+// the catch block, when fetch itself failed, which on a phone means
+// offline. A successful fetch is never served from what is stored, and the
+// stored copy is refreshed every time a real fetch succeeds, so the offline
+// fallback stays as current as this device's own last real visit, never
+// older than that.
+async function networkFirst(request, cacheKey) {
+  try {
+    const fresh = await fetch(request, { cache: 'no-store' });
+    if (fresh && fresh.ok) {
+      const cache = await caches.open(RUNTIME);
+      cache.put(cacheKey, fresh.clone()).catch(() => {});
+    }
+    return fresh;
+  } catch (e) {
+    const cached = await caches.match(cacheKey);
+    if (cached) return cached;
+    throw e;
+  }
+}
+
+// Static assets, keyed by a hash of their own bytes rather than by path, so
+// a file changing is a cache miss on its own and needs no version bump to
+// be noticed. Still asks the network first, every time; the hash only ever
+// decides where the answer is stored and read back from, never whether the
+// network gets asked.
+async function contentHashed(request, url) {
+  const cache = await caches.open(RUNTIME);
+  // Origin plus path, not path alone: fonts.googleapis.com and
+  // fonts.gstatic.com are both handled here, and a bare path would let two
+  // different hosts collide in one shared cache.
+  const identity = url.origin + url.pathname;
+  try {
+    const fresh = await fetch(request, { cache: 'no-store' });
+    if (!fresh.ok) throw new Error('bad response: ' + fresh.status);
+    const buffer = await fresh.clone().arrayBuffer();
+    const hash = await sha256Hex(buffer);
+    const key = new Request('https://sw-cache-key.invalid/?id=' + encodeURIComponent(identity) + '&h=' + hash);
+    if (!(await cache.match(key))) cache.put(key, fresh.clone()).catch(() => {});
+    return fresh;
+  } catch (e) {
+    // Offline, or the fetch failed outright: the most recent hash this
+    // device actually has for this exact origin and path is the only
+    // fallback there is, found by that identity since the hash of what
+    // would have come back now is exactly what is not known here.
+    const keys = await cache.keys();
+    const prefix = 'https://sw-cache-key.invalid/?id=' + encodeURIComponent(identity) + '&h=';
+    const match = keys.find((k) => k.url.startsWith(prefix));
+    if (match) return cache.match(match);
+    throw e;
+  }
 }
 
 self.addEventListener('fetch', (event) => {
@@ -120,42 +152,28 @@ self.addEventListener('fetch', (event) => {
   let url;
   try { url = new URL(request.url); } catch (e) { return; }
 
-  // The admin API, including auth. Never cached, never intercepted: an approval
-  // must reach the engine or fail loudly, a stale queue would show posts that
-  // already went, and a cached session check could tell the app it is still
-  // signed in when the cookie has expired. desk.html now calls the Worker on
-  // its own workers.dev address (see ENGINE_BASE there) rather than this
-  // origin's /api/*, so that is excluded by name too, explicitly, rather
-  // than relying on it simply not matching a same-origin path below.
-  if (url.hostname.endsWith('.workers.dev')) return;
-  if (url.pathname === '/social' || url.pathname.startsWith('/social/')) return;
-  if (url.pathname === '/api' || url.pathname.startsWith('/api/')) return;
+  // The admin API, including auth. Never cached, never intercepted, in
+  // either direction: an approval must reach the engine or fail loudly, a
+  // stale queue would show posts that already went, and a cached session
+  // check could tell the app it is still signed in when the cookie expired.
+  if (isApiRequest(url)) return;
 
-  // A navigation to the admin. Network first, so a deploy is never a load
-  // behind, with the cache underneath it for a bad connection or none.
-  if (request.mode === 'navigate' && isShellRequest(url) && url.origin === self.location.origin) {
-    event.respondWith(
-      networkFirst(new Request('/desk.html', { cache: 'no-store' }), SHELL)
-        .catch(() => caches.match('/desk.html'))
-    );
-    return;
-  }
-
-  // The page itself, however it is asked for, gets the same treatment for the
-  // same reason. Everything else in the shell is an icon or a manifest that
-  // changes about never, so those stay cache first and keep opening instantly.
+  // desk.html itself, on a navigation or a direct fetch (the installed
+  // PWA's start_url is /desk.html?source=pwa; the query string does not
+  // change url.pathname). This is the file that broke: served from the
+  // cache first once, it kept calling endpoints a later deploy had already
+  // removed. Network first, every time; the cached copy is a fallback for
+  // offline only, and only ever holds what was really served the last time
+  // the network actually answered. Matched by path, not by navigate mode
+  // alone, so a navigation to some other same-origin page (the public site)
+  // is left alone rather than handed desk.html.
   if (url.origin === self.location.origin && url.pathname === '/desk.html') {
-    event.respondWith(networkFirst(request, SHELL));
+    event.respondWith(networkFirst(new Request('/desk.html', { cache: 'no-store' }), '/desk.html'));
     return;
   }
 
-  if (url.origin === self.location.origin && isShellRequest(url)) {
-    event.respondWith(staleWhileRevalidate(request, SHELL));
-    return;
-  }
-
-  if (isFont(url)) {
-    event.respondWith(staleWhileRevalidate(request, RUNTIME));
+  if (isStaticAsset(url) || isFont(url)) {
+    event.respondWith(contentHashed(request, url));
     return;
   }
 

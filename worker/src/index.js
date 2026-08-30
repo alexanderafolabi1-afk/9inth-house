@@ -1321,31 +1321,32 @@ export default {
     );
   },
   async fetch(request, env, ctx) {
-    // desk.html now calls this Worker on its own workers.dev address
-    // directly rather than through the 9thpoint.com/api/* Route, which
-    // stopped answering at all (GET included). That makes this a genuinely
-    // cross-origin request, so it needs real CORS, not just the /social
-    // routes' own copy of it. OPTIONS is answered here, before any routing,
-    // and everything else this function returns gets the same headers
-    // merged on afterwards, see respond() and its call at the end below.
+    // desk.html tries the 9thpoint.com/api/* Route first (see ROUTE_BASE
+    // there), which is what gives the session cookie a genuinely same-site
+    // request to be set on; falling back to this Worker's own workers.dev
+    // address (ENGINE_BASE) only when the Route itself fails to answer.
+    // That fallback path is a real cross-origin request, so CORS is still
+    // needed here regardless, not just the /social routes' own copy of it.
+    // OPTIONS is answered here, before any routing, and everything else
+    // this function returns gets the same headers merged on afterwards, see
+    // respond() and its call at the end below.
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: corsHeaders(request, env) });
     }
     const respond = async () => {
     const url = new URL(request.url);
 
-    // desk.html calls this Worker on its own workers.dev address directly
-    // now (see ENGINE_BASE there), with a bare path, no /api prefix. The
-    // 9thpoint.com/api/* Route is left connected in wrangler.toml in case it
-    // ever starts resolving again, and curl or the Author Desk trigger may
-    // still reach the Worker through it with the prefix, so it is still
-    // stripped here rather than assumed absent, at no cost to the path this
-    // Worker actually depends on now.
+    // Two shapes reach this Worker now: a bare path from ENGINE_BASE, and
+    // an /api-prefixed one from the Route (see ROUTE_BASE and ENGINE_BASE
+    // in desk.html, and API_BASE, which decides which of the two a given
+    // session actually uses). Stripped here unconditionally so every route
+    // below can be written once, against the bare shape, regardless of
+    // which address answered.
     const apiPath = url.pathname.replace(/^\/api(?=\/|$)/, '') || '/';
 
-    // Method tunnelling, kept as a second line of defence even now that
-    // desk.html talks to workers.dev directly rather than through whatever
-    // sat in front of the Route. The reason it originally had to exist:
+    // Method tunnelling, kept as a second line of defence regardless of
+    // which base a given call is using. The reason it originally had to
+    // exist:
     //
     // Something in front of this Worker passes GET through and refuses POST.
     // A GET to /api/auth/session is answered here; the POST to /api/auth/setup
