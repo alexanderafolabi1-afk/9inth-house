@@ -64,14 +64,25 @@ async function derivePbkdf2(password, salt, iterations) {
 
 export async function verifyPassword(password, stored) {
   if (!password || !stored) return false;
-  const parts = String(stored).split('$');
+  // A secret pasted into the dashboard can pick up a trailing newline or a
+  // stray space; trimmed here rather than trusted, so a paste artifact reads
+  // as a wrong password instead of crashing the request.
+  const parts = String(stored).trim().split('$');
   if (parts.length !== 4 || parts[0] !== 'pbkdf2') return false;
   const iterations = Number(parts[1]);
   if (!Number.isFinite(iterations) || iterations <= 0) return false;
-  const salt = b64urlDecode(parts[2]);
-  const expected = b64urlDecode(parts[3]);
-  const actual = await derivePbkdf2(password, salt, iterations);
-  return constantTimeEqual(actual, expected);
+  // b64urlDecode calls atob, which throws on anything that is not valid
+  // base64url rather than returning a value, so a malformed stored hash (the
+  // same paste artifact case) is caught here and treated as a login that
+  // cannot succeed, not as a server error.
+  try {
+    const salt = b64urlDecode(parts[2]);
+    const expected = b64urlDecode(parts[3]);
+    const actual = await derivePbkdf2(password, salt, iterations);
+    return constantTimeEqual(actual, expected);
+  } catch (e) {
+    return false;
+  }
 }
 
 /* ---------- session cookie ---------- */
