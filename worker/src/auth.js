@@ -21,7 +21,33 @@
 
 const COOKIE_NAME = 'nh_session';
 const SESSION_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
-const PBKDF2_ITERATIONS = 210000;
+
+// Chosen against the Workers CPU budget, not against a recommendation sheet.
+//
+// The Workers Free plan allows 10 ms of CPU per HTTP request. Waiting on KV or
+// the network does not count, so on this Worker essentially the whole budget is
+// this one derivation. At 210000 iterations it measures about 35 ms, three and a
+// half times over, and the result is not a slow login but no login at all: the
+// request is killed for exceeding resources, and a route set to fail open then
+// behaves as though no Worker existed and hands the request to the origin. The
+// origin here is a static host, which refuses POST outright, so the desk saw a
+// bare 404 on "Create your password" while the far cheaper GET that draws the
+// same screen kept working. That asymmetry is the signature of this fault.
+//
+// 25000 measures about 4.5 ms on the whole signed-in path, derivation and
+// session cookie together, which leaves better than double headroom for a
+// slower edge CPU. It is a real reduction in resistance to an offline attack on
+// a stolen hash, and it is a deliberate trade: the hash lives in KV rather than
+// anywhere public, login is rate limited and locked out per IP, and there is
+// one owner. A count the plan cannot execute protects nothing, because it never
+// runs.
+//
+// On the Workers Paid plan the limit is 30 seconds rather than 10 ms, and this
+// single number is the only thing to raise. verifyPassword reads the iteration
+// count out of each stored hash rather than assuming this constant, so raising
+// it never invalidates an existing password; that password keeps its old count
+// until it is next changed.
+const PBKDF2_ITERATIONS = 25000;
 const LOCKOUT_THRESHOLD = 5;
 const LOCKOUT_SECONDS = 15 * 60;
 const ATTEMPTS_TTL_SECONDS = 60 * 60;
