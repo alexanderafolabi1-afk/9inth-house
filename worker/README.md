@@ -539,6 +539,9 @@ cannot route yet would only fill your morning with things that cannot be sent.
 
 ## Checking it yourself
 
+Forcing a fresh deploy after the workers.dev migration, so SESSION_SECRET
+is picked up by the version actually serving traffic now.
+
 A note for anyone reading this after a login secret was set via the dashboard
 and the Worker still answered "Login is not configured": pushing any change
 to this file forces a fresh deploy, which has been observed to be the fix
