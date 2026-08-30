@@ -293,6 +293,22 @@ pre,code,.mono{overflow-wrap:anywhere;word-break:break-word}
 #toast span{flex:1;font-size:13.5px}
 #toast button{min-height:44px;min-width:76px;padding:0 14px;border-radius:9px;border:1px solid var(--gold-deep);background:none;color:var(--gold);font-family:'Albert Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer}
 
+/* The refresh control. Present on every tab, not tied to #app, so it survives
+   every render(). Sitting well above the toast's own row (bottom: 92px) so
+   the two never fight for the same strip when both are on screen at once,
+   and low enough on the screen to still be a one-handed reach on the way
+   down from the nav bar. */
+.refresh-fab{
+  position:fixed;right:calc(14px + env(safe-area-inset-right));bottom:calc(150px + env(safe-area-inset-bottom));z-index:52;
+  width:50px;height:50px;min-width:44px;min-height:44px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--gold);border:1px solid var(--gold-deep);color:var(--ink);
+  font-size:19px;cursor:pointer;box-shadow:0 8px 20px rgba(0,0,0,.5);
+}
+.refresh-fab .ic{display:inline-block;line-height:1}
+.refresh-fab.spinning .ic{animation:sp .8s linear infinite}
+.refresh-fab:disabled{opacity:.6}
+
 .qstat{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:14px;-webkit-overflow-scrolling:touch}
 .qstat .cell{flex:0 0 auto;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 12px;min-width:132px}
 .qstat .cell b{display:block;font-family:'Marcellus',serif;font-size:15px;color:var(--gold);font-weight:400}
@@ -323,6 +339,7 @@ pre,code,.mono{overflow-wrap:anywhere;word-break:break-word}
 <main id="app"></main>
 
 <nav id="nav"></nav>
+<button type="button" id="refreshfab" class="refresh-fab" aria-label="Refresh" onclick="refreshCurrent()"><i class="ic">&#8635;</i></button>
 <div id="modal-root"></div>
 <div id="toast" role="status" aria-live="polite"></div>
 
@@ -596,17 +613,20 @@ function render(){
   const app = document.getElementById('app');
   const daychip = document.getElementById('daychip');
   const gear = document.getElementById('gearbtn');
+  const refreshfab = document.getElementById('refreshfab');
   if(!AUTHED){
     nav.style.display = 'none';
     nav.innerHTML = '';
     daychip.style.display = 'none';
     gear.style.display = 'none';
+    if(refreshfab) refreshfab.style.display = 'none';
     app.innerHTML = NEEDS_SETUP ? vSetup() : vLogin();
     return;
   }
   nav.style.display = '';
   daychip.style.display = '';
   gear.style.display = '';
+  if(refreshfab) refreshfab.style.display = '';
   daychip.textContent = 'DAY '+String(S.day).padStart(3,'0');
   renderNav();
   if(TAB==='queue') app.innerHTML = vQueue();
@@ -2331,12 +2351,68 @@ async function prepareStorage(){
 
 /* ---------- boot ---------- */
 
-if('serviceWorker' in navigator){
+// Whether this load was already under a service worker's control before any
+// of the code below runs. True on every open after the first: false only on
+// the very first visit, or one where the browser bypassed the worker
+// entirely (a hard refresh). That distinction is what tells an ordinary
+// first install apart from a deploy landing while the tab is open, further
+// down where SW_RELOAD_PENDING is decided.
+const SW_SUPPORTED = 'serviceWorker' in navigator;
+const HAD_SW_CONTROLLER_AT_LOAD = SW_SUPPORTED && Boolean(navigator.serviceWorker.controller);
+let SW_REG = null;
+let SW_RELOAD_PENDING = false;
+
+if(SW_SUPPORTED){
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch(() => {
+    navigator.serviceWorker.register('sw.js').then((reg) => { SW_REG = reg; }).catch(() => {
       // No offline shell and no notifications, and nothing else is affected.
     });
   });
+
+  // sw.js activates a new version the moment it finishes installing (see its
+  // own skipWaiting call) and takes over every open tab, but a tab that was
+  // already loaded keeps running the JS it started with until it reloads.
+  // This is what actually closes that gap: the moment a new worker takes
+  // over an ALREADY CONTROLLED tab, reload it once, with a brief toast so it
+  // does not just vanish. On the very first install there is no controller
+  // yet to replace, nothing on the page is stale, and this does nothing.
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if(!HAD_SW_CONTROLLER_AT_LOAD || SW_RELOAD_PENDING) return;
+    SW_RELOAD_PENDING = true;
+    toast('Updated. Reloading…');
+    setTimeout(() => location.reload(), 600);
+  });
+}
+
+// Asks the browser to re-fetch sw.js right now instead of waiting for its own
+// schedule. If the bytes differ, the new worker installs, activates and
+// claims every open tab on its own (see sw.js); the controllerchange
+// listener above is what notices that happened and reloads. This only ever
+// has something to announce itself when nothing changed.
+async function checkForUpdate(announceIfCurrent){
+  if(!SW_REG) return;
+  try{
+    await SW_REG.update();
+  }catch(e){ return; }
+  if(SW_REG.installing || SW_REG.waiting) return;
+  if(announceIfCurrent) toast('Already on the latest version.');
+}
+
+// The one refresh control, present on every tab: re-fetches whatever the
+// current tab is showing, then checks for a newer deploy the same way the
+// focus check below does.
+async function refreshCurrent(){
+  const btn = document.getElementById('refreshfab');
+  if(!btn || btn.disabled) return;
+  btn.disabled = true;
+  btn.classList.add('spinning');
+  try{
+    if(TAB === 'queue' && engineReady()) await loadQueue();
+    else await syncAutopilot();
+  }catch(e){ /* the individual loaders already report their own errors */ }
+  await checkForUpdate(true);
+  btn.disabled = false;
+  btn.classList.remove('spinning');
 }
 
 // Arriving from the notification, or from the home screen shortcut.
@@ -2348,9 +2424,14 @@ function applyHash(){
 window.addEventListener('hashchange', () => { if(applyHash()) render(); });
 
 // The queue is reread when the app comes back to the front, because a post may
-// have gone out from another device in the meantime.
+// have gone out from another device in the meantime. Every tab, not only the
+// queue, also gets a silent check for a newer deploy: this is opened from the
+// home screen most mornings, and this is what lets that catch up without
+// ever visiting Settings or clearing anything by hand.
 document.addEventListener('visibilitychange', () => {
-  if(document.visibilityState === 'visible' && TAB === 'queue' && engineReady()) loadQueue(true);
+  if(document.visibilityState !== 'visible') return;
+  if(TAB === 'queue' && engineReady()) loadQueue(true);
+  checkForUpdate(false);
 });
 window.addEventListener('online', async () => {
   const sent = await flushPending();
