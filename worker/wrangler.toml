@@ -1,4 +1,11 @@
-name = "ninth-house-autopilot"
+# Must match the Worker this repo actually deploys to. The account holds exactly
+# one Worker, "9inth-house-engine", and the Git integration has been updating it
+# on every push, overriding the name that used to sit here. Left mismatched, the
+# trap is a local "wrangler deploy": it would read this file literally and create
+# a second, separate Worker, which can then take the Route below away from the
+# real one. Matching it means every route to deploy, from CI or from a laptop,
+# lands on the same Worker.
+name = "9inth-house-engine"
 main = "src/index.js"
 compatibility_date = "2026-07-28"
 compatibility_flags = ["nodejs_compat"]
@@ -60,18 +67,16 @@ crons = [
 # binding pointing at a database that does not exist yet fails the deploy and
 # stops the autopilot, the Night Press and the journal from shipping with it.
 #
-# Until it is connected the engine simply says storage is not configured, and
-# everything else runs exactly as before.
+# Connected. The database was created on the account on 30 Aug 2026 and the id
+# below is the real one it was issued, not a placeholder, so this deploys rather
+# than failing the build. The tables are created on the next shift, and the
+# Prepare storage button in the desk Settings does it immediately.
 #
-# To connect it, once:
-#
-#   1. cd worker && npx wrangler d1 create ninth-house-social
-#   2. Copy the database_id it prints into the block below.
-#   3. Delete the # from the four lines below.
-#   4. Commit and push. The deploy creates the tables on the next shift, or you
-#      can use Prepare storage in the desk Settings to do it immediately.
-#
-# [[d1_databases]]
-# binding = "DB"
-# database_name = "ninth-house-social"
-# database_id = "paste-the-id-here"
+# The engine stays defensive about this regardless: hasStore(env) still gates
+# every path that touches the database, so removing this block degrades the
+# engine to "storage is not configured" instead of breaking the autopilot, the
+# Night Press or the journal.
+[[d1_databases]]
+binding = "DB"
+database_name = "ninth-house-social"
+database_id = "520abee5-c4e7-435a-b265-2461a9599ed4"
