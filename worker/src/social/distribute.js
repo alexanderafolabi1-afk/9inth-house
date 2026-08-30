@@ -1,16 +1,20 @@
 // The only thing in the house that publishes.
 //
-// Everything goes through one Make.com webhook. The Worker never talks to
-// LinkedIn, X or Instagram itself, holds no platform credentials, and contains no
-// conditional on a platform name. The rail routes on the platform field, so an
-// extra branch inside Make is the entire cost of adding a platform.
+// It decides that a post goes out exactly once, and nothing else. How it goes
+// out belongs to a sender in ./senders, chosen by the delivery name on the
+// platform's config entry, so this file still contains no conditional on a
+// platform name and never learns which platform it is sending.
 //
-// The endpoint is never written down in this repo. It comes from the
-// MAKE_WEBHOOK_URL secret at runtime.
+// Two deliveries exist today. The Make rail, which is metered per call, and a
+// direct sender that talks to the platform itself and costs nothing per post.
+// Adding another means a file in ./senders and one word in config.js.
+//
+// No endpoint or credential is written down in this repo. Senders read what they
+// need from Worker secrets at runtime.
 
 import { PLATFORMS, SENDABLE, imageRequired } from './config.js';
 import { claimForSend, releaseClaim, markPosted, markFailed } from './db.js';
-import { stripDashPunctuation } from './text.js';
+import { senderFor } from './senders/index.js';
 
 // Checks the row can actually be delivered before a claim is taken, so a post
 // that was always going to be rejected does not burn a rail call and does not
@@ -43,40 +47,9 @@ export function validateForSend(post) {
   return problems;
 }
 
-// The five fields the rail expects, and nothing invented. The idempotency key
-// rides along as a sixth so a Make branch can dedupe on it too if it ever wants
-// to; the rail ignores fields it does not read.
-export function buildPayload(post) {
-  return {
-    venture: post.venture,
-    platform: post.platform,
-    text: stripDashPunctuation(String(post.text || '')),
-    image_url: post.image_url || '',
-    link: post.link || '',
-    idempotency_key: post.id
-  };
-}
-
-// Pulls whatever the rail hands back that looks like a platform post id, without
-// insisting on any particular shape. The live rail currently answers
-// {"success":true} and carries no id, in which case external_id stays null.
-export function readExternalId(body) {
-  if (!body || typeof body !== 'object') return null;
-  const candidates = ['external_id', 'post_id', 'postId', 'id', 'urn', 'activity_id', 'permalink', 'url'];
-  for (const key of candidates) {
-    const v = body[key];
-    if (typeof v === 'string' && v.trim() && v.trim().toLowerCase() !== 'true') return v.trim().slice(0, 300);
-    if (typeof v === 'number') return String(v);
-  }
-  // One level down, since Make branches often answer { data: { id } }.
-  for (const key of ['data', 'result', 'response']) {
-    if (body[key] && typeof body[key] === 'object') {
-      const nested = readExternalId(body[key]);
-      if (nested) return nested;
-    }
-  }
-  return null;
-}
+// Both moved to the webhook sender, where they belong, and re-exported so
+// existing callers and tests keep working unchanged.
+export { buildPayload, readExternalId } from './senders/webhook.js';
 
 // Publishes exactly once.
 //
@@ -92,9 +65,9 @@ export async function publishPost(env, db, post, { sendable = SENDABLE } = {}) {
     return { ok: true, alreadyPosted: true, externalId: post.external_id || null, reason: 'already posted, nothing sent' };
   }
 
-  const endpoint = env.MAKE_WEBHOOK_URL;
-  if (!endpoint) {
-    return { ok: false, reason: 'MAKE_WEBHOOK_URL is not set on the Worker, so there is nowhere to publish to' };
+  const { name: deliveryName, sender } = senderFor(PLATFORMS[post.platform]);
+  if (!sender) {
+    return { ok: false, reason: `no sender is configured for delivery "${deliveryName}", so there is nowhere to publish to` };
   }
 
   const problems = validateForSend(post);
@@ -112,38 +85,25 @@ export async function publishPost(env, db, post, { sendable = SENDABLE } = {}) {
     return { ok: false, skipped: true, reason: 'that post is already being sent or has already gone' };
   }
 
-  let res;
-  let bodyText = '';
+  // Past this point the row is claimed, so every exit has to release it or mark
+  // it posted. The sender never touches the database itself, which is what keeps
+  // send-exactly-once decided here and only here, whichever delivery is used.
+  let result;
   try {
-    res = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        // Belt and braces alongside the claim: if the rail or anything in front of
-        // it honours this header, a retried request collapses into one post there
-        // too rather than relying on our claim alone.
-        'Idempotency-Key': post.id
-      },
-      body: JSON.stringify(buildPayload(post)),
-      signal: AbortSignal.timeout(20000)
-    });
-    bodyText = await res.text();
+    result = await sender.send(env, post);
   } catch (e) {
-    const reason = 'the distribution rail could not be reached: ' + String(e && e.message ? e.message : e).slice(0, 200);
+    const reason = 'the send failed unexpectedly: ' + String(e && e.message ? e.message : e).slice(0, 200);
     await releaseClaim(db, post.id, 'failed', reason);
     return { ok: false, reason };
   }
 
-  if (!res.ok) {
-    const reason = `the rail answered ${res.status}: ${bodyText.slice(0, 200) || 'no detail given'}`;
+  if (!result || !result.ok) {
+    const reason = (result && result.reason) || 'the send failed for no stated reason';
     await releaseClaim(db, post.id, 'failed', reason);
-    return { ok: false, status: res.status, reason };
+    return { ok: false, status: result && result.status, reason };
   }
 
-  let parsed = null;
-  try { parsed = JSON.parse(bodyText); } catch (e) { parsed = null; }
-
-  const externalId = readExternalId(parsed);
+  const externalId = result.externalId || null;
   await markPosted(db, post.id, externalId);
-  return { ok: true, status: res.status, externalId };
+  return { ok: true, status: result.status, externalId };
 }

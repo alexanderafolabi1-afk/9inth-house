@@ -376,7 +376,8 @@ pasting the value when it asks. They are never written into the repo.
 
 | Secret | What it is |
 |---|---|
-| `MAKE_WEBHOOK_URL` | The Make.com webhook address that actually posts. Never write this into a file. |
+| `MAKE_WEBHOOK_URL` | The Make.com webhook address, for the platforms that still route through the rail. Never write this into a file. LinkedIn no longer uses it, so this is only needed once a platform other than LinkedIn is switched on. |
+| `LINKEDIN_ACCESS_TOKEN` | Posts to LinkedIn directly, with no rail in between and no cost per post. See "Posting to LinkedIn" below for how to get one, and what happens when it expires. |
 | `ANTHROPIC_API_KEY` | Already set. The engine writes the copy with it, and the desk admin's AI features (standup, board, commissioning a partner) now also go through this same key on the Worker, never in the browser. |
 
 Nothing else in this table is a Cloudflare dashboard secret any more.
@@ -537,25 +538,71 @@ nothing to pad with.
 To stop a venture entirely for a while, use Pause in "Edit ventures". Nothing more
 is generated for it, and nothing already in the queue is lost.
 
+## Posting to LinkedIn
+
+LinkedIn does not go through Make. The Worker posts to it directly.
+
+**Why.** The Make free plan allows 1,000 operations a month and every post costs
+at least two of them, so a normal week of posting across the ventures exhausts
+the allowance and the rail becomes the limit on how often the house can speak.
+Posting directly costs nothing per post and removes a moving part.
+
+**What has to be set, once.** Two values, and only the first is a secret:
+
+| Name | Set with | What it is |
+|---|---|---|
+| `LINKEDIN_ACCESS_TOKEN` | `npx wrangler secret put LINKEDIN_ACCESS_TOKEN` | An access token for a LinkedIn app with the community management product, authorised to post as your page |
+| `LINKEDIN_AUTHORS` | a plain var, or the dashboard | JSON of venture slug to page URN, for example `{"9thpoint":"urn:li:organization:123","glotemp":"urn:li:organization:456"}` |
+
+Where every venture posts as the same page, set `LINKEDIN_DEFAULT_AUTHOR` to that
+one URN instead and skip the map. A venture with neither is refused rather than
+posted under whichever page happened to be first, because posting one venture's
+copy under another venture's name is worse than not posting it.
+
+**Getting the token** is the part only a person can do, because LinkedIn requires
+a human to approve the app against the page:
+
+1. Create an app at the LinkedIn developer portal and associate it with your
+   company page.
+2. Request the **Community Management API** product. `w_organization_social` is
+   the scope that matters.
+3. Complete the OAuth flow as a page administrator and keep the access token.
+
+**Tokens expire.** LinkedIn access tokens are not permanent, and when one lapses
+every post fails until it is replaced. That failure is reported in plain terms
+rather than as a status code: the queue will say the token has expired or been
+revoked, in those words, so it is obvious what to do rather than looking like a
+posting bug.
+
+**The API version is pinned** in `worker/src/social/senders/linkedin.js` and can
+be overridden with a `LINKEDIN_API_VERSION` var without a deploy. Pinned on
+purpose: a change in their API should be a deliberate edit after reading their
+changelog, never a silent shift under a running house.
+
 ## How to add a platform
 
 Two steps, in this order.
 
-1. **In Make**, add a branch for it on the existing webhook, routing on the
-   `platform` field the way the LinkedIn branch already does. The rail receives
-   `venture`, `platform`, `text`, `image_url` and `link` on every post.
+1. **Choose how it delivers.** Either add a branch for it on the Make webhook,
+   routing on the `platform` field, in which case there is nothing to write; or
+   add a sender beside `worker/src/social/senders/linkedin.js` and name it in
+   `senders/index.js`. The rail receives `venture`, `platform`, `text`,
+   `image_url` and `link` on every post.
 2. **In the code**, add one entry to `worker/src/social/config.js` under
    `PLATFORMS`, giving its label, its character limit, whether it needs an image,
-   and how many hashtags it takes. Deploy.
+   and how many hashtags it takes. Add `delivery` only if it is not the rail.
+   Deploy.
 
 It then appears by itself in the venture form, ready to be given a cadence. No
 other file changes, because nothing else in the engine knows what a platform is:
 there is a check in `scripts/check-social.mjs` that fails the build if any module
-other than the config starts naming platforms.
+other than the config and the senders starts naming platforms, and another that
+fails if a platform asks for a delivery no sender implements.
 
-Only LinkedIn is live on the rail as at 12 August 2026, which is why the first
-venture is seeded with LinkedIn alone. Queueing posts for a platform the rail
-cannot route yet would only fill your morning with things that cannot be sent.
+The senders are the only place besides the config allowed to know a platform by
+name. `distribute.js` looks a sender up by delivery name and never learns which
+platform it is carrying, which is what keeps send-exactly-once decided in one
+place no matter how a post leaves the house.
 
 ## Checking it yourself
 

@@ -9,6 +9,13 @@
 export const PLATFORMS = {
   linkedin: {
     label: 'LinkedIn',
+    // Posted directly by the Worker rather than through the Make rail. The rail
+    // is metered per call on a free allowance small enough that a normal week of
+    // posting exhausts it, which made it the binding constraint on how often the
+    // house could speak. Talking to LinkedIn from the Worker costs nothing per
+    // post and removes a moving part. See worker/src/social/senders/linkedin.js
+    // for what it needs, and worker/README.md for the one time setup.
+    delivery: 'linkedin',
     // Hard ceiling the platform itself enforces. Copy is generated to aim well
     // under this; the admin shows the count so nothing is discovered at send time.
     limit: 3000,
