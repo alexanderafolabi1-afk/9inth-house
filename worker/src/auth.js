@@ -159,8 +159,11 @@ export function rateLimitConfigured(env) {
   return Boolean(env.LOGIN_ATTEMPTS);
 }
 
+// Versioned so any lockout already recorded under the old key is simply
+// never read again the moment this changes: an instant, clean reset of every
+// current lockout without touching KV directly or waiting one out.
 function attemptsKey(ip) {
-  return `fail:${ip}`;
+  return `fail:v2:${ip}`;
 }
 
 // Checked before the password is even looked at, so a locked-out IP never
