@@ -208,10 +208,45 @@ export async function verifyPassword(password, stored) {
 
 /* ---------- session cookie ---------- */
 
+// Same KV namespace as the password hash, same reason: a value that has to
+// survive being pasted into a masked Cloudflare dashboard field turned out
+// to be genuinely unreliable on this project, repeatedly, in ways that were
+// never fully explainable from outside that field. SESSION_SECRET as a
+// dashboard secret is kept as the first choice, since it is still the more
+// conventional place for it and works fine once it is actually there; this
+// is what the Worker falls back to the moment it finds that secret missing,
+// generating one itself the first time it is needed and writing it to KV,
+// which is written to from inside the Worker's own code, never a browser
+// paste, so it either works every time or the binding itself is absent.
+const SESSION_SECRET_KV_KEY = 'session:secret:v1';
+
+async function getOrCreateSessionSecret(env) {
+  if (env.SESSION_SECRET) return env.SESSION_SECRET;
+  if (!env.LOGIN_ATTEMPTS) return null;
+  const existing = await env.LOGIN_ATTEMPTS.get(SESSION_SECRET_KV_KEY);
+  if (existing) return existing;
+  // Generated once and persisted. Two requests racing to be first would each
+  // generate their own and the later write wins, same known, narrow window
+  // as claimAdminPassword below; whichever value ends up stored is the one
+  // every session from then on is signed and checked against, consistently.
+  const generated = b64urlEncode(crypto.getRandomValues(new Uint8Array(32)));
+  await env.LOGIN_ATTEMPTS.put(SESSION_SECRET_KV_KEY, generated);
+  return generated;
+}
+
+// True the moment a session can actually be signed, either a dashboard
+// secret is present or LOGIN_ATTEMPTS is bound so one can be generated.
+// Callers use this instead of checking env.SESSION_SECRET directly, which
+// is now only one of two ways this can be satisfied.
+export function sessionSigningAvailable(env) {
+  return Boolean(env && (env.SESSION_SECRET || env.LOGIN_ATTEMPTS));
+}
+
 async function hmacKey(env) {
-  if (!env.SESSION_SECRET) return null;
+  const secret = await getOrCreateSessionSecret(env);
+  if (!secret) return null;
   return crypto.subtle.importKey(
-    'raw', new TextEncoder().encode(env.SESSION_SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']
+    'raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']
   );
 }
 

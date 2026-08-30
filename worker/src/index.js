@@ -28,7 +28,8 @@ import { SENDABLE } from './social/config.js';
 import {
   requireSession, mintSession, verifyPassword, sessionCookie, clearedSessionCookie,
   rateLimitConfigured, checkLockout, recordFailure, resetAttempts,
-  hashPassword, getStoredPasswordHash, setStoredPasswordHash, hashIsVerifiable, passwordResetOpen
+  hashPassword, getStoredPasswordHash, setStoredPasswordHash, hashIsVerifiable, passwordResetOpen,
+  sessionSigningAvailable
 } from './auth.js';
 
 const REPO = 'alexanderafolabi1-afk/9inth-house';
@@ -1399,8 +1400,11 @@ export default {
           fingerprint: await fingerprint(storedHash)
         },
         sessionSecret: {
-          set: Boolean(env.SESSION_SECRET),
-          length: env.SESSION_SECRET ? String(env.SESSION_SECRET).length : 0
+          // True from either source: the dashboard secret if it is set, or
+          // the KV-generated fallback the moment LOGIN_ATTEMPTS is bound.
+          // See sessionSigningAvailable in auth.js.
+          set: sessionSigningAvailable(env),
+          source: env.SESSION_SECRET ? 'dashboard secret' : (env.LOGIN_ATTEMPTS ? 'kv, generated on first use' : 'none available')
         },
         loginAttemptsKvBound: Boolean(env.LOGIN_ATTEMPTS)
       });
@@ -1413,7 +1417,7 @@ export default {
     // there is no separate "reset" path here on purpose; a lost password is
     // recovered by deleting the KV key directly, not by this endpoint.
     if (apiPath === '/auth/setup' && effective.method === 'POST') {
-      if (!env.SESSION_SECRET) {
+      if (!sessionSigningAvailable(env)) {
         return apiJson({ ok: false, error: 'Setup is not configured on this Worker yet. See worker/README.md.' }, 503);
       }
       if (!rateLimitConfigured(env)) {
@@ -1453,7 +1457,7 @@ export default {
     }
 
     if (apiPath === '/auth/login' && effective.method === 'POST') {
-      if (!env.SESSION_SECRET) {
+      if (!sessionSigningAvailable(env)) {
         return apiJson({ ok: false, error: 'Login is not configured on this Worker yet. See worker/README.md.' }, 503);
       }
       if (!rateLimitConfigured(env)) {
