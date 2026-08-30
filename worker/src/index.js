@@ -403,6 +403,16 @@ function apiJson(body, status = 200, extraHeaders = {}) {
   });
 }
 
+// Bounded, and the bound matters more than it looks.
+//
+// These calls carry the web search tool, so the model makes several search
+// round trips before it answers and a minute is ordinary rather than a sign
+// of trouble. Left unbounded, a request that stalls at Anthropic holds the
+// desk open until something further out gives up and returns a page of HTML
+// the admin cannot read. Eighty five seconds is chosen to land inside that,
+// so what comes back is always this Worker's own JSON saying what happened.
+const ANTHROPIC_TIMEOUT_MS = 85000;
+
 async function claude(key, system, user, max = 1000) {
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -411,7 +421,8 @@ async function claude(key, system, user, max = 1000) {
       'x-api-key': key,
       'anthropic-version': '2023-06-01'
     },
-    body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: max, system, messages: [{ role: 'user', content: user }], tools: [{ type: 'web_search_20250305', name: 'web_search' }] })
+    body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: max, system, messages: [{ role: 'user', content: user }], tools: [{ type: 'web_search_20250305', name: 'web_search' }] }),
+    signal: AbortSignal.timeout(ANTHROPIC_TIMEOUT_MS)
   });
   if (!res.ok) throw new Error('API ' + res.status + ': ' + (await res.text()).slice(0, 200));
   const data = await res.json();
@@ -1553,8 +1564,18 @@ export default {
         const text = await claude(env.ANTHROPIC_API_KEY, system, user, maxTokens);
         return apiJson({ ok: true, text });
       } catch (e) {
-        console.error('Desk ask failed: ' + String(e && e.message ? e.message : e).slice(0, 300));
-        return apiJson({ ok: false, error: 'The house could not reach Anthropic. Try again shortly.' }, 502);
+        const detail = String(e && e.message ? e.message : e);
+        console.error('Desk ask failed: ' + detail.slice(0, 300));
+        // A timeout and a refusal are different problems with different
+        // answers, and telling them apart saves the owner retrying something
+        // that will fail the same way every time.
+        const timedOut = (e && e.name === 'TimeoutError') || /aborted|timed out/i.test(detail);
+        return apiJson({
+          ok: false,
+          error: timedOut
+            ? 'The partners took longer than the house waits. These calls search the web before answering, so they are slow by nature. Try once more, and if it keeps happening say so.'
+            : 'The house could not reach Anthropic. Try again shortly.'
+        }, timedOut ? 504 : 502);
       }
     }
 
