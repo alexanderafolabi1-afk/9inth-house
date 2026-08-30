@@ -18,6 +18,8 @@ import { slotsDueToday, pickCategory, trimToLimit, buildBias } from '../worker/s
 import { validateForSend, buildPayload, readExternalId } from '../worker/src/social/distribute.js';
 import { streakFrom } from '../worker/src/social/metrics.js';
 import { generateVapidKeys, encryptPayload, b64urlToBytes, bytesToB64url } from '../worker/src/social/push.js';
+import { checkOutreachRules, researchGate, MESSAGE_STATUSES } from '../worker/src/social/outreach.js';
+import { VISIT_DUBAI_EMAIL_BODY, VISIT_DUBAI_SUBJECT, VISIT_DUBAI_TO, VISIT_DUBAI_CC, VISIT_DUBAI_PROSPECT } from '../worker/src/social/seeds/visit-dubai.js';
 
 let passed = 0;
 const failures = [];
@@ -48,6 +50,34 @@ await test('the migration file carries every table in SCHEMA_SQL', () => {
   const indexes = [...SCHEMA_SQL.matchAll(/CREATE INDEX IF NOT EXISTS (\w+)/g)].map((m) => m[1]);
   for (const i of indexes) {
     assert.ok(migration.includes(i), `migration is missing index ${i}`);
+  }
+});
+
+// Table names matching was not enough. A column renamed in the migration and
+// not in SCHEMA_SQL passed that check and then failed at runtime, on the one
+// path where the tables are created from SCHEMA_SQL rather than from the file:
+// a fresh database answering the desk before any shift has run. The columns are
+// what the code actually binds to, so the columns are what is compared.
+await test('every table has the same columns in SCHEMA_SQL and in the migration', () => {
+  const migration = readFileSync('worker/migrations/0001_social_engine.sql', 'utf8');
+  const columnsOf = (sql, table) => {
+    const m = new RegExp(`CREATE TABLE IF NOT EXISTS ${table}\\s*\\(([\\s\\S]*?)\\n\\);`).exec(sql);
+    if (!m) return null;
+    return m[1]
+      .split('\n')
+      .map((line) => line.replace(/--.*$/, '').trim())
+      .filter((line) => line && !/^(PRIMARY KEY|FOREIGN KEY|UNIQUE|CHECK)\b/i.test(line))
+      .map((line) => line.split(/\s+/)[0].replace(/,$/, ''))
+      .filter(Boolean)
+      .sort();
+  };
+  const tables = [...SCHEMA_SQL.matchAll(/CREATE TABLE IF NOT EXISTS (\w+)/g)].map((m) => m[1]);
+  for (const t of tables) {
+    const fromSchema = columnsOf(SCHEMA_SQL, t);
+    const fromMigration = columnsOf(migration, t);
+    assert.ok(fromSchema, `could not read the columns of ${t} from SCHEMA_SQL`);
+    assert.ok(fromMigration, `could not read the columns of ${t} from the migration`);
+    assert.deepEqual(fromMigration, fromSchema, `${t} has different columns in the migration and in SCHEMA_SQL`);
   }
 });
 
@@ -386,6 +416,55 @@ await test('base64url round trips, including bytes that need padding', () => {
     assert.deepEqual([...back], [...bytes], 'round trip failed at length ' + len);
   }
   assert.ok(!bytesToB64url(new Uint8Array([251, 255])).match(/[+/=]/), 'output is not url safe');
+});
+
+/* ---------- outreach: the rules the owner set, checked rather than remembered ---------- */
+
+// The Visit Dubai pack is the standard for founding partner outreach, and it is
+// going to a government tourism body. Every one of these is a thing the owner
+// wrote down as forbidden. A guard here is worth more than a note in a file
+// nobody reads before editing a seed at speed.
+await test('nothing outbound in the Visit Dubai pack carries an em dash', () => {
+  assert.ok(!hasDashPunctuation(VISIT_DUBAI_EMAIL_BODY), 'the body has an em dash');
+  assert.ok(!hasDashPunctuation(VISIT_DUBAI_SUBJECT), 'the subject has an em dash');
+  assert.ok(!hasDashPunctuation(VISIT_DUBAI_TO + ' ' + VISIT_DUBAI_CC), 'an address has an em dash');
+});
+
+// The one finding it does carry is its own signature block, which arrived with
+// [Full name] and [Title] still in it. That is caught here on purpose rather
+// than quietly filled in with a guess at who is signing.
+await test('the Visit Dubai pack breaks no standing rule except its unfilled signature', () => {
+  const findings = checkOutreachRules(VISIT_DUBAI_EMAIL_BODY);
+  assert.deepEqual(findings.map((f) => f.id), ['no_unfilled_placeholder'], 'the standard breaks a rule it should not');
+});
+
+await test('the placeholder rule catches a signature block and leaves real prose alone', () => {
+  const caught = (t) => checkOutreachRules(t).some((f) => f.id === 'no_unfilled_placeholder');
+  assert.ok(caught('With respect,\n\n[Full name]\n[Title]'), 'an unfilled name went through');
+  assert.ok(caught('Reply to [email] and we will follow your process.'), 'an unfilled address went through');
+  assert.ok(!caught('With respect,\n\nAlexander Afolabi\nAdvertising and partnerships'), 'a filled signature was flagged');
+});
+
+await test('leadership is not on the Visit Dubai send list, and the pricing is the owner\'s', () => {
+  const addressed = (VISIT_DUBAI_TO + ',' + VISIT_DUBAI_CC).toLowerCase();
+  assert.ok(!/kazim|almarri/.test(addressed), 'the pack opens with leadership, which the owner forbade');
+  assert.ok(!/kazim|almarri/i.test(VISIT_DUBAI_EMAIL_BODY), 'the letter addresses leadership by name');
+  assert.ok(VISIT_DUBAI_EMAIL_BODY.includes('USD 160,000'), 'the published rate has moved');
+  assert.ok(VISIT_DUBAI_EMAIL_BODY.includes('USD 96,000'), 'the founding rate has moved');
+  assert.ok(!/USD 15,000/.test(VISIT_DUBAI_EMAIL_BODY), 'it opens at a price the owner ruled out');
+});
+
+await test('the research gate refuses a prospect that cannot answer all three questions', () => {
+  assert.equal(researchGate(VISIT_DUBAI_PROSPECT).ready, true, 'the seeded prospect should pass its own gate');
+  const thin = { research: { what_they_do: 'A tourism board.', why_now: '' } };
+  const gate = researchGate(thin);
+  assert.equal(gate.ready, false, 'a prospect with no answer to why now was let through');
+  assert.deepEqual(gate.missing.sort(), ['what_is_missing', 'why_now']);
+});
+
+await test('a message status cannot become something the rest of the code does not know', () => {
+  assert.ok(MESSAGE_STATUSES.includes('sent'));
+  assert.ok(!MESSAGE_STATUSES.includes('delivered'), 'an unknown status is in the allowed list');
 });
 
 /* ---------- report ---------- */
