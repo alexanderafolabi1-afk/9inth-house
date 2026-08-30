@@ -2575,7 +2575,14 @@ let SW_RELOAD_PENDING = false;
 
 if(SW_SUPPORTED){
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').then((reg) => { SW_REG = reg; }).catch(() => {
+    navigator.serviceWorker.register('sw.js').then((reg) => {
+      SW_REG = reg;
+      // The update check the focus handler and the refresh button both use,
+      // run once more here too, so a launch on its own (not only a later
+      // backgrounding and refocusing) is enough to catch a deploy that
+      // landed while the app was closed.
+      checkForUpdate(false);
+    }).catch(() => {
       // No offline shell and no notifications, and nothing else is affected.
     });
   });
