@@ -53,6 +53,34 @@ await test('the migration file carries every table in SCHEMA_SQL', () => {
   }
 });
 
+// Table names matching was not enough. A column renamed in the migration and
+// not in SCHEMA_SQL passed that check and then failed at runtime, on the one
+// path where the tables are created from SCHEMA_SQL rather than from the file:
+// a fresh database answering the desk before any shift has run. The columns are
+// what the code actually binds to, so the columns are what is compared.
+await test('every table has the same columns in SCHEMA_SQL and in the migration', () => {
+  const migration = readFileSync('worker/migrations/0001_social_engine.sql', 'utf8');
+  const columnsOf = (sql, table) => {
+    const m = new RegExp(`CREATE TABLE IF NOT EXISTS ${table}\\s*\\(([\\s\\S]*?)\\n\\);`).exec(sql);
+    if (!m) return null;
+    return m[1]
+      .split('\n')
+      .map((line) => line.replace(/--.*$/, '').trim())
+      .filter((line) => line && !/^(PRIMARY KEY|FOREIGN KEY|UNIQUE|CHECK)\b/i.test(line))
+      .map((line) => line.split(/\s+/)[0].replace(/,$/, ''))
+      .filter(Boolean)
+      .sort();
+  };
+  const tables = [...SCHEMA_SQL.matchAll(/CREATE TABLE IF NOT EXISTS (\w+)/g)].map((m) => m[1]);
+  for (const t of tables) {
+    const fromSchema = columnsOf(SCHEMA_SQL, t);
+    const fromMigration = columnsOf(migration, t);
+    assert.ok(fromSchema, `could not read the columns of ${t} from SCHEMA_SQL`);
+    assert.ok(fromMigration, `could not read the columns of ${t} from the migration`);
+    assert.deepEqual(fromMigration, fromSchema, `${t} has different columns in the migration and in SCHEMA_SQL`);
+  }
+});
+
 /* ---------- the house punctuation rule ---------- */
 
 await test('em dashes and en dashes never survive', () => {

@@ -114,9 +114,10 @@ CREATE TABLE IF NOT EXISTS outreach_messages (
   cc_addresses TEXT NOT NULL DEFAULT '',
   subject TEXT NOT NULL,
   body TEXT NOT NULL,
-  -- The owner's own wording, kept beside the version that obeys the house
-  -- rules, so an automatic correction is visible rather than silent.
-  body_original TEXT NOT NULL DEFAULT '',
+  -- The owner's own wording for whatever was corrected, kept beside the
+  -- version that obeys the house rules, so an automatic correction is visible
+  -- rather than silent. Currently a subject line whose em dash was resolved.
+  original_wording TEXT NOT NULL DEFAULT '',
   locale_note TEXT NOT NULL DEFAULT '',
   rule_findings TEXT NOT NULL DEFAULT '[]',
   status TEXT NOT NULL DEFAULT 'awaiting_approval',

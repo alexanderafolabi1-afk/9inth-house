@@ -470,6 +470,12 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
       // owner is reading the constraints beside the message rather than
       // remembering them.
       case 'GET /social/outreach': {
+        // The four outreach tables arrive with a deploy, but the schema is only
+        // applied on a scheduled shift or a hand run of migrate. Opening the
+        // desk before the next dawn shift would otherwise answer "no such
+        // table" on the one morning this most needs to work. Idempotent, and
+        // the same call the shift makes.
+        await ensureSchema(db);
         await seedOutreach(db);
         const messages = await listMessages(db, { limit: 50 });
         return json(request, env, {
