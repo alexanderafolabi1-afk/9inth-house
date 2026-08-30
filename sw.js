@@ -8,7 +8,7 @@
 // this app, and the admin API is never cached: a cached approval or a cached queue
 // would be worse than no cache at all.
 
-const VERSION = 'nh-desk-v8';
+const VERSION = 'nh-desk-v9';
 const SHELL = `${VERSION}-shell`;
 const RUNTIME = `${VERSION}-runtime`;
 
@@ -61,6 +61,43 @@ function isFont(url) {
   return url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com';
 }
 
+// The admin page itself, which is the one thing here that changes often.
+//
+// Cache first was wrong for it, and cost a deploy that reached the Worker and
+// then appeared to have done nothing. The update path in desk.html only fires
+// when THIS file's bytes differ, so a change to desk.html alone left the old
+// page being served with nothing to notice it: the panel that had just been
+// added was in the deployed page and absent from the screen. Remembering to
+// bump VERSION on every desk.html change is not a mechanism, it is a thing to
+// forget once.
+//
+// Network first closes it. A deploy is picked up on the next open whether or
+// not this file changed, and the cache is still there for a bad connection or
+// no connection at all. The wait is bounded so a slow network cannot leave the
+// app hanging on a blank screen when a perfectly good copy is already held:
+// after the timeout the cached page is served, and the network copy still
+// lands in the cache for next time.
+async function networkFirst(request, cacheName, timeoutMs = 2500) {
+  const cache = await caches.open(cacheName);
+  const network = fetch(request).then((res) => {
+    if (res && res.ok) cache.put(request, res.clone()).catch(() => {});
+    return res;
+  }).catch(() => null);
+
+  const timeout = new Promise((resolve) => setTimeout(() => resolve(null), timeoutMs));
+  const fresh = await Promise.race([network, timeout]);
+  if (fresh && fresh.ok) return fresh;
+
+  const cached = await cache.match(request);
+  if (cached) return cached;
+
+  // Nothing cached and the race gave up. Wait out the real request rather than
+  // failing on a slow connection with nothing to fall back on.
+  const eventual = await network;
+  if (eventual) return eventual;
+  throw new Error('offline and nothing cached');
+}
+
 // Serve what is cached at once, then refresh it in the background. The shell opens
 // instantly and still updates itself on the next open.
 async function staleWhileRevalidate(request, cacheName) {
@@ -94,13 +131,21 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname === '/social' || url.pathname.startsWith('/social/')) return;
   if (url.pathname === '/api' || url.pathname.startsWith('/api/')) return;
 
-  // A navigation to the admin. Cache first so it opens with no wait, network in
-  // the background so it stays current.
+  // A navigation to the admin. Network first, so a deploy is never a load
+  // behind, with the cache underneath it for a bad connection or none.
   if (request.mode === 'navigate' && isShellRequest(url) && url.origin === self.location.origin) {
     event.respondWith(
-      staleWhileRevalidate(new Request('/desk.html', { cache: 'no-store' }), SHELL)
+      networkFirst(new Request('/desk.html', { cache: 'no-store' }), SHELL)
         .catch(() => caches.match('/desk.html'))
     );
+    return;
+  }
+
+  // The page itself, however it is asked for, gets the same treatment for the
+  // same reason. Everything else in the shell is an icon or a manifest that
+  // changes about never, so those stay cache first and keep opening instantly.
+  if (url.origin === self.location.origin && url.pathname === '/desk.html') {
+    event.respondWith(networkFirst(request, SHELL));
     return;
   }
 
