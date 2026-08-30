@@ -66,6 +66,36 @@ CREATE TABLE IF NOT EXISTS metrics (
 CREATE INDEX IF NOT EXISTS idx_metrics_post ON metrics (post_id);
 CREATE INDEX IF NOT EXISTS idx_metrics_captured ON metrics (captured_at);
 
+CREATE TABLE IF NOT EXISTS venture_facts (
+  venture TEXT NOT NULL,
+  fact_key TEXT NOT NULL,
+  fact_value TEXT NOT NULL,
+  -- Where the value came from, so a number in a deliverable can be traced back
+  -- to the page that stated it rather than to whoever last remembered it.
+  source_url TEXT NOT NULL DEFAULT '',
+  -- When this entry was last checked against that source. Updated on every
+  -- check, whether or not the value moved, because "checked today and
+  -- unchanged" and "not checked since June" are different things.
+  verified_at TEXT NOT NULL,
+  -- When the value itself last moved, which is what the change trigger reads.
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (venture, fact_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_facts_verified ON venture_facts (verified_at);
+
+CREATE TABLE IF NOT EXISTS fact_changes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  venture TEXT NOT NULL,
+  fact_key TEXT NOT NULL,
+  old_value TEXT NOT NULL DEFAULT '',
+  new_value TEXT NOT NULL DEFAULT '',
+  source_url TEXT NOT NULL DEFAULT '',
+  noticed_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_fact_changes_noticed ON fact_changes (noticed_at);
+
 CREATE TABLE IF NOT EXISTS feedback (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   -- What was rejected. Deliberately not constrained to posts: the same table
@@ -115,7 +145,7 @@ export async function ensureSchema(db) {
   await db.batch(statements);
 }
 
-const nowIso = () => new Date().toISOString();
+export const nowIso = () => new Date().toISOString();
 
 /* ---------- ventures ---------- */
 

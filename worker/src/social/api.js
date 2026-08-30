@@ -26,6 +26,8 @@ import {
   recordFeedback, feedbackFor, repeatedReasons
 } from './db.js';
 import { publishPost } from './distribute.js';
+import { factsFor, recentChanges, putFact, runFactsSweep, DEFAULT_STALE_HOURS } from './facts.js';
+import { SENDABLE as PENDING_STATUSES } from './config.js';
 import { credentialDeliveries, credentialStatusFor, writeCredentialsFor } from './senders/index.js';
 import { getWebhookUrl, setWebhookUrl, describeWebhookUrl } from '../n8n.js';
 import { getAnthropicKey, setAnthropicKey, anthropicKeyStatus, describeAnthropicKey } from '../aikey.js';
@@ -467,6 +469,45 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
       // key itself: whether one is held and its last four characters, which is
       // enough to see a rotation took without handing a browser something that
       // can spend money.
+      // The sheet, with every entry's provenance attached. This is what the
+      // owner reads to sanity check a number without re-deriving it himself.
+      case 'GET /social/facts': {
+        const venture = url.searchParams.get('venture') || undefined;
+        const ventures = venture ? [{ slug: venture }] : await listVentures(db, { activeOnly: false });
+        const sheets = {};
+        for (const v of ventures) sheets[v.slug] = await factsFor(db, v.slug);
+        return json(request, env, { ok: true, sheets, changes: await recentChanges(db, { venture }) });
+      }
+
+      // A correction made by hand. Goes through the same putFact as the live
+      // refresh, so it is logged as a change like any other and triggers the
+      // same re-check of anything pending against it.
+      case 'POST /social/facts': {
+        if (!body.venture || !body.key || !String(body.value || '').trim()) {
+          return json(request, env, { ok: false, error: 'venture, key and value are all required' }, 400);
+        }
+        const outcome = await putFact(db, {
+          venture: body.venture, key: body.key, value: body.value,
+          sourceUrl: body.source_url || 'set by hand in the admin'
+        });
+        return json(request, env, { ok: true, ...outcome, facts: await factsFor(db, body.venture) });
+      }
+
+      // The sweep, on demand. The same run the shift does, so what the owner
+      // triggers here and what happens overnight cannot drift apart.
+      case 'POST /social/facts/sweep': {
+        const ventures = await listVentures(db, { activeOnly: true });
+        const report = await runFactsSweep(env, db, {
+          ask,
+          ventures,
+          staleHours: Number(body.staleHours) || DEFAULT_STALE_HOURS,
+          refreshFirst: body.refresh !== false,
+          listPosts,
+          PENDING_STATUSES
+        });
+        return json(request, env, { ok: true, report });
+      }
+
       case 'GET /social/anthropic-key': {
         return json(request, env, { ok: true, status: await anthropicKeyStatus(env) });
       }

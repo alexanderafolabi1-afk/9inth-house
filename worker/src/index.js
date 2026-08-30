@@ -18,7 +18,8 @@
 // job and the iwriteyouread job all carry on exactly as before. Nothing in this
 // file's existing behaviour depends on it.
 import { stripDashPunctuation } from './social/text.js';
-import { hasStore, ensureSchema, seedVentures, dueScheduled, insertPost, listPosts, getVenture } from './social/db.js';
+import { hasStore, ensureSchema, seedVentures, dueScheduled, insertPost, listPosts, getVenture, listVentures } from './social/db.js';
+import { runFactsSweep } from './social/facts.js';
 import { runGeneration } from './social/generate.js';
 import { publishPost } from './social/distribute.js';
 import { captureMetrics } from './social/metrics.js';
@@ -1256,7 +1257,44 @@ async function runSocial(env, shift) {
     console.error('Distribution engine: the scheduling sweep failed. ' + String(e && e.message ? e.message : e).slice(0, 300));
   }
 
+  // The accuracy sweep, once a day, on the Dawn shift and before anything is
+  // generated. Before, deliberately: a sheet refreshed first means the copy
+  // written minutes later is written against today's numbers rather than
+  // yesterday's, and anything already pending that the refresh has just
+  // invalidated is pulled out of the queue before the owner is shown it.
+  //
+  // Its own try, and its own catch, so a venture whose site is down cannot stop
+  // the generation that follows it.
   if (shift === 'Dawn') {
+    try {
+      if (!(await getAnthropicKey(env))) {
+        console.error('Accuracy sweep: no Anthropic key, so the facts sheets were not refreshed.');
+      } else {
+        const ventures = await listVentures(db, { activeOnly: true });
+        const report = await runFactsSweep(env, db, {
+          ask: socialAsk(env),
+          ventures,
+          listPosts,
+          PENDING_STATUSES: SENDABLE
+        });
+        console.log(`Accuracy sweep: ${report.checked} pending items checked, ${report.flagged.length} held for redraft, ${report.changedVentures.length} facts sheets moved.`);
+        // A discrepancy caught on something already pending is one of the
+        // things the owner asked to be told about the moment it happens, since
+        // it means a thing he was about to approve had changed under him.
+        if (report.flagged.length || report.changedVentures.length) {
+          await notifyOwner(env, db, {
+            title: 'The facts moved',
+            body: report.flagged.length
+              ? `${report.flagged.length} pending ${report.flagged.length === 1 ? 'item is' : 'items are'} held for redraft: the numbers in them no longer match the live source.`
+              : `${report.changedVentures.length} facts ${report.changedVentures.length === 1 ? 'sheet' : 'sheets'} changed against the live source.`,
+            url: '/desk.html#queue'
+          }).catch(() => {});
+        }
+      }
+    } catch (e) {
+      console.error('Accuracy sweep failed. ' + String(e && e.message ? e.message : e).slice(0, 300));
+    }
+
     try {
       if (!(await getAnthropicKey(env))) {
         console.error('Distribution engine: no Anthropic key, so nothing was generated.');
