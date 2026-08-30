@@ -11,6 +11,7 @@
 import { PLATFORMS, CATEGORIES, imageRequired } from './config.js';
 import { sanitiseSocialText, extractDirectives, trimHashtags } from './text.js';
 import { listVentures, insertPost, countSince, metricsWindow, listPosts } from './db.js';
+import { factsFor, factsBlock } from './facts.js';
 
 // Statuses that mean the slot is already accounted for this week. A skipped or
 // failed row does not count as delivered, so the cadence is not quietly reduced
@@ -121,12 +122,18 @@ export function pickCategory({ mix, biasFor, venture, avoid, articlesAvailable, 
   return pool[pool.length - 1][0];
 }
 
-function buildSystemPrompt(venture, platform, category) {
+function buildSystemPrompt(venture, platform, category, factsText) {
   const p = PLATFORMS[platform];
   const c = CATEGORIES[category];
   return [
     `You write social copy for ${venture.name}, one venture inside the Ninth House portfolio. You are writing as the venture, not as an agency describing it.`,
     '',
+    // The sheet comes before the positioning deliberately. A persona that reads
+    // the pitch first and the permitted numbers second tends to write the pitch
+    // it remembers and reach for a figure to match; this way the figures it is
+    // allowed are the first thing it has.
+    factsText || '',
+    factsText ? '' : '',
     `POSITIONING: ${venture.positioning}`,
     `AUDIENCE: ${venture.audience}`,
     `TONE: ${venture.tone}`,
@@ -144,6 +151,7 @@ function buildSystemPrompt(venture, platform, category) {
     'HARD RULES:',
     'Never use em dashes, en dashes, or a hyphen surrounded by spaces as punctuation. Use commas, colons and full stops.',
     'Never invent a client, a testimonial, a case study, a statistic or a result. If you have not been given a number, do not use one.',
+    'Every number, price, count, coverage figure and comparison must come from the facts sheet above, word for word in substance. Not from memory, not from an earlier draft, not from what you believe about this company.',
     'Never promise a timescale or a price that is not in the brief.',
     'Do not open with a question, and do not close by asking for comments.',
     'Return the post copy only. No preamble, no explanation, no markdown, no surrounding quotation marks.'
@@ -198,6 +206,10 @@ export async function runGeneration(env, db, { ask, articles = [], now = new Dat
   const notes = [];
 
   for (const venture of ventures) {
+    // Loaded once per venture rather than once per post: the sheet cannot move
+    // in the middle of a run, and reading it per slot would be the same query
+    // several times over for the same answer.
+    const ventureFacts = factsBlock(await factsFor(db, venture.slug));
     const openArticles = await availableArticles(db, venture, articles);
     let articleCursor = 0;
     let lastCategory = null;
@@ -240,7 +252,7 @@ export async function runGeneration(env, db, { ask, articles = [], now = new Dat
         let raw;
         try {
           raw = await ask(
-            buildSystemPrompt(venture, platform, category),
+            buildSystemPrompt(venture, platform, category, ventureFacts),
             buildUserPrompt({ venture, category, article, today }),
             700
           );

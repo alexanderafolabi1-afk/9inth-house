@@ -1567,7 +1567,7 @@ function openSettings(){
   // Fetched once per session, the first time Settings is opened, then the panel
   // is redrawn with it. Doing it here rather than at sign in keeps one more
   // request off the critical path of getting into the desk.
-  if(!LI_TRIED){ LI_TRIED = true; Promise.all([loadLinkedIn(), loadN8nHook(), loadAnthropicKey()]).then(openSettings); }
+  if(!LI_TRIED){ LI_TRIED = true; Promise.all([loadLinkedIn(), loadN8nHook(), loadAnthropicKey(), loadFacts()]).then(openSettings); }
   modal(`
     <h2>Firm Settings</h2>
     <div class="eyebrow">Account</div>
@@ -1589,6 +1589,22 @@ function openSettings(){
     <div class="btnrow" style="margin-top:10px">
       <button class="btn gold" id="ai-save" style="min-height:44px" onclick="saveAnthropicKey()">Save key</button>
     </div>
+
+    <div class="hr"></div>
+    <div class="eyebrow">Facts sheets</div>
+    <p class="tiny" style="margin-top:2px">The only numbers the partners may state. Checked against each venture's own site every morning, and again the moment one moves. Anything pending that no longer matches is held for redraft rather than quietly corrected.</p>
+    ${FACTS_MSG ? `<p class="tiny" style="margin-top:6px;color:${FACTS_OK ? 'var(--gold)' : 'var(--rust)'}">${esc(FACTS_MSG)}</p>` : ''}
+    ${FACTS ? Object.keys(FACTS).map(slug => `
+      <div style="margin-top:10px">
+        <div class="tiny" style="color:var(--gold);letter-spacing:.1em;text-transform:uppercase">${esc(slug)}</div>
+        ${(FACTS[slug] || []).length
+          ? FACTS[slug].map(f => `<div class="tiny" style="margin-top:4px"><strong>${esc(f.fact_key)}</strong>: ${esc(f.fact_value)} <span style="color:var(--faint)">checked ${esc(factAge(f.verified_at))}</span></div>`).join('')
+          : '<div class="tiny" style="margin-top:4px;color:var(--rust)">Nothing verified yet, so no figures may be stated for this venture.</div>'}
+      </div>`).join('') : '<p class="tiny" style="margin-top:6px">Not loaded yet.</p>'}
+    <div class="btnrow" style="margin-top:10px">
+      <button class="btn gold sm" id="facts-sweep" style="min-height:44px" onclick="runSweep()">Refresh and sweep now</button>
+    </div>
+    <p class="tiny" style="margin-top:6px">Refetches every venture's site, updates the sheets, and re-checks everything waiting in the queue against them. It uses the partners, so give it a minute.</p>
 
     <div class="hr"></div>
     <div class="eyebrow">Change password</div>
@@ -1685,6 +1701,56 @@ function openSettings(){
     </div>
   `);
 }
+let FACTS = null;
+let FACTS_MSG = '';
+let FACTS_OK = false;
+
+// How long ago a figure was last checked against the live source, said the way
+// a person would say it. The owner should not have to read a timestamp to know
+// whether a number is current.
+function factAge(iso){
+  const t = Date.parse(iso || '');
+  if(!Number.isFinite(t)) return 'never';
+  const hours = (Date.now() - t) / 3600000;
+  if(hours < 1) return 'just now';
+  if(hours < 24) return Math.round(hours) + 'h ago';
+  const days = Math.floor(hours / 24);
+  return days === 1 ? 'yesterday' : days + ' days ago';
+}
+
+async function loadFacts(){
+  try{
+    const data = await engine('/social/facts', null, 'GET');
+    FACTS = data.sheets || {};
+  }catch(e){
+    FACTS = null;
+  }
+}
+
+async function runSweep(){
+  const btn = document.getElementById('facts-sweep');
+  if(!btn || btn.disabled) return;
+  btn.disabled = true;
+  const stop = countUpOn(btn, 'Sweeping…');
+  FACTS_MSG = ''; 
+  try{
+    const data = await engine('/social/facts/sweep', {}, 'POST', { timeoutMs: AI_TIMEOUT_MS });
+    const r = data.report || {};
+    stop();
+    const held = (r.flagged || []).length;
+    FACTS_MSG = `${r.checked || 0} checked, ${held} held for redraft, ${(r.changedVentures || []).length} sheets moved.`
+      + (r.unchecked ? ` ${r.unchecked} could not be checked.` : '');
+    FACTS_OK = held === 0;
+    await loadFacts();
+    if(held) await loadQueue(true);
+  }catch(e){
+    stop();
+    FACTS_MSG = e.message || 'The sweep could not run.';
+    FACTS_OK = false;
+  }
+  openSettings();
+}
+
 let AI_STATUS = null;
 let AI_MSG = '';
 let AI_OK = false;

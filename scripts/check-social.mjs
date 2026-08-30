@@ -228,6 +228,53 @@ await test('no module branches on a platform name', () => {
   }
 });
 
+// A missing import is not a syntax error, so node --check passes and the name is
+// simply undefined until the line runs. Where that line sits inside a try/catch,
+// as the sweep does, the failure is swallowed and the feature silently never
+// happens. This catches it at check time instead.
+await test('every worker module imports every name it uses at module scope', async () => {
+  const files = [
+    'worker/src/index.js', 'worker/src/aikey.js', 'worker/src/n8n.js', 'worker/src/auth.js',
+    'worker/src/social/facts.js', 'worker/src/social/generate.js', 'worker/src/social/api.js',
+    'worker/src/social/db.js', 'worker/src/social/distribute.js'
+  ];
+  for (const f of files) {
+    await import('../' + f);
+  }
+});
+
+await test('the facts sheet refuses to invent, and reports rather than rewrites', async () => {
+  const { parseFacts, factsBlock, readableText, checkClaims } = await import('../worker/src/social/facts.js');
+
+  // Junk in must not become a fact.
+  assert.equal(parseFacts('not json at all').length, 0);
+  assert.equal(parseFacts('{"facts":[{"key":"","value":"x"}]}').length, 0);
+  assert.equal(parseFacts('{"facts":[{"key":"tiers","value":""}]}').length, 0);
+  // A fenced answer is still read, since models wrap JSON in fences.
+  assert.equal(parseFacts('```json\n{"facts":[{"key":"Entry Tier","value":"9 USD"}]}\n```')[0].key, 'entry_tier');
+
+  // Markup never reaches the model as markup.
+  assert.ok(!readableText('<script>bad()</script><p>Ninety professions</p>').includes('bad'));
+  assert.ok(readableText('<p>Ninety&nbsp;professions</p>').includes('Ninety professions'));
+
+  // With no sheet, a figure is unverifiable rather than silently allowed.
+  const noSheet = await checkClaims(null, { text: 'We support 89 professions.', facts: [], ventureName: 'X' });
+  assert.equal(noSheet.ok, false, 'a figure with no sheet should not pass');
+  const noSheetNoNumber = await checkClaims(null, { text: 'We help small businesses post.', facts: [], ventureName: 'X' });
+  assert.equal(noSheetNoNumber.ok, true, 'prose with no figure needs no sheet');
+
+  // A check that throws is reported as unchecked, never as a pass.
+  const broken = await checkClaims(() => { throw new Error('model down'); }, {
+    text: 'We support 89 professions.', facts: [{ fact_key: 'professions', fact_value: '89', verified_at: new Date().toISOString() }], ventureName: 'X'
+  });
+  assert.equal(broken.ok, false, 'a failed check must not read as a pass');
+  assert.equal(broken.unchecked, true);
+
+  // The block a persona is given names its own emptiness rather than going quiet.
+  assert.ok(factsBlock([]).includes('may not state a single number'));
+  assert.ok(factsBlock([{ fact_key: 'professions', fact_value: '89', verified_at: new Date().toISOString() }]).includes('89'));
+});
+
 await test('every platform resolves to a sender that exists', () => {
   for (const [key, platform] of Object.entries(PLATFORMS)) {
     const { name, sender } = senderFor(platform);
