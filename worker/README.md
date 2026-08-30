@@ -618,6 +618,42 @@ name. `distribute.js` looks a sender up by delivery name and never learns which
 platform it is carrying, which is what keeps send-exactly-once decided in one
 place no matter how a post leaves the house.
 
+## Outreach
+
+Prepared approaches to named organisations, held until the owner decides. It
+lives in `worker/src/social/outreach.js` with the reference examples in
+`worker/src/social/seeds/`.
+
+**Nothing here sends anything.** There is no email rail in this house: no
+provider, no sending domain, no warmed identity. An outreach message reaching
+its hour means one thing, that it is prepared and now waiting on a human. The
+desk says so on every card, the morning notification says so, and the only way a
+message becomes `sent` is the owner pressing a button that says he sent it
+himself. That button is what closes the cross-venture duplicate window, so it is
+worth pressing honestly.
+
+**A reference example is the standard for a campaign type,** held verbatim and
+handed to a writing agent whole rather than summarised, because the register and
+the structure are the thing being referenced and a summary of a register is not
+a register. An agent takes the shape and leaves the facts: every figure in a
+reference belongs to the organisation it was written for.
+
+**The standing rules** in `OUTREACH_RULES` are checked before the owner is shown
+anything and again when he approves, since a body can be edited between the two.
+They cover the things that would damage the house if they went out: a call ask,
+stacked propositions, invented urgency, unevidenced social proof, a fabricated
+relationship, exclamation marks, an apologetic register, hype, and a signature
+block still carrying `[Full name]`. A breach stops approval with the finding
+named; the owner can overrule it, but never by accident.
+
+**The research gate** refuses to write until what they do, what is missing and
+why now are all evidenced from that organisation's own material. A prospect that
+cannot answer all three is parked for more research rather than written to on
+assumption.
+
+**Suppression is keyed on the address alone,** never on the venture. Someone who
+asked the house to stop hearing from it did not mean one brand of it.
+
 ## Checking it yourself
 
 Forcing a fresh deploy after the workers.dev migration, so SESSION_SECRET

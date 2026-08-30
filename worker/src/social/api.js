@@ -26,6 +26,7 @@ import {
   recordFeedback, feedbackFor, repeatedReasons
 } from './db.js';
 import { publishPost } from './distribute.js';
+import { seedOutreach, listReferences, listProspects, listMessages, addReference, checkOutreachRules, setMessageStatus, CAMPAIGN_TYPES, VISIT_DUBAI_GUARDRAILS, recentlyApproached, isSuppressed } from './outreach.js';
 import { factsFor, recentChanges, putFact, runFactsSweep, DEFAULT_STALE_HOURS } from './facts.js';
 import { SENDABLE as PENDING_STATUSES } from './config.js';
 import { credentialDeliveries, credentialStatusFor, writeCredentialsFor } from './senders/index.js';
@@ -465,10 +466,85 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
         return json(request, env, { ok: true, status: await credentialStatusFor(env, delivery) });
       }
 
-      // The key every partner in the house runs on. Read only, and never the
-      // key itself: whether one is held and its last four characters, which is
-      // enough to see a rotation took without handing a browser something that
-      // can spend money.
+      // Everything prepared and waiting, with the guardrails attached so the
+      // owner is reading the constraints beside the message rather than
+      // remembering them.
+      case 'GET /social/outreach': {
+        await seedOutreach(db);
+        const messages = await listMessages(db, { limit: 50 });
+        return json(request, env, {
+          ok: true,
+          messages,
+          prospects: await listProspects(db, { limit: 50 }),
+          references: await listReferences(db),
+          campaignTypes: CAMPAIGN_TYPES,
+          guardrails: VISIT_DUBAI_GUARDRAILS
+        });
+      }
+
+      // Approving a first message to a new organisation is the owner's, per
+      // Section 6. The duplicate and suppression checks run here rather than at
+      // send time, because the answer he needs is before he says yes.
+      case 'POST /social/outreach/approve': {
+        if (!body.id) return json(request, env, { ok: false, error: 'no message id was given' }, 400);
+        const [msg] = await listMessages(db, { limit: 300 }).then((all) => all.filter((m) => m.id === body.id));
+        if (!msg) return json(request, env, { ok: false, error: 'that message no longer exists' }, 404);
+
+        // Re-checked here rather than trusted from what was stored when it was
+        // written, because the body can be edited between the two and a rule
+        // that only ran once is a rule that can be walked around.
+        const findings = checkOutreachRules(msg.body);
+        if (findings.length && !body.override) {
+          return json(request, env, {
+            ok: false,
+            findings,
+            error: `This breaks ${findings.length === 1 ? 'a standing rule' : findings.length + ' standing rules'}. Fix it, or approve again to send it anyway.`
+          }, 409);
+        }
+
+        const already = await recentlyApproached(db, msg.organisation);
+        const blocked = already.filter((a) => a.id !== msg.id);
+        if (blocked.length) {
+          return json(request, env, { ok: false, error: `${msg.organisation} has already been approached in the last ${30} days, from ${blocked[0].venture}. Two ventures approaching the same organisation reads as one company that does not talk to itself.` }, 409);
+        }
+        for (const addr of String(msg.to_addresses + ',' + msg.cc_addresses).split(',').map((a) => a.trim()).filter(Boolean)) {
+          if (await isSuppressed(db, addr)) {
+            return json(request, env, { ok: false, error: `${addr} is on the suppression list and is never contacted again, from any venture.` }, 409);
+          }
+        }
+        await db.prepare('UPDATE outreach_messages SET status = ?, updated_at = ? WHERE id = ?')
+          .bind('approved', new Date().toISOString(), body.id).run();
+        return json(request, env, { ok: true, messages: await listMessages(db, { limit: 50 }) });
+      }
+
+      // The verdict, filed. The reason itself goes through /social/feedback
+      // like every other rejection in the house, so one rejected message
+      // teaches the same place all the others do.
+      case 'POST /social/outreach/reject': {
+        if (!body.id) return json(request, env, { ok: false, error: 'no message id was given' }, 400);
+        await setMessageStatus(db, body.id, 'rejected');
+        return json(request, env, { ok: true, messages: await listMessages(db, { limit: 50 }) });
+      }
+
+      // Marked by hand, because sending is by hand. There is no email rail in
+      // this house, so nothing can mark itself sent, and the duplicate window
+      // is only honest if the owner tells it when a message actually went.
+      case 'POST /social/outreach/sent': {
+        if (!body.id) return json(request, env, { ok: false, error: 'no message id was given' }, 400);
+        await setMessageStatus(db, body.id, 'sent');
+        return json(request, env, { ok: true, messages: await listMessages(db, { limit: 50 }) });
+      }
+
+      // A reference example per campaign type, added from the admin, since the
+      // owner has said more are coming.
+      case 'POST /social/outreach/reference': {
+        if (!body.campaignType || !body.name || !String(body.body || '').trim()) {
+          return json(request, env, { ok: false, error: 'campaignType, name and body are all required' }, 400);
+        }
+        await addReference(db, { campaignType: body.campaignType, name: body.name, body: body.body, notes: body.notes });
+        return json(request, env, { ok: true, references: await listReferences(db) });
+      }
+
       // The sheet, with every entry's provenance attached. This is what the
       // owner reads to sanity check a number without re-deriving it himself.
       case 'GET /social/facts': {
@@ -508,6 +584,10 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
         return json(request, env, { ok: true, report });
       }
 
+      // The key every partner in the house runs on. Read only, and never the
+      // key itself: whether one is held and its last four characters, which is
+      // enough to see a rotation took without handing a browser something that
+      // can spend money.
       case 'GET /social/anthropic-key': {
         return json(request, env, { ok: true, status: await anthropicKeyStatus(env) });
       }

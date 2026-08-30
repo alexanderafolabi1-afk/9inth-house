@@ -795,6 +795,10 @@ async function checkSession(){
 function afterLogin(){
   syncAutopilot();
   loadQueue(true);
+  // Loaded quietly alongside the queue rather than on first sight of the tab,
+  // because the whole point of a message with an hour on it is that it is
+  // already on screen when he opens the desk that morning.
+  loadOutreach(true);
 }
 
 /* ============ VIEWS ============ */
@@ -1952,6 +1956,203 @@ const Q = {
   storage: true
 };
 
+/* ============ OUTREACH ============ */
+// Prepared approaches, held here until the owner decides. The one thing this
+// surface must never do is look like a send button. There is no email rail in
+// this house: no provider, no sending domain, nothing. So every control here is
+// honest about what it does. Copy puts the text on the clipboard. Open in mail
+// hands it to his own mail app, addressed and filled in. Sent is something he
+// tells the house after he has sent it himself, and it is the only thing that
+// makes the cross-venture duplicate window mean anything.
+const OUT = {
+  messages: [], prospects: [], references: [], campaignTypes: {}, guardrails: [],
+  loaded: false, loading: false, error: '',
+  open: {},   // message id -> true while its full body is showing
+  busy: {}
+};
+
+async function loadOutreach(quiet){
+  OUT.loading = true; OUT.error = '';
+  if(!quiet) render();
+  try{
+    const data = await engine('/social/outreach', null, 'GET', { retries: 1, timeoutMs: 15000 });
+    OUT.messages = data.messages || [];
+    OUT.prospects = data.prospects || [];
+    OUT.references = data.references || [];
+    OUT.campaignTypes = data.campaignTypes || {};
+    OUT.guardrails = data.guardrails || [];
+  }catch(e){
+    OUT.error = 'Loading outreach failed: ' + (e.message || String(e));
+  }
+  OUT.loading = false; OUT.loaded = true;
+  render();
+}
+
+// Only what he still has to decide about, or has decided and not yet sent.
+// Rejected and sent messages stay in the table for the duplicate window and the
+// record, and there is no reason to put them back in front of him every morning.
+function outreachLive(){
+  return OUT.messages.filter(m => m.status === 'awaiting_approval' || m.status === 'approved');
+}
+
+function outreachWhen(iso){
+  if(!iso) return '';
+  const t = new Date(iso);
+  if(isNaN(t)) return '';
+  return t.getTime() <= Date.now()
+    ? 'Due now, held since ' + t.toLocaleString()
+    : 'Held until ' + t.toLocaleString();
+}
+
+function outreachMailto(m){
+  const cc = (m.cc_addresses || '').trim();
+  const q = 'subject=' + encodeURIComponent(m.subject || '')
+    + '&body=' + encodeURIComponent(m.body || '')
+    + (cc ? '&cc=' + encodeURIComponent(cc) : '');
+  return 'mailto:' + encodeURIComponent(m.to_addresses || '').replace(/%40/g, '@').replace(/%2C/gi, ',') + '?' + q;
+}
+
+function vOutreachCard(m){
+  const open = !!OUT.open[m.id];
+  const busy = !!OUT.busy[m.id];
+  const findings = m.rule_findings || [];
+  const research = m.research || {};
+  const ct = OUT.campaignTypes[m.campaign_type];
+
+  return `<div class="card" style="margin-bottom:12px${busy ? ';opacity:.5' : ''}">
+    <div class="qmeta" style="margin-bottom:8px">
+      <span class="qtag venture">${esc(m.venture)}</span>
+      <span class="qtag">${esc(ct ? ct.label : m.campaign_type)}</span>
+      ${m.locale_note ? `<span class="qtag">Email</span>` : ''}
+      <span class="qtag state ${esc(m.status)}">${m.status === 'approved' ? 'approved, not yet sent' : 'awaiting you'}</span>
+    </div>
+
+    <h3 class="serif" style="font-size:17px;margin-bottom:4px">${esc(m.organisation || m.prospect_id)}</h3>
+    <p class="tiny" style="margin-bottom:8px">${esc(outreachWhen(m.send_after))}</p>
+
+    <div class="qnote" style="margin-bottom:10px;white-space:normal"><b>To</b> ${esc(m.to_addresses)}${m.cc_addresses ? `<br><b>Cc</b> ${esc(m.cc_addresses)}` : ''}<br><b>Subject</b> ${esc(m.subject)}</div>
+
+    ${findings.length ? `<div class="qerr">This breaks ${findings.length === 1 ? 'a standing rule' : findings.length + ' standing rules'}:<br>${findings.map(f => '&#8226; ' + esc(f.finding)).join('<br>')}</div>` : ''}
+
+    ${research.why_now ? `<p class="sub" style="margin-bottom:10px"><b>Why now.</b> ${esc(research.why_now)}</p>` : ''}
+
+    ${open
+      ? `<div style="white-space:pre-wrap;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px;max-height:52vh;overflow-y:auto;font-size:15px;line-height:1.5;margin-bottom:10px">${esc(m.body)}</div>
+         ${m.original_wording ? `<p class="tiny" style="margin-bottom:10px">Your subject line as supplied used an em dash, which the house rule forbids in anything outbound, so it reads "${esc(m.subject)}" here. Yours was "${esc(m.original_wording)}".</p>` : ''}
+         ${m.locale_note ? `<p class="tiny" style="margin-bottom:10px">${esc(m.locale_note)}</p>` : ''}
+         <details style="margin-bottom:10px"><summary class="tiny" style="cursor:pointer;min-height:44px;display:flex;align-items:center">The guardrails on this one</summary>
+           <ul class="sub" style="margin:8px 0 0;padding-left:18px">${(OUT.guardrails || []).map(g => `<li style="margin-bottom:6px">${esc(g.detail)}</li>`).join('')}</ul>
+         </details>
+         <div class="btnrow" style="margin-bottom:10px"><button class="btn ghost wide" style="min-height:44px" onclick="OUT.open['${m.id}']=false;render()">Hide the letter</button></div>`
+      : `<div class="btnrow" style="margin-bottom:10px"><button class="btn ghost wide" style="min-height:44px" onclick="OUT.open['${m.id}']=true;render()">Read the letter</button></div>`}
+
+    <div class="qnote" style="margin-bottom:10px;white-space:normal">The house does not send email. Nothing here goes out on its own: copy it, or open it in your own mail app, send it from your own address, then tell the house it went.</div>
+
+    <div class="btnrow">
+      <button class="btn jade" style="min-height:44px" onclick="copyOutreach('${m.id}')" ${busy ? 'disabled' : ''}>Copy the email</button>
+      <a class="btn ghost" style="min-height:44px;display:inline-flex;align-items:center;text-decoration:none" href="${esc(outreachMailto(m))}">Open in mail</a>
+    </div>
+    <div class="btnrow" style="margin-top:8px">
+      ${m.status === 'approved'
+        ? `<button class="btn gold wide" style="min-height:44px" onclick="markOutreachSent('${m.id}')" ${busy ? 'disabled' : ''}>I have sent this</button>`
+        : `<button class="btn gold" style="min-height:44px" onclick="approveOutreach('${m.id}')" ${busy ? 'disabled' : ''}>Approve</button>
+           <button class="btn danger" style="min-height:44px" onclick="rejectOutreach('${m.id}')" ${busy ? 'disabled' : ''}>Reject</button>`}
+    </div>
+  </div>`;
+}
+
+function vOutreach(){
+  const live = outreachLive();
+  if(!live.length && !OUT.error && OUT.loaded) return '';
+  return `
+    <div class="eyebrow">Outreach waiting on you</div>
+    ${OUT.error ? `<div class="qerr">${esc(OUT.error)}</div>` : ''}
+    ${live.map(vOutreachCard).join('')}
+    <div class="hr"></div>`;
+}
+
+async function copyOutreach(id){
+  const m = OUT.messages.find(x => x.id === id);
+  if(!m) return;
+  try{
+    await navigator.clipboard.writeText(m.subject + '\n\n' + m.body);
+    toast('Copied, subject line and all. Send it from your own address.');
+  }catch(e){
+    toast('Could not copy. Read the letter and select it by hand.');
+  }
+}
+
+async function approveOutreach(id, override){
+  const m = OUT.messages.find(x => x.id === id);
+  if(!m) return;
+  OUT.busy[id] = true; render();
+  try{
+    const data = await engine('/social/outreach/approve', override ? { id, override: true } : { id }, 'POST', { timeoutMs: 20000 });
+    OUT.messages = data.messages || OUT.messages;
+    toast('Approved. Send it when you are ready, then tell the house it went.');
+  }catch(e){
+    // A rule breach and a duplicate are different answers and deserve
+    // different endings: one he can decide to overrule, the other he cannot.
+    const msg = e.message || String(e);
+    if(/standing rule/i.test(msg)){
+      delete OUT.busy[id];
+      render();
+      return modal(`
+        <h2>Hold on</h2>
+        <p class="sub">${esc(msg)}</p>
+        <div class="btnrow" style="margin-top:14px"><button class="btn wide" style="min-height:44px;background:var(--rust);color:#fff;border-color:var(--rust)" onclick="closeModal();approveOutreach('${id}', true)">Send it anyway</button></div>
+        <div class="btnrow" style="margin-top:8px"><button class="btn ghost wide" style="min-height:44px" onclick="closeModal()">Leave it</button></div>
+      `);
+    }
+    toast(errMsg('Approving', e));
+  }
+  delete OUT.busy[id];
+  render();
+}
+
+function rejectOutreach(id){
+  const m = OUT.messages.find(x => x.id === id);
+  rejectWithReason({
+    title: 'Reject this approach',
+    itemKind: 'outreach_message',
+    itemId: id,
+    venture: m && m.venture,
+    category: m && m.campaign_type,
+    onConfirm: async () => {
+      const data = await engine('/social/outreach/reject', { id }, 'POST', { timeoutMs: 15000 });
+      OUT.messages = data.messages || OUT.messages;
+      render();
+    }
+  });
+}
+
+// Confirmed rather than one tap, because this is the record the duplicate
+// window reads: marking it sent when it has not gone would quietly stop the
+// house ever raising this organisation again.
+function markOutreachSent(id){
+  const m = OUT.messages.find(x => x.id === id);
+  if(!m) return;
+  modal(`
+    <h2>Sent?</h2>
+    <p class="sub">This records that you sent it to ${esc(m.to_addresses)} yourself. From then on no venture in the house approaches ${esc(m.organisation || 'them')} again for 30 days.</p>
+    <div class="btnrow" style="margin-top:14px"><button class="btn gold wide" style="min-height:44px" onclick="closeModal();confirmOutreachSent('${id}')">Yes, it has gone</button></div>
+    <div class="btnrow" style="margin-top:8px"><button class="btn ghost wide" style="min-height:44px" onclick="closeModal()">Not yet</button></div>
+  `);
+}
+
+async function confirmOutreachSent(id){
+  OUT.busy[id] = true; render();
+  try{
+    const data = await engine('/social/outreach/sent', { id }, 'POST', { timeoutMs: 15000 });
+    OUT.messages = data.messages || OUT.messages;
+    toast('Filed. Nobody else in the house will knock on that door for a month.');
+  }catch(e){
+    toast(errMsg('Filing it', e));
+  }
+  delete OUT.busy[id];
+  render();
+}
+
 // Kept as a function, not folded into a plain AUTHED check, so every existing
 // call site (loadQueue, flushPending, the visibility/online listeners, the
 // final boot line) reads unchanged: the only thing that changed underneath is
@@ -2204,6 +2405,7 @@ function vQueue(){
   const cards = Q.posts.map(qcard).join('');
 
   return `
+    ${vOutreach()}
     <div class="eyebrow">The morning queue</div>
 
     ${offline ? `<div class="offline">No signal. You can still approve and skip: everything is held on this device and sent the moment the connection returns.</div>` : ''}
@@ -2216,7 +2418,7 @@ function vQueue(){
 
     <div class="qhead">
       <button class="btn gold" style="min-height:44px" onclick="approveAll()" ${Q.posts.length && !Q.loading ? '' : 'disabled'}>Approve all</button>
-      <button class="btn ghost" style="min-height:44px" onclick="loadQueue()" ${Q.loading ? 'disabled' : ''}>${Q.loading ? '<span class="spin"></span>' : 'Refresh'}</button>
+      <button class="btn ghost" style="min-height:44px" onclick="loadQueue();loadOutreach(true)" ${Q.loading ? 'disabled' : ''}>${Q.loading ? '<span class="spin"></span>' : 'Refresh'}</button>
       <button class="btn ghost" style="min-height:44px" onclick="generateNow()" ${Q.loading ? 'disabled' : ''}>Generate now</button>
     </div>
 
@@ -2823,7 +3025,7 @@ async function refreshCurrent(){
   btn.disabled = true;
   btn.classList.add('spinning');
   try{
-    if(TAB === 'queue' && engineReady()) await loadQueue();
+    if(TAB === 'queue' && engineReady()) await Promise.all([loadQueue(), loadOutreach(true)]);
     else await syncAutopilot();
   }catch(e){ /* the individual loaders already report their own errors */ }
   await checkForUpdate(true);

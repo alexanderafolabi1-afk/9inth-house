@@ -20,6 +20,7 @@
 import { stripDashPunctuation } from './social/text.js';
 import { hasStore, ensureSchema, seedVentures, dueScheduled, insertPost, listPosts, getVenture, listVentures } from './social/db.js';
 import { runFactsSweep } from './social/facts.js';
+import { seedOutreach, dueMessages } from './social/outreach.js';
 import { runGeneration } from './social/generate.js';
 import { publishPost } from './social/distribute.js';
 import { captureMetrics } from './social/metrics.js';
@@ -1293,6 +1294,32 @@ async function runSocial(env, shift) {
       }
     } catch (e) {
       console.error('Accuracy sweep failed. ' + String(e && e.message ? e.message : e).slice(0, 300));
+    }
+
+    // Outreach that has reached its hour. Nothing is sent here and nothing can
+    // be: there is no email rail in this house, so an outreach message becoming
+    // due means one thing only, that it is prepared and now waiting on a human.
+    // The notification says exactly that rather than implying it has gone.
+    //
+    // This sits outside the Anthropic key check on purpose. It reads rows and
+    // sends a push, and refusing to tell the owner that the Visit Dubai message
+    // is waiting just because a key is missing would be the wrong failure.
+    try {
+      await seedOutreach(db);
+      const due = await dueMessages(db);
+      if (due.length) {
+        const first = due[0];
+        await notifyOwner(env, db, {
+          title: due.length === 1 ? 'One outreach message is ready' : `${due.length} outreach messages are ready`,
+          body: due.length === 1
+            ? `${first.organisation || first.venture}: "${first.subject}". Prepared and waiting on you. It is sent from your own mailbox, the house does not send email.`
+            : `Starting with ${first.organisation || first.venture}. All prepared and waiting on you. They are sent from your own mailbox, the house does not send email.`,
+          url: '/desk.html#queue'
+        }).catch(() => {});
+        console.log(`Outreach: ${due.length} prepared ${due.length === 1 ? 'message is' : 'messages are'} past their hour and waiting on the owner.`);
+      }
+    } catch (e) {
+      console.error('Outreach: could not check what is due. ' + String(e && e.message ? e.message : e).slice(0, 300));
     }
 
     try {

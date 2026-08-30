@@ -119,3 +119,72 @@ CREATE TABLE IF NOT EXISTS fact_changes (
 );
 
 CREATE INDEX IF NOT EXISTS idx_fact_changes_noticed ON fact_changes (noticed_at);
+
+CREATE TABLE IF NOT EXISTS reference_examples (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  campaign_type TEXT NOT NULL,
+  name TEXT NOT NULL,
+  -- Held verbatim. The register and the structure are the standard, and a
+  -- summary of a register is not a register.
+  body TEXT NOT NULL,
+  notes TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_reference_type ON reference_examples (campaign_type);
+
+CREATE TABLE IF NOT EXISTS prospects (
+  id TEXT PRIMARY KEY,
+  venture TEXT NOT NULL,
+  campaign_type TEXT NOT NULL DEFAULT 'need_led',
+  organisation TEXT NOT NULL,
+  -- The named human and the route to them. A prospect with no named human is
+  -- not reachable and scores accordingly.
+  contacts TEXT NOT NULL DEFAULT '[]',
+  locale TEXT NOT NULL DEFAULT '',
+  -- The three things Section 4 requires before anything is written: what they
+  -- do, what is missing, why now. Nothing is written until all three are here.
+  research TEXT NOT NULL DEFAULT '{}',
+  -- Why the score is what it is, kept beside it. A score with no reasoning
+  -- cannot be argued with, and the owner's rejections need something to correct.
+  evidence TEXT NOT NULL DEFAULT '[]',
+  score INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'researching',
+  notes TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_prospects_venture ON prospects (venture, status);
+CREATE INDEX IF NOT EXISTS idx_prospects_org ON prospects (organisation);
+
+CREATE TABLE IF NOT EXISTS outreach_messages (
+  id TEXT PRIMARY KEY,
+  prospect_id TEXT NOT NULL,
+  venture TEXT NOT NULL,
+  campaign_type TEXT NOT NULL,
+  identity TEXT NOT NULL DEFAULT '',
+  to_addresses TEXT NOT NULL DEFAULT '',
+  cc_addresses TEXT NOT NULL DEFAULT '',
+  subject TEXT NOT NULL,
+  body TEXT NOT NULL,
+  -- The owner's own wording for whatever was corrected, kept beside the
+  -- version that obeys the house rules, so an automatic correction is visible
+  -- rather than silent. Currently a subject line whose em dash was resolved.
+  original_wording TEXT NOT NULL DEFAULT '',
+  locale_note TEXT NOT NULL DEFAULT '',
+  rule_findings TEXT NOT NULL DEFAULT '[]',
+  status TEXT NOT NULL DEFAULT 'awaiting_approval',
+  send_after TEXT,
+  sent_at TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_messages_status ON outreach_messages (status, send_after);
+
+CREATE TABLE IF NOT EXISTS suppression (
+  email TEXT PRIMARY KEY,
+  reason TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL
+);
