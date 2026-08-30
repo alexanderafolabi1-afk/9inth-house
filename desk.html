@@ -191,8 +191,17 @@ nav button .badge{
 
 /* Modal */
 .modal-bg{position:fixed;inset:0;background:rgba(10,12,16,.78);z-index:60;display:flex;align-items:flex-end;justify-content:center}
-.modal{background:var(--panel);border:1px solid var(--line);border-radius:20px 20px 0 0;padding:22px 20px calc(24px + env(safe-area-inset-bottom));width:100%;max-width:680px;max-height:88dvh;overflow-y:auto}
-.modal h2{font-family:'Marcellus',serif;font-weight:400;font-size:18px;margin-bottom:4px}
+.modal{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:20px 20px 0 0;padding:22px 20px calc(24px + env(safe-area-inset-bottom));width:100%;max-width:680px;max-height:88dvh;overflow-y:auto}
+.modal h2{font-family:'Marcellus',serif;font-weight:400;font-size:18px;margin-bottom:4px;padding-right:40px}
+/* Always present on every panel: the one way back on a phone with no visible
+   chrome to tap outside of. Top right, a full 44px target, offset past the
+   notch and the rounded corner on either safe-area edge. */
+.modal-close{
+  position:absolute;top:calc(14px + env(safe-area-inset-top));right:calc(14px + env(safe-area-inset-right));
+  width:44px;height:44px;display:flex;align-items:center;justify-content:center;
+  background:none;border:none;border-radius:10px;color:var(--faint);font-size:22px;line-height:1;cursor:pointer;
+}
+.modal-close:hover,.modal-close:focus-visible{color:var(--gold)}
 
 .spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(233,226,208,.25);border-top-color:var(--gold);border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px}
 @keyframes sp{to{transform:rotate(360deg)}}
@@ -1390,11 +1399,38 @@ function errMsg(action, e){
 }
 
 /* ============ SETTINGS / MODAL ============ */
+// One shell, used by every panel in the admin (Settings, Charter, Commission,
+// Add a backer, Constitution, Add a debt, Add an outgoing, Schedule, Image,
+// Venture, Registry): a close button in the corner and a history entry that
+// makes the phone's back gesture close the panel instead of leaving the app.
+// modal() itself is called more than once for the same open panel, to redraw
+// it after an action (a password message, a fresh queue count), so the
+// history entry is only pushed the first time; redraws while it is already
+// open do not stack more of them.
+let MODAL_HISTORY_PUSHED = false;
+window.addEventListener('popstate', () => {
+  if(MODAL_HISTORY_PUSHED){
+    MODAL_HISTORY_PUSHED = false;
+    document.getElementById('modal-root').innerHTML = '';
+  }
+});
 function modal(html){
   document.getElementById('modal-root').innerHTML =
-    `<div class="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal">${html}</div></div>`;
+    `<div class="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal">`
+    + `<button type="button" class="modal-close" aria-label="Close" onclick="closeModal()">&times;</button>`
+    + `${html}</div></div>`;
+  if(!MODAL_HISTORY_PUSHED){
+    MODAL_HISTORY_PUSHED = true;
+    history.pushState({ nhModal: true }, '', location.href);
+  }
 }
-function closeModal(){ document.getElementById('modal-root').innerHTML=''; }
+function closeModal(){
+  document.getElementById('modal-root').innerHTML='';
+  if(MODAL_HISTORY_PUSHED){
+    MODAL_HISTORY_PUSHED = false;
+    history.back();
+  }
+}
 function openSettings(){
   modal(`
     <h2>Firm Settings</h2>
