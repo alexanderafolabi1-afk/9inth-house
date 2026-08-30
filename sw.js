@@ -21,7 +21,7 @@
 // newer version of this file on every launch and every time it regains
 // focus, and reloads itself once a new one has taken over.
 
-const VERSION = 'nh-desk-v12';
+const VERSION = 'nh-desk-v13';
 const RUNTIME = `${VERSION}-runtime`;
 
 // Cached by content hash below, not cached-first by path. Never desk.html,
