@@ -27,7 +27,8 @@ import { isSocialRoute, handleSocial } from './social/api.js';
 import { SENDABLE } from './social/config.js';
 import {
   requireSession, mintSession, verifyPassword, sessionCookie, clearedSessionCookie,
-  rateLimitConfigured, checkLockout, recordFailure, resetAttempts
+  rateLimitConfigured, checkLockout, recordFailure, resetAttempts,
+  hashPassword, getStoredPasswordHash, setStoredPasswordHash
 } from './auth.js';
 
 const REPO = 'alexanderafolabi1-afk/9inth-house';
@@ -131,13 +132,15 @@ async function ghPutFileTo(token, repo, branch, path, content, message, sha) {
 const BIZ = {
   setpostgo: `SetPostGo (setpostgo.xyz): social media content generation SaaS under Lyrīon Ltd. 89 professions, 12 categories, 6 platforms, 30 posts/month per profession. Geo-pricing across 22 countries; affordability for African SMEs (Nigeria entry tier ₦2,000; Flutterwave for Africa, Stripe elsewhere). Levers: SEO blog, UGC creators, UK Visibility Register, Africa expansion.`,
   renviait: `RenviaIT Ltd (renviait.co.uk): Milton Keynes ITAD and circular electronics: IT asset disposition, refurbishment, resale. "Road to £1M" roadmap, one protégé on trial, grant applications live. Levers: B2B collection contracts, marketplace velocity, local MK presence, sustainability story.`,
-  nagori: `NAGORI (nagori.xyz): permanent digital archive capped at one million sealed letters. Tiers £1.99 / £19.99 / £74.99 / £149.99. Emotional, premium, scarcity-driven. Levers: emotional storytelling, gifting occasions, press-worthy concept, scarcity of the million plots.`
+  nagori: `NAGORI (nagori.xyz): permanent digital archive capped at one million sealed letters. Tiers £1.99 / £19.99 / £74.99 / £149.99. Emotional, premium, scarcity-driven. Levers: emotional storytelling, gifting occasions, press-worthy concept, scarcity of the million plots.`,
+  glotemp: `Glotemp (glo-temp.com): live city pulse PWA under RenviaIT Ltd, a growing register of cities, not a fixed number, real time weather, radio, mood and pulse data across twelve verticals. Tier system Listed, Verified, Anchor based on real data depth. City applications open to the public. Levers: sponsor and city partnerships, Instagram and Facebook automation live, X content posted manually, SEO across every city page, a new campus and student contributor layer.`
 };
 
 const FIRM_CTX = `THE PORTFOLIO YOU SERVE (all owned by the CEO "Q", a UK lawyer-entrepreneur, Lyrīon Ltd):
 1) ${BIZ.setpostgo}
 2) ${BIZ.renviait}
 3) ${BIZ.nagori}
+4) ${BIZ.glotemp}
 CONSTRAINTS: solo founder, mobile-first, lean budget, speed over polish, premium positioning. Every deliverable must end with "## CEO ACTIONS": a numbered checklist of concrete real-world steps executable this week (each under 30 minutes where possible).
 FORMAT: ## headers, - bullets, **bold**. Concrete: real copy, real numbers, real targets. No filler.
 DOCTRINE OF THE HOUSE (operate like the geniuses of commerce): compounding beats spikes; distribution before vanity; own the audience you rent today; price on value and defend margin like territory; cash is oxygen and the ledger never lies; speed of iteration beats size of budget; positioning must be first, different or better, never vague; write every decision down so the institution outlives any single actor.
@@ -361,11 +364,11 @@ const CHARS = {
   valentina:{ name: 'Valentina Ibarra', biz: 'setpostgo', sys: 'You are Valentina Ibarra, Head of Social & Culture (LATAM), AlmapBBDO/GUT tradition. Platform-native formats, hooks, series concepts. Write actual example posts.' },
   adaeze:   { name: 'Adaeze Nwosu', biz: 'setpostgo', sys: 'You are Adaeze Nwosu, Head of Growth for African Markets, Lagos. Mobile-first WhatsApp-economy distribution, price-sensitive SME acquisition, agent networks. Street-real tactics with numbers.' },
   theo:     { name: 'Theo Lindqvist', biz: 'renviait', sys: 'You are Theo Lindqvist, Head of Performance Media. Exact campaign structures: channels, budgets, audiences, creative angles, CAC/CPA ranges. Testable within £100–£500.' },
-  priya:    { name: 'Priya Raman', biz: 'renviait', sys: 'You are Priya Raman, Head of SEO & Content. Keyword clusters, programmatic SEO, article briefs with real titles/H2s/intents, internal linking.' },
-  sipho:    { name: 'Sipho Dlamini', biz: 'nagori', sys: 'You are Sipho Dlamini, Head of Partnerships & PR (King James tradition). Press angles, ready-to-send pitch emails, partnership targets.' },
+  priya:    { name: 'Priya Raman', biz: 'renviait', sys: 'You are Priya Raman, Head of SEO & Content. Keyword clusters, programmatic SEO, article briefs with real titles/H2s/intents, internal linking. Glotemp (glo-temp.com) is the largest SEO surface in the house: one page per city across twelve verticals, so treat it as your main programmatic estate and compound it every week.' },
+  sipho:    { name: 'Sipho Dlamini', biz: 'nagori', sys: 'You are Sipho Dlamini, Head of Partnerships & PR (King James tradition). Press angles, ready-to-send pitch emails, partnership targets. Glotemp (glo-temp.com) is your most open door: city partnerships, sponsors, and the campus and student contributor layer, all of it reachable without a budget.' },
   rocio:    { name: 'Rocco Fuentes', biz: 'setpostgo', sys: 'You are Rocco Fuentes, Head of Data & Analytics. Funnel metrics, experiment designs (hypothesis/variant/success metric). Numeric and blunt.' },
   kenji:    { name: 'Kenji Hara', biz: 'nagori', sys: 'You are Kenji Hara, Head of CRM & Retention, Tokyo. Lifecycle email/WhatsApp flows with actual copy per message. Deep Japanese aesthetic sense, a natural fit for NAGORI.' },
-  tobias:   { name: 'Tobias Renner', biz: 'renviait', sys: 'You are Tobias Renner, Head of IT & Site Reliability, Berlin SRE. Interpret uptime checks, diagnose GitHub+Netlify/Supabase stacks, audit technical SEO, issue severity-rated incident reports with precise fixes.' },
+  tobias:   { name: 'Tobias Renner', biz: 'renviait', sys: 'You are Tobias Renner, Head of IT & Site Reliability, Berlin SRE. Interpret uptime checks, diagnose GitHub+Netlify/Supabase stacks, audit technical SEO, issue severity-rated incident reports with precise fixes. Glotemp (glo-temp.com) is on your watch alongside the rest of the estate: a live data PWA with a page per city, so uptime, load speed and technical SEO across every city page are yours to keep clean.' },
   margaret: { name: 'Margaret Osei', biz: 'renviait', sys: 'You are Margaret Osei, Head of Finance & Accounting, Big-4 trained. Per-venture P&L thinking, runway, unit economics, UK compliance calendars. Never invent figures. List exactly what data the CEO must supply.' },
   lena:     { name: 'Dr. Lena Castellanos', biz: 'setpostgo', sys: 'You are Dr. Lena Castellanos, Head of Research & Market Intelligence, Bogotá. Competitor teardowns, market sizing with stated assumptions. Separate facts from hypotheses; always include a "Verify this week" list.' },
   amara:    { name: 'Amara Diallo', biz: 'renviait', sys: 'You are Amara Diallo, Head of CSR & Impact, Dakar. Impact programmes and measurement (e-waste kg diverted, CO2e avoided), award submissions, credible never-greenwashed storytelling. RenviaIT is your flagship.' },
@@ -1316,7 +1319,9 @@ export default {
       : new Request(new URL(apiPath + url.search, url), request);
 
     if (apiPath === '/auth/session' && request.method === 'GET') {
-      return apiJson({ ok: true, authed: await requireSession(routed, env) });
+      const authed = await requireSession(routed, env);
+      const needsSetup = !(await getStoredPasswordHash(env));
+      return apiJson({ ok: true, authed, needsSetup });
     }
 
     // Read only, reveals nothing that could sign anyone in: a length and a
@@ -1332,12 +1337,13 @@ export default {
         const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(v)));
         return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 12);
       };
+      const storedHash = await getStoredPasswordHash(env);
       return apiJson({
         ok: true,
-        adminPasswordHash: {
-          set: Boolean(env.ADMIN_PASSWORD_HASH),
-          length: env.ADMIN_PASSWORD_HASH ? String(env.ADMIN_PASSWORD_HASH).length : 0,
-          fingerprint: await fingerprint(env.ADMIN_PASSWORD_HASH)
+        passwordHash: {
+          set: Boolean(storedHash),
+          length: storedHash ? String(storedHash).length : 0,
+          fingerprint: await fingerprint(storedHash)
         },
         sessionSecret: {
           set: Boolean(env.SESSION_SECRET),
@@ -1347,12 +1353,57 @@ export default {
       });
     }
 
+    // First run only. Serves the "Create your password" screen's submit: the
+    // owner picks a password, it is hashed and written to KV, and they are
+    // signed in immediately, the same as a successful login. Once a hash
+    // exists this always refuses, so the claim can only ever happen once -
+    // there is no separate "reset" path here on purpose; a lost password is
+    // recovered by deleting the KV key directly, not by this endpoint.
+    if (apiPath === '/auth/setup' && request.method === 'POST') {
+      if (!env.SESSION_SECRET) {
+        return apiJson({ ok: false, error: 'Setup is not configured on this Worker yet. See worker/README.md.' }, 503);
+      }
+      if (!rateLimitConfigured(env)) {
+        return apiJson({ ok: false, error: 'Login rate limiting is not configured on this Worker yet. See worker/README.md.' }, 503);
+      }
+      if (await getStoredPasswordHash(env)) {
+        return apiJson({ ok: false, error: 'A password is already set. Sign in instead.' }, 403);
+      }
+      let body = {};
+      try { body = await routed.json(); } catch (e) { /* handled below by the empty-password check */ }
+      const password = String(body.password || '');
+      const confirm = String(body.confirm || '');
+      if (password.length < 8) {
+        return apiJson({ ok: false, error: 'Choose a password of at least 8 characters.' }, 400);
+      }
+      if (password !== confirm) {
+        return apiJson({ ok: false, error: 'Those passwords did not match.' }, 400);
+      }
+      const hash = await hashPassword(password);
+      // Narrows, but cannot fully close, the window between two simultaneous
+      // first-run submissions: KV has no compare-and-swap, so this is a
+      // best-effort second check immediately before the write, not a hard
+      // guarantee against a race. Whichever request writes last wins the
+      // password; the loser's client sees success but a later login with
+      // their password will simply fail, exactly as if they had mistyped it.
+      if (await getStoredPasswordHash(env)) {
+        return apiJson({ ok: false, error: 'A password is already set. Sign in instead.' }, 403);
+      }
+      await setStoredPasswordHash(env, hash);
+      const token = await mintSession(env);
+      return apiJson({ ok: true }, 200, { 'Set-Cookie': sessionCookie(token) });
+    }
+
     if (apiPath === '/auth/login' && request.method === 'POST') {
-      if (!env.ADMIN_PASSWORD_HASH || !env.SESSION_SECRET) {
+      if (!env.SESSION_SECRET) {
         return apiJson({ ok: false, error: 'Login is not configured on this Worker yet. See worker/README.md.' }, 503);
       }
       if (!rateLimitConfigured(env)) {
         return apiJson({ ok: false, error: 'Login rate limiting is not configured on this Worker yet. See worker/README.md.' }, 503);
+      }
+      const storedHash = await getStoredPasswordHash(env);
+      if (!storedHash) {
+        return apiJson({ ok: false, error: 'No password has been set up yet.' }, 409);
       }
       const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
       const lock = await checkLockout(env, ip);
@@ -1365,7 +1416,7 @@ export default {
       }
       let body = {};
       try { body = await routed.json(); } catch (e) { /* handled below by the empty-password check */ }
-      const ok = await verifyPassword(String(body.password || ''), env.ADMIN_PASSWORD_HASH);
+      const ok = await verifyPassword(String(body.password || ''), storedHash);
       if (!ok) {
         await recordFailure(env, ip);
         console.error('Desk login: wrong password from ' + ip);
@@ -1378,6 +1429,32 @@ export default {
 
     if (apiPath === '/auth/logout' && request.method === 'POST') {
       return apiJson({ ok: true }, 200, { 'Set-Cookie': clearedSessionCookie() });
+    }
+
+    // Signed in only. The owner's way to rotate the password from inside the
+    // admin instead of ever touching Cloudflare. Requires the current
+    // password (not just an active session) so a device left signed in is
+    // not, by itself, enough to take over the account.
+    if (apiPath === '/auth/change-password' && request.method === 'POST') {
+      if (!(await requireSession(routed, env))) return apiJson({ ok: false, error: 'Not signed in.' }, 401);
+      const storedHash = await getStoredPasswordHash(env);
+      if (!storedHash) return apiJson({ ok: false, error: 'No password is set up yet.' }, 409);
+      let body = {};
+      try { body = await routed.json(); } catch (e) { /* handled below */ }
+      const currentPassword = String(body.currentPassword || '');
+      const newPassword = String(body.newPassword || '');
+      const confirm = String(body.confirm || '');
+      if (!(await verifyPassword(currentPassword, storedHash))) {
+        return apiJson({ ok: false, error: 'Current password is wrong.' }, 401);
+      }
+      if (newPassword.length < 8) {
+        return apiJson({ ok: false, error: 'Choose a new password of at least 8 characters.' }, 400);
+      }
+      if (newPassword !== confirm) {
+        return apiJson({ ok: false, error: 'Those passwords did not match.' }, 400);
+      }
+      await setStoredPasswordHash(env, await hashPassword(newPassword));
+      return apiJson({ ok: true });
     }
 
     // The one AI endpoint the desk admin ever calls from the browser. It is a
@@ -1431,7 +1508,7 @@ export default {
       return new Response('Media pack rebuild triggered.', { status: 202 });
     }
     return new Response(
-      'Ninth House Autopilot Worker. Mostly a Cron Trigger worker. POST /author-desk/media-pack (bearer token) redoes the Author Desk press kit. Everything under /social and /desk, and /auth/session, /auth/login, /auth/logout, back the admin at desk.html and are session-cookie authenticated. See /worker/README.md for deploy and secret setup.',
+      'Ninth House Autopilot Worker. Mostly a Cron Trigger worker. POST /author-desk/media-pack (bearer token) redoes the Author Desk press kit. Everything under /social and /desk, and /auth/session, /auth/setup, /auth/login, /auth/logout, /auth/change-password, back the admin at desk.html and are session-cookie authenticated (setup and login are the two that work with no session yet). See /worker/README.md for deploy and secret setup.',
       { status: 200, headers: { 'content-type': 'text/plain' } }
     );
   }

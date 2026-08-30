@@ -326,11 +326,13 @@ means in practice). Concretely, the steps only you can do are:
 8. If you want the on-demand media pack rebuild, set `AUTHOR_DESK_TRIGGER_TOKEN`
    (step 3 above) and keep that string somewhere safe; it is the only thing
    that authorises `POST /author-desk/media-pack`.
-9. Set up the desk admin's login: run `node scripts/hash-password.mjs`, set
-   `ADMIN_PASSWORD_HASH` and `SESSION_SECRET`, connect the `LOGIN_ATTEMPTS` KV
-   namespace, and connect the `9thpoint.com/api/*` Route. See "Authentication"
-   under "The distribution engine" below; none of it can be done for you, since
-   it means choosing a password and confirming your own Cloudflare zone.
+9. Set up the desk admin's login: set `SESSION_SECRET`, connect the
+   `LOGIN_ATTEMPTS` KV namespace, and connect the `9thpoint.com/api/*` Route.
+   The password itself is never set here; the first time anyone opens
+   desk.html after that, it shows a "Create your password" screen instead of
+   the login screen, and choosing a password there is what claims the login.
+   See "Authentication" under "The distribution engine" below; none of it can
+   be done for you, since it means confirming your own Cloudflare zone.
 
 Nothing else in this repository change requires action from you; the
 GitHub Actions workflow is disabled (its schedule is commented out, its
@@ -374,7 +376,6 @@ pasting the value when it asks. They are never written into the repo.
 | Secret | What it is |
 |---|---|
 | `MAKE_WEBHOOK_URL` | The Make.com webhook address that actually posts. Never write this into a file. |
-| `ADMIN_PASSWORD_HASH` | The owner's login password, hashed. Never the password itself. Generate it with `node scripts/hash-password.mjs` from the repo root (see "Authentication" below) and paste its output here. |
 | `SESSION_SECRET` | Any long random string, used to sign the session cookie. Generate one with `openssl rand -base64 32`, or anything else that is long and unguessable. Rotating it instantly signs every device out. |
 | `ANTHROPIC_API_KEY` | Already set. The engine writes the copy with it, and the desk admin's AI features (standup, board, commissioning a partner) now also go through this same key on the Worker, never in the browser. |
 
@@ -415,29 +416,48 @@ The whole admin, and every route behind it, requires signing in with a single
 owner password. There is no username, and no way to reach `/social`, `/desk`,
 or the queue without a valid session.
 
+There is no password secret to set in Cloudflare at all: the password hash
+lives as a value in the `LOGIN_ATTEMPTS` KV namespace, written the first time
+anyone claims the admin (see "First-run setup" below), never in `wrangler.toml`
+or a `wrangler secret`.
+
 **Required, in order, before the admin will work at all:**
 
-1. **Choose the password.** From the repo root: `node scripts/hash-password.mjs`.
-   It asks for the password twice (hidden input), and prints a hash, not the
-   password itself. Set it: `cd worker && npx wrangler secret put ADMIN_PASSWORD_HASH`,
-   pasting the printed value.
-2. **Set `SESSION_SECRET`** (see the table above): `npx wrangler secret put SESSION_SECRET`.
-3. **Connect the login rate limiter.** This is not optional the way the D1
+1. **Set `SESSION_SECRET`** (see the table above): `npx wrangler secret put SESSION_SECRET`.
+2. **Connect the login rate limiter.** This is not optional the way the D1
    database below is: with no `LOGIN_ATTEMPTS` KV binding, `POST /api/auth/login`
-   refuses every request rather than allow unlimited guesses, so nobody,
-   including the owner, can sign in until this is connected.
+   and `POST /api/auth/setup` both refuse every request rather than allow
+   unlimited guesses or an unconfigured claim, so nobody, including the owner,
+   can sign in or set a password until this is connected.
    ```
    cd worker && npx wrangler kv namespace create LOGIN_ATTEMPTS
    ```
    Paste the id it prints into the `LOGIN_ATTEMPTS` block near the top of
    `worker/wrangler.toml`, delete the `#` from those three lines, commit and push.
-4. **Connect the same-site Route**, so the session cookie actually works. The
+3. **Connect the same-site Route**, so the session cookie actually works. The
    admin lives on `9thpoint.com`; a `SameSite=Strict` cookie set by a Worker on
    only the `.workers.dev` domain would never be sent back by the browser, so
    the Worker needs to answer on `9thpoint.com/api/*` too. This needs
    `9thpoint.com`'s DNS to be on the same Cloudflare account used for
    `wrangler login`. Paste the zone into the `routes` block near the top of
    `worker/wrangler.toml`, delete the `#` from those three lines, commit and push.
+
+### First-run setup
+
+Once the three steps above are done and the Worker is deployed, open
+desk.html. With no password hash yet in `LOGIN_ATTEMPTS`, it shows "Create
+your password" instead of the login screen: enter a password twice, and the
+Worker hashes it (PBKDF2-HMAC-SHA256, same parameters the old
+`scripts/hash-password.mjs` used), stores the hash in KV, and signs that
+device in. From then on `desk.html` shows the ordinary login screen, and
+`POST /api/auth/setup` refuses every further request with "A password is
+already set" - the claim is one-time. To change the password afterwards, sign
+in and use "Change password" in Settings, which asks for the current password
+before accepting a new one. To reset a forgotten password, delete the
+`admin:password_hash:v1` key from the `LOGIN_ATTEMPTS` namespace directly (the
+Cloudflare dashboard, or `npx wrangler kv key delete --namespace-id=<id>
+admin:password_hash:v1`); the very next visit to `desk.html` shows the setup
+screen again.
 
 Once all four are done, `9thpoint.com/desk.html` shows a login screen instead
 of the app, and stays that way until the right password is entered. Five wrong

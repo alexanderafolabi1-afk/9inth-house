@@ -295,7 +295,7 @@ pre,code,.mono{overflow-wrap:anywhere;word-break:break-word}
   </div>
   <div class="hspace"></div>
   <div class="daychip" id="daychip">DAY 001</div>
-  <button class="gear" id="gearbtn" onclick="openSettings()" aria-label="Settings">&#9881;</button>
+  <button class="gear" id="gearbtn" onclick="CP_MSG='';openSettings()" aria-label="Settings">&#9881;</button>
 </header>
 
 <main id="app"></main>
@@ -377,7 +377,9 @@ const BIZ = {
   renviait: { name:'RenviaIT', tag:'ITAD & circular electronics · renviait.co.uk', color:'#5FA98B',
     ctx:`RenviaIT Ltd. Milton Keynes ITAD and circular electronics business (IT asset disposition, refurbishment, resale). "Road to £1M" roadmap in motion, one protégé on trial, grant applications live (Material Focus funds), buying stock via arbitrage scoring. Customers: UK businesses disposing of IT estate + consumers buying refurbished. Levers: B2B collection contracts, marketplace sales velocity, local MK/Buckinghamshire presence, sustainability angle.` },
   nagori: { name:'NAGORI', tag:'Digital letter archive · nagori.xyz', color:'#B08BC0',
-    ctx:`NAGORI.xyz. a permanent digital archive capped at one million sealed letters. Japanese concept of "nagori" (the trace of what remains). Tiers: Nagori £1.99, Kotodama £19.99, Tamashii £74.99, Eien £149.99. Emotional, premium, scarcity-driven brand. React/Netlify/Supabase/Stripe. Levers: emotional storytelling, letter whisper features, museum interludes, gifting occasions, press-worthy concept, scarcity of the million plots.` }
+    ctx:`NAGORI.xyz. a permanent digital archive capped at one million sealed letters. Japanese concept of "nagori" (the trace of what remains). Tiers: Nagori £1.99, Kotodama £19.99, Tamashii £74.99, Eien £149.99. Emotional, premium, scarcity-driven brand. React/Netlify/Supabase/Stripe. Levers: emotional storytelling, letter whisper features, museum interludes, gifting occasions, press-worthy concept, scarcity of the million plots.` },
+  glotemp: { name:'Glotemp', tag:'Live city pulse, glo-temp.com', color:'#6FA8C7',
+    ctx:`Glotemp (glo-temp.com). A live city pulse PWA under RenviaIT Ltd: a growing register of cities, not a fixed number, carrying real time weather, radio, mood and pulse data across twelve verticals. Tiers Listed, Verified and Anchor, set by real data depth. City applications are open to the public. Levers: sponsor and city partnerships, Instagram and Facebook automation already live, X posted by hand for now, SEO across every city page, and a new campus and student contributor layer.` }
 };
 
 /* ============ THE FIRM. 19 PARTNERS, 7 DEPARTMENTS ============ */
@@ -554,7 +556,9 @@ let TAB = 'desk';
    says, this only decides what desk.html shows. A 401 from any call flips it
    back to false and returns to the login screen (see engine(), below). */
 let AUTHED = false;
+let NEEDS_SETUP = false;
 let LOGIN_MSG = '';
+let CP_MSG = '';
 
 function renderNav(){
   const pend = S.docket.filter(d=>d.status==='pending').length;
@@ -575,7 +579,7 @@ function render(){
     nav.innerHTML = '';
     daychip.style.display = 'none';
     gear.style.display = 'none';
-    app.innerHTML = vLogin();
+    app.innerHTML = NEEDS_SETUP ? vSetup() : vLogin();
     return;
   }
   nav.style.display = '';
@@ -590,6 +594,50 @@ function render(){
   if(TAB==='rooms') app.innerHTML = vRooms();
   if(TAB==='board') app.innerHTML = vBoard();
   if(TAB==='queue') bindSwipe();
+}
+
+// Shown only when the Worker reports no password has ever been set (fresh
+// LOGIN_ATTEMPTS namespace, first deploy). One-time: the moment setup
+// succeeds, checkSession's next call reports needsSetup: false forever, and
+// this screen is never shown again on this Worker.
+function vSetup(){
+  return `
+  <div class="eyebrow">Ninth House</div>
+  <div class="card" style="max-width:420px;margin:10vh auto 0">
+    <h3 class="serif" style="font-size:19px;margin-bottom:6px">Create your password</h3>
+    <p class="sub">First run. Choose the one password that opens the desk from here on. Nothing gets set by hand in Cloudflare.</p>
+    ${LOGIN_MSG ? `<p class="sub" style="color:var(--rust);margin-top:8px">${esc(LOGIN_MSG)}</p>` : ''}
+    <label style="margin-top:14px">Password</label>
+    <input type="password" id="setup-password" autocomplete="new-password" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" onkeydown="if(event.key==='Enter')doSetup()">
+    <label>Confirm password</label>
+    <input type="password" id="setup-confirm" autocomplete="new-password" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" onkeydown="if(event.key==='Enter')doSetup()">
+    <div class="btnrow" style="margin-top:14px">
+      <button class="btn gold wide" id="setup-btn" style="min-height:44px" onclick="doSetup()">Create password &amp; sign in</button>
+    </div>
+  </div>`;
+}
+
+async function doSetup(){
+  const btn = document.getElementById('setup-btn');
+  if(btn.disabled) return;
+  const pwEl = document.getElementById('setup-password');
+  const confEl = document.getElementById('setup-confirm');
+  const password = pwEl ? pwEl.value : '';
+  const confirm = confEl ? confEl.value : '';
+  if(!password || password.length < 8){ LOGIN_MSG = 'Choose a password of at least 8 characters.'; render(); return; }
+  if(password !== confirm){ LOGIN_MSG = 'Those did not match.'; render(); return; }
+  btn.innerHTML = '<i class="spin"></i> Creating…'; btn.disabled = true;
+  try{
+    await engine('/auth/setup', { password, confirm }, 'POST', { timeoutMs: 15000 });
+    AUTHED = true; NEEDS_SETUP = false; LOGIN_MSG = '';
+    render();
+    afterLogin();
+  }catch(e){
+    LOGIN_MSG = e.message || 'Could not create the password.';
+    render();
+    const again = document.getElementById('setup-password');
+    if(again) again.focus();
+  }
 }
 
 function vLogin(){
@@ -651,6 +699,7 @@ async function checkSession(){
   try{
     const data = await engine('/auth/session', null, 'GET', { retries: 1, timeoutMs: 10000 });
     AUTHED = Boolean(data.authed);
+    NEEDS_SETUP = Boolean(data.needsSetup);
   }catch(e){
     AUTHED = false;
   }
@@ -1322,6 +1371,19 @@ function openSettings(){
     </div>
 
     <div class="hr"></div>
+    <div class="eyebrow">Change password</div>
+    ${CP_MSG ? `<p class="sub" style="color:var(--rust);margin-top:4px">${esc(CP_MSG)}</p>` : ''}
+    <label>Current password</label>
+    <input type="password" id="cp-current" autocomplete="current-password" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;">
+    <label>New password</label>
+    <input type="password" id="cp-new" autocomplete="new-password" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;">
+    <label>Confirm new password</label>
+    <input type="password" id="cp-confirm" autocomplete="new-password" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;">
+    <div class="btnrow" style="margin-top:10px">
+      <button class="btn gold" id="cp-btn" style="min-height:44px" onclick="changePassword()">Update password</button>
+    </div>
+
+    <div class="hr"></div>
     <label>Group WhatsApp line</label>
     <input type="text" id="set-wa" value="${esc(S.wa||'')}" placeholder="447700900000 (digits only, country code first)">
     <p class="tiny" style="margin-top:6px">${S.wa?`Live link: wa.me/${esc(S.wa)}. Noor wires this into content packs and CTAs.`:'One number, one WhatsApp Business profile ("Lyrīon Group") serving all brands via quick replies.'}</p>
@@ -1344,6 +1406,29 @@ function openSettings(){
       <button class="btn ghost" style="color:var(--rust)" onclick="if(confirm('Dissolve the firm and start over?')){localStorage.removeItem(LS_KEY);S=defaultState();closeModal();render();}">Reset</button>
     </div>
   `);
+}
+async function changePassword(){
+  const btn = document.getElementById('cp-btn');
+  if(!btn || btn.disabled) return;
+  const curEl = document.getElementById('cp-current');
+  const newEl = document.getElementById('cp-new');
+  const confEl = document.getElementById('cp-confirm');
+  const currentPassword = curEl ? curEl.value : '';
+  const newPassword = newEl ? newEl.value : '';
+  const confirm = confEl ? confEl.value : '';
+  if(!currentPassword || !newPassword || !confirm){ CP_MSG = 'Fill in all three fields.'; openSettings(); return; }
+  if(newPassword.length < 8){ CP_MSG = 'Choose a new password of at least 8 characters.'; openSettings(); return; }
+  if(newPassword !== confirm){ CP_MSG = 'Those did not match.'; openSettings(); return; }
+  btn.innerHTML = '<i class="spin"></i> Updating…'; btn.disabled = true;
+  try{
+    await engine('/auth/change-password', { currentPassword, newPassword, confirm }, 'POST', { timeoutMs: 15000 });
+    CP_MSG = '';
+    closeModal();
+    toast('Password updated.');
+  }catch(e){
+    CP_MSG = e.message || 'Could not update the password.';
+    openSettings();
+  }
 }
 function saveWa(closeAfter){
   const el = document.getElementById('set-wa');
