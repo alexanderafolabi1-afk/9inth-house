@@ -20,6 +20,7 @@ import {
   savePushSub, deletePushSub
 } from './db.js';
 import { publishPost } from './distribute.js';
+import { credentialDeliveries, credentialStatusFor, writeCredentialsFor } from './senders/index.js';
 import { runGeneration } from './generate.js';
 import { ingestMetrics, ventureSummary } from './metrics.js';
 import { getVapidKeys, pushConfigured, notifyOwner } from './push.js';
@@ -344,6 +345,55 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
           return json(request, env, { ok: false, error: 'LOGIN_ATTEMPTS is not bound, so there is nowhere to store an n8n token. See worker/README.md.' }, 503);
         }
         return json(request, env, { ok: true, token });
+      }
+
+      // Credentials for the deliveries that post directly rather than through
+      // the rail. Routed on the delivery name, never on a platform name, so
+      // this file stays free of platform specifics and a future direct sender
+      // gets a settings screen without an edit here.
+      //
+      // Read only, and deliberately partial: a sender reports whether it holds
+      // a credential and enough to recognise it, never the credential. An
+      // endpoint that handed back a posting token would undo the point of
+      // keeping it out of the repository.
+      case 'GET /social/credentials': {
+        const out = {};
+        for (const name of credentialDeliveries()) {
+          out[name] = await credentialStatusFor(env, name);
+        }
+        return json(request, env, { ok: true, deliveries: out });
+      }
+
+      // Writes them. An empty token is refused rather than stored, because
+      // storing one would quietly disable posting on that delivery and read as
+      // a successful save.
+      case 'POST /social/credentials': {
+        const delivery = String(body.delivery || '');
+        if (!credentialDeliveries().includes(delivery)) {
+          return json(request, env, { ok: false, error: `"${delivery}" is not a delivery that holds credentials` }, 400);
+        }
+        if (!String(body.token || '').trim()) {
+          return json(request, env, { ok: false, error: 'An access token is required. Paste the one from the platform, it is not something to invent.' }, 400);
+        }
+        const authors = String(body.authors || '').trim();
+        if (authors) {
+          try {
+            const parsed = JSON.parse(authors);
+            if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('not an object');
+          } catch (e) {
+            return json(request, env, { ok: false, error: 'The per venture page list has to be a JSON object, for example {"glotemp":"urn:li:organization:123"}. Leave it empty to post every venture as the same page.' }, 400);
+          }
+        }
+        const written = await writeCredentialsFor(env, delivery, {
+          token: body.token,
+          authors,
+          defaultAuthor: body.defaultAuthor,
+          version: body.version
+        });
+        if (!written) {
+          return json(request, env, { ok: false, error: 'LOGIN_ATTEMPTS is not bound, so there is nowhere to store credentials. See worker/README.md.' }, 503);
+        }
+        return json(request, env, { ok: true, status: await credentialStatusFor(env, delivery) });
       }
 
       case 'POST /social/push/subscribe': {

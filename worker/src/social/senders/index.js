@@ -29,3 +29,29 @@ export function senderFor(platform) {
   const name = (platform && platform.delivery) || DEFAULT_DELIVERY;
   return { name, sender: SENDERS[name] || null };
 }
+
+// The deliveries that hold credentials of their own, and can therefore be set
+// up from the desk. Discovered by asking each sender whether it implements the
+// pair, rather than listed here, so api.js can offer a credentials screen for
+// any future direct sender without naming it or being edited at all.
+export function credentialDeliveries() {
+  return Object.keys(SENDERS).filter((name) => {
+    const s = SENDERS[name];
+    return s && typeof s.credentialStatus === 'function' && typeof s.writeCredentials === 'function';
+  });
+}
+
+// What the desk may see about one delivery's credentials. Never the secret
+// itself: each sender decides what is safe to show, and none of them return a
+// value that could post on the owner's behalf.
+export async function credentialStatusFor(env, name) {
+  const s = SENDERS[name];
+  if (!s || typeof s.credentialStatus !== 'function') return null;
+  return s.credentialStatus(env);
+}
+
+export async function writeCredentialsFor(env, name, next) {
+  const s = SENDERS[name];
+  if (!s || typeof s.writeCredentials !== 'function') return false;
+  return s.writeCredentials(env, next);
+}

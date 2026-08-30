@@ -11,39 +11,105 @@
 // the rail was the binding constraint on how often the house could speak. Talking
 // to LinkedIn from here costs nothing per post and removes a moving part.
 //
-// Credentials come from Worker secrets at runtime and are never written down
-// here. Nothing in this file is specific to one account.
+// Credentials are read at runtime and never written down here. Nothing in this
+// file is specific to one account.
 
 const API = 'https://api.linkedin.com/rest';
 
 // LinkedIn requires a dated version header on every REST call and rejects the
 // request outright without one. Pinned rather than floating, so a change in
 // their API is a deliberate edit here after reading their changelog, never a
-// silent shift under a running house. Overridable by a var so it can be moved
-// without a deploy if a version is retired at short notice.
+// silent shift under a running house. Overridable from the desk so it can be
+// moved without a deploy if a version is retired at short notice.
 const DEFAULT_VERSION = '202508';
 
-function headers(env, extra) {
+// Where the credentials live, and why they are not Cloudflare secrets.
+//
+// Everything else the house needs at runtime moved into KV and out of the
+// dashboard, because setting a Cloudflare secret means a terminal or a
+// dashboard the owner does not have, and a value that cannot be set is a
+// feature that cannot be used. The session secret and the n8n token both went
+// this way. LinkedIn follows them, with one difference: those two are generated
+// here, and this one comes from LinkedIn, so the desk has to be able to put it
+// in. See the LinkedIn panel in the desk Settings.
+//
+// A Worker secret still wins if one is set, so an existing deployment that has
+// one keeps working untouched.
+const CREDENTIALS_KV_KEY = 'linkedin:credentials:v1';
+
+export async function readCredentials(env) {
+  const fromEnv = {
+    token: env.LINKEDIN_ACCESS_TOKEN || '',
+    authors: env.LINKEDIN_AUTHORS || '',
+    defaultAuthor: env.LINKEDIN_DEFAULT_AUTHOR || '',
+    version: env.LINKEDIN_API_VERSION || ''
+  };
+  if (fromEnv.token) return fromEnv;
+  if (!env.LOGIN_ATTEMPTS) return fromEnv;
+  const raw = await env.LOGIN_ATTEMPTS.get(CREDENTIALS_KV_KEY);
+  if (!raw) return fromEnv;
+  try {
+    const stored = JSON.parse(raw);
+    return {
+      token: stored.token || '',
+      authors: stored.authors || '',
+      defaultAuthor: stored.defaultAuthor || '',
+      version: stored.version || ''
+    };
+  } catch (e) {
+    // A corrupt value must not read as a valid empty one that silently posts
+    // nowhere. Treated as absent, which the caller reports plainly.
+    return fromEnv;
+  }
+}
+
+export async function writeCredentials(env, next) {
+  if (!env.LOGIN_ATTEMPTS) return false;
+  await env.LOGIN_ATTEMPTS.put(CREDENTIALS_KV_KEY, JSON.stringify({
+    token: String(next.token || '').trim(),
+    authors: String(next.authors || '').trim(),
+    defaultAuthor: String(next.defaultAuthor || '').trim(),
+    version: String(next.version || '').trim()
+  }));
+  return true;
+}
+
+// What the desk is allowed to see. Never the token itself: only whether one is
+// held, and enough of a fingerprint to tell one token from another after a
+// rotation. A read only endpoint that hands back a posting credential would
+// undo the point of keeping it out of the repo.
+export async function credentialStatus(env) {
+  const c = await readCredentials(env);
+  return {
+    tokenSet: Boolean(c.token),
+    tokenTail: c.token ? String(c.token).slice(-4) : '',
+    authors: c.authors || '',
+    defaultAuthor: c.defaultAuthor || '',
+    version: c.version || DEFAULT_VERSION
+  };
+}
+
+function headers(creds, extra) {
   return Object.assign({
-    Authorization: `Bearer ${env.LINKEDIN_ACCESS_TOKEN}`,
-    'LinkedIn-Version': env.LINKEDIN_API_VERSION || DEFAULT_VERSION,
+    Authorization: `Bearer ${creds.token}`,
+    'LinkedIn-Version': creds.version || DEFAULT_VERSION,
     'X-Restli-Protocol-Version': '2.0.0'
   }, extra || {});
 }
 
 // Which page or profile a venture posts as.
 //
-// LINKEDIN_AUTHORS is a JSON object of venture slug to URN, so a venture is
-// added by editing one var rather than by a deploy. LINKEDIN_DEFAULT_AUTHOR
-// covers the single page case, and is used for any venture the map does not
-// name. A venture with neither is refused rather than posted under whichever
-// page happened to be first, because posting a venture's copy to the wrong
-// page is worse than not posting it.
-export function resolveAuthor(env, venture) {
+// authors is a JSON object of venture slug to URN, so a venture is added from
+// the desk rather than by a deploy. defaultAuthor covers the single page case
+// and is used for any venture the map does not name. A venture with neither is
+// refused rather than posted under whichever page happened to be first, because
+// putting one venture's copy on another venture's page is worse than not
+// posting it.
+export function resolveAuthor(creds, venture) {
   let map = {};
-  if (env.LINKEDIN_AUTHORS) {
+  if (creds.authors) {
     try {
-      const parsed = JSON.parse(env.LINKEDIN_AUTHORS);
+      const parsed = JSON.parse(creds.authors);
       if (parsed && typeof parsed === 'object') map = parsed;
     } catch (e) {
       // A malformed map must not silently fall back to the default author, or
@@ -54,7 +120,7 @@ export function resolveAuthor(env, venture) {
       map = {};
     }
   }
-  const urn = String(map[venture] || env.LINKEDIN_DEFAULT_AUTHOR || '').trim();
+  const urn = String(map[venture] || creds.defaultAuthor || '').trim();
   if (!urn) return null;
   // Accept a bare id or a full URN, so neither form is a silent failure.
   if (/^urn:li:(organization|person):/.test(urn)) return urn;
@@ -135,10 +201,10 @@ export function describeFailure(status, bodyText) {
 
 // Three legged upload: ask for a slot, put the bytes, then reference the URN in
 // the post. Only reached for a post that actually carries an image.
-async function uploadImage(env, author, imageUrl) {
+async function uploadImage(creds, author, imageUrl) {
   const init = await fetch(`${API}/images?action=initializeUpload`, {
     method: 'POST',
-    headers: headers(env, { 'Content-Type': 'application/json' }),
+    headers: headers(creds, { 'Content-Type': 'application/json' }),
     body: JSON.stringify({ initializeUploadRequest: { owner: author } }),
     signal: AbortSignal.timeout(20000)
   });
@@ -161,7 +227,7 @@ async function uploadImage(env, author, imageUrl) {
 
   const put = await fetch(value.uploadUrl, {
     method: 'PUT',
-    headers: { Authorization: `Bearer ${env.LINKEDIN_ACCESS_TOKEN}` },
+    headers: { Authorization: `Bearer ${creds.token}` },
     body: bytes,
     signal: AbortSignal.timeout(30000)
   });
@@ -178,14 +244,15 @@ async function uploadImage(env, author, imageUrl) {
 // stay in distribute.js, so idempotency is decided in exactly one place no
 // matter which delivery a platform uses.
 export async function send(env, post) {
-  if (!env.LINKEDIN_ACCESS_TOKEN) {
-    return { ok: false, reason: 'LINKEDIN_ACCESS_TOKEN is not set on the Worker, so there is no way to post to LinkedIn' };
+  const creds = await readCredentials(env);
+  if (!creds.token) {
+    return { ok: false, reason: 'no LinkedIn access token is stored yet. Open the desk Settings, find the LinkedIn panel, and paste one in' };
   }
-  const author = resolveAuthor(env, post.venture);
+  const author = resolveAuthor(creds, post.venture);
   if (!author) {
     return {
       ok: false,
-      reason: `no LinkedIn page is set for "${post.venture}". Add it to the LINKEDIN_AUTHORS map, or set LINKEDIN_DEFAULT_AUTHOR if every venture posts as the same page`
+      reason: `no LinkedIn page is set for "${post.venture}". Add it in the desk Settings, under the LinkedIn panel, either against this venture by name or as the page every venture posts as`
     };
   }
 
@@ -193,7 +260,7 @@ export async function send(env, post) {
   const imageUrl = String(post.image_url || '').trim();
   if (imageUrl) {
     try {
-      imageUrn = await uploadImage(env, author, imageUrl);
+      imageUrn = await uploadImage(creds, author, imageUrl);
     } catch (e) {
       return { ok: false, reason: String(e && e.message ? e.message : e).slice(0, 300) };
     }
@@ -204,7 +271,7 @@ export async function send(env, post) {
   try {
     res = await fetch(`${API}/posts`, {
       method: 'POST',
-      headers: headers(env, {
+      headers: headers(creds, {
         'Content-Type': 'application/json',
         // LinkedIn dedupes on this for a period, so a retry that crosses with a
         // success collapses into one post there as well as here.
