@@ -523,7 +523,13 @@ A note for anyone reading this after a login secret was set via the dashboard
 and the Worker still answered "Login is not configured": pushing any change
 to this file forces a fresh deploy, which has been observed to be the fix
 when a dashboard-added secret does not appear to be picked up by the
-already-running Worker.
+already-running Worker. Confirmed twice now on this project: a secret edited
+purely through Settings > Variables and Secrets did not take over production
+traffic on its own, but a plain git push to main (a full Git-integration
+build and deploy) picked up whatever secrets existed on the account at that
+moment and served correctly. If a secret ever looks right in the dashboard
+but the Worker still cannot see it, push any small change to this repo's
+main branch rather than re-editing the secret again.
 
 ```
 curl https://YOUR-WORKER-ADDRESS/social/selfcheck \
