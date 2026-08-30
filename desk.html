@@ -1488,13 +1488,27 @@ function openSettings(){
   // Fetched once per session, the first time Settings is opened, then the panel
   // is redrawn with it. Doing it here rather than at sign in keeps one more
   // request off the critical path of getting into the desk.
-  if(!LI_TRIED){ LI_TRIED = true; Promise.all([loadLinkedIn(), loadN8nHook()]).then(openSettings); }
+  if(!LI_TRIED){ LI_TRIED = true; Promise.all([loadLinkedIn(), loadN8nHook(), loadAnthropicKey()]).then(openSettings); }
   modal(`
     <h2>Firm Settings</h2>
     <div class="eyebrow">Account</div>
     <p class="sub">Signed in as the owner.</p>
     <div class="btnrow" style="margin-top:8px">
       <button class="btn ghost" style="min-height:44px" onclick="logout()">Sign out</button>
+    </div>
+
+    <div class="hr"></div>
+    <div class="eyebrow">Anthropic key</div>
+    <p class="tiny" style="margin-top:2px">Every partner in the house runs on this: the four daily shifts, the Night Press, the standup, the board, and everything you commission. Without it none of them can answer. Paste the key from console.anthropic.com. It is stored on the Worker and never shown again.</p>
+    ${AI_MSG ? `<p class="sub" style="color:${AI_OK ? 'var(--gold)' : 'var(--rust)'};margin-top:4px">${esc(AI_MSG)}</p>` : ''}
+    ${(AI_WARNINGS || []).map(w => `<p class="tiny" style="margin-top:6px;color:var(--rust)">${esc(w)}</p>`).join('')}
+    ${AI_STATUS && AI_STATUS.set
+      ? `<p class="tiny" style="margin-top:6px;color:var(--gold)">A key is stored, ending ${esc(AI_STATUS.tail)} (${esc(AI_STATUS.source)}). Pasting a new one replaces it.</p>`
+      : `<p class="tiny" style="margin-top:6px;color:var(--rust)">No key stored, so nothing in the house can think yet.</p>`}
+    <label style="margin-top:10px">Anthropic API key</label>
+    ${pwField('ai-key', 'off')}
+    <div class="btnrow" style="margin-top:10px">
+      <button class="btn gold" id="ai-save" style="min-height:44px" onclick="saveAnthropicKey()">Save key</button>
     </div>
 
     <div class="hr"></div>
@@ -1592,6 +1606,40 @@ function openSettings(){
     </div>
   `);
 }
+let AI_STATUS = null;
+let AI_MSG = '';
+let AI_OK = false;
+let AI_WARNINGS = [];
+
+async function loadAnthropicKey(){
+  try{
+    const data = await engine('/social/anthropic-key', null, 'GET');
+    AI_STATUS = data.status || null;
+  }catch(e){
+    AI_STATUS = null;
+  }
+}
+
+async function saveAnthropicKey(){
+  const btn = document.getElementById('ai-save');
+  if(!btn || btn.disabled) return;
+  const key = (document.getElementById('ai-key') || {}).value || '';
+  if(!key.trim()){ AI_MSG = 'Paste the key from the Anthropic console first.'; AI_OK = false; AI_WARNINGS = []; openSettings(); return; }
+  btn.innerHTML = '<i class="spin"></i> Saving…'; btn.disabled = true;
+  try{
+    const data = await engine('/social/anthropic-key', { key }, 'POST', { timeoutMs: 15000 });
+    AI_STATUS = data.status || AI_STATUS;
+    AI_WARNINGS = data.warnings || [];
+    AI_MSG = AI_WARNINGS.length ? 'Saved, but read the warnings below.' : 'Saved. The house can think again.';
+    AI_OK = AI_WARNINGS.length === 0;
+  }catch(e){
+    AI_MSG = e.message || 'Could not save that key.';
+    AI_OK = false;
+    AI_WARNINGS = [];
+  }
+  openSettings();
+}
+
 let N8N_HOOK = '';
 let N8N_HOOK_MSG = '';
 let N8N_HOOK_OK = false;

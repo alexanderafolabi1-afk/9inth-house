@@ -32,6 +32,7 @@ import {
   sessionSigningAvailable, getOrCreateN8nToken, regenerateN8nToken, verifyN8nToken
 } from './auth.js';
 import { forwardToN8n } from './n8n.js';
+import { getAnthropicKey } from './aikey.js';
 
 const REPO = 'alexanderafolabi1-afk/9inth-house';
 const BRANCH = 'main';
@@ -697,7 +698,7 @@ function section(raw, marker, allMarkers) {
 // ever redone on the manual trigger (POST /author-desk/media-pack, see fetch
 // below); a plain cron cycle never rebuilds it once it exists.
 async function authorMediaPack(env, { force = false } = {}) {
-  const KEY = env.ANTHROPIC_API_KEY;
+  const KEY = await getAnthropicKey(env);
   const GH_TOKEN = env.GITHUB_TOKEN;
   if (!KEY || !GH_TOKEN) { console.log('Author Desk media pack: missing ANTHROPIC_API_KEY or GITHUB_TOKEN, skipping.'); return; }
 
@@ -755,7 +756,7 @@ async function authorMediaPack(env, { force = false } = {}) {
 
 /* ---------- The daily cycle ---------- */
 async function runCycle(env) {
-  const KEY = env.ANTHROPIC_API_KEY;
+  const KEY = await getAnthropicKey(env);
   const GH_TOKEN = env.GITHUB_TOKEN;
   if (!KEY) { console.error('Missing ANTHROPIC_API_KEY secret. Run: wrangler secret put ANTHROPIC_API_KEY'); return; }
   if (!GH_TOKEN) { console.error('Missing GITHUB_TOKEN secret. Run: wrangler secret put GITHUB_TOKEN'); return; }
@@ -1198,7 +1199,7 @@ CEO_ACTIONS:
 // Social copy is written without the web search tool. It costs less, and more to
 // the point a social post must not go out carrying a claim nobody in the house has
 // checked. Anything time sensitive belongs in an article first.
-const socialAsk = (env) => (system, user, max = 700) => claudeNoTools(env.ANTHROPIC_API_KEY, system, user, max);
+const socialAsk = (env) => async (system, user, max = 700) => claudeNoTools(await getAnthropicKey(env), system, user, max);
 
 // What the article_derived category is allowed to cut from: the house journal,
 // which the Night Press maintains. A venture with its own article feed is added by
@@ -1257,8 +1258,8 @@ async function runSocial(env, shift) {
 
   if (shift === 'Dawn') {
     try {
-      if (!env.ANTHROPIC_API_KEY) {
-        console.error('Distribution engine: no ANTHROPIC_API_KEY, so nothing was generated.');
+      if (!(await getAnthropicKey(env))) {
+        console.error('Distribution engine: no Anthropic key, so nothing was generated.');
       } else {
         const articles = await gatherArticles(env);
         const result = await runGeneration(env, db, { ask: socialAsk(env), articles, now: new Date() });
@@ -1552,7 +1553,7 @@ export default {
     // route is the only place ANTHROPIC_API_KEY is ever read.
     if (apiPath === '/desk/ask' && effective.method === 'POST') {
       if (!(await requireSession(routed, env))) return apiJson({ ok: false, error: 'Not signed in.' }, 401);
-      if (!env.ANTHROPIC_API_KEY) return apiJson({ ok: false, error: 'ANTHROPIC_API_KEY is not set on the Worker' }, 503);
+      if (!(await getAnthropicKey(env))) return apiJson({ ok: false, error: 'No Anthropic key is stored yet. Open the desk Settings, find the Anthropic key panel, and paste one in.' }, 503);
       let body = {};
       try { body = await routed.json(); } catch (e) { body = {}; }
       const system = String(body.system || '');
@@ -1561,7 +1562,7 @@ export default {
       if (!user.trim()) return apiJson({ ok: false, error: 'Nothing to ask.' }, 400);
       if (system.length > 20000 || user.length > 20000) return apiJson({ ok: false, error: 'That request is too long.' }, 400);
       try {
-        const text = await claude(env.ANTHROPIC_API_KEY, system, user, maxTokens);
+        const text = await claude(await getAnthropicKey(env), system, user, maxTokens);
         return apiJson({ ok: true, text });
       } catch (e) {
         const detail = String(e && e.message ? e.message : e);
@@ -1638,7 +1639,7 @@ export default {
       const provided = (effective.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
       if (!(await verifyN8nToken(env, provided))) return apiJson({ ok: false, error: 'Unauthorized' }, 401);
       if (!hasStore(env)) return apiJson({ ok: false, error: 'D1 is not connected. See worker/README.md.' }, 503);
-      if (!env.ANTHROPIC_API_KEY) return apiJson({ ok: false, error: 'ANTHROPIC_API_KEY is not set on the Worker' }, 503);
+      if (!(await getAnthropicKey(env))) return apiJson({ ok: false, error: 'No Anthropic key is stored yet. Open the desk Settings, find the Anthropic key panel, and paste one in.' }, 503);
       const db = env.DB;
       await ensureSchema(db);
       await seedVentures(db);

@@ -8,7 +8,7 @@
 // this app, and the admin API is never cached: a cached approval or a cached queue
 // would be worse than no cache at all.
 
-const VERSION = 'nh-desk-v10';
+const VERSION = 'nh-desk-v11';
 const SHELL = `${VERSION}-shell`;
 const RUNTIME = `${VERSION}-runtime`;
 
