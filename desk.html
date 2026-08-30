@@ -727,8 +727,15 @@ async function checkSession(){
     const data = await engine('/auth/session', null, 'GET', { retries: 1, timeoutMs: 10000 });
     AUTHED = Boolean(data.authed);
     NEEDS_SETUP = Boolean(data.needsSetup);
+    LOGIN_MSG = '';
   }catch(e){
+    // A failed check used to leave NEEDS_SETUP at its default of false, which
+    // drew the sign in form. That is the wrong fallback and it hides the real
+    // fault: it is not that a password exists, it is that the engine could not
+    // be asked, and no password typed into that form can succeed. Say which it
+    // is, so a sign in screen always means a password really is set.
     AUTHED = false;
+    LOGIN_MSG = e && e.message ? e.message : 'The engine could not be reached, so the desk cannot tell whether a password has been set.';
   }
   render();
   if(AUTHED) afterLogin();

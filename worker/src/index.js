@@ -28,7 +28,7 @@ import { SENDABLE } from './social/config.js';
 import {
   requireSession, mintSession, verifyPassword, sessionCookie, clearedSessionCookie,
   rateLimitConfigured, checkLockout, recordFailure, resetAttempts,
-  hashPassword, getStoredPasswordHash, setStoredPasswordHash, hashIsVerifiable
+  hashPassword, getStoredPasswordHash, setStoredPasswordHash, hashIsVerifiable, passwordResetOpen
 } from './auth.js';
 
 const REPO = 'alexanderafolabi1-afk/9inth-house';
@@ -1328,7 +1328,10 @@ export default {
       // rather than as a password to sign in with. That reopens the first run
       // screen, and /auth/setup below writes the new password over the dead one.
       const storedForSession = await getStoredPasswordHash(env);
-      const needsSetup = !storedForSession || !hashIsVerifiable(storedForSession);
+      // The reset window is checked here too, so an owner who does not know the
+      // stored password is shown the screen that can fix that rather than a
+      // sign in form they cannot get past.
+      const needsSetup = !storedForSession || !hashIsVerifiable(storedForSession) || passwordResetOpen(env);
       return apiJson({ ok: true, authed, needsSetup });
     }
 
@@ -1378,7 +1381,7 @@ export default {
       // unverifiable one is dead weight: nobody can sign in with it, so
       // refusing to overwrite it would brick the desk rather than protect it.
       const claimed = await getStoredPasswordHash(env);
-      if (claimed && hashIsVerifiable(claimed)) {
+      if (claimed && hashIsVerifiable(claimed) && !passwordResetOpen(env)) {
         return apiJson({ ok: false, error: 'A password is already set. Sign in instead.' }, 403);
       }
       let body = {};
@@ -1399,7 +1402,7 @@ export default {
       // password; the loser's client sees success but a later login with
       // their password will simply fail, exactly as if they had mistyped it.
       const claimedNow = await getStoredPasswordHash(env);
-      if (claimedNow && hashIsVerifiable(claimedNow)) {
+      if (claimedNow && hashIsVerifiable(claimedNow) && !passwordResetOpen(env)) {
         return apiJson({ ok: false, error: 'A password is already set. Sign in instead.' }, 403);
       }
       await setStoredPasswordHash(env, hash);

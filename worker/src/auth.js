@@ -66,6 +66,29 @@ const PBKDF2_ITERATIONS = 25000;
 // had just written, and the desk would reset itself on the next sign in.
 const MAX_VERIFIABLE_ITERATIONS = Math.max(40000, PBKDF2_ITERATIONS);
 
+// A deliberate, time boxed window in which the password can be set again from
+// the first run screen, even though a usable one is already stored.
+//
+// This is the recovery path for a password nobody knows: the hash lives in KV
+// with no way to reach it from the desk, and the alternative is an owner locked
+// out of their own house with no route back that does not involve the Cloudflare
+// dashboard. It is armed by PASSWORD_RESET_UNTIL in wrangler.toml, so opening it
+// requires the ability to commit to this repository and deploy, which is the
+// proof of ownership. There is deliberately no endpoint, no button and no header
+// that can open it, because any of those could be reached by whoever found the
+// address first.
+//
+// It closes by itself. The value is a timestamp, not a boolean, so a window left
+// open by an unreverted commit still expires rather than standing open forever.
+// A missing, empty, malformed or past value all mean closed.
+export function passwordResetOpen(env) {
+  const until = env && env.PASSWORD_RESET_UNTIL;
+  if (!until) return false;
+  const at = Date.parse(String(until).trim());
+  if (!Number.isFinite(at)) return false;
+  return Date.now() < at;
+}
+
 // Whether a stored hash can be checked at all on this plan, asked before any
 // derivation is attempted rather than discovered by being killed part way
 // through one. A false answer means nobody can sign in with it, the owner
