@@ -1455,7 +1455,7 @@ function openSettings(){
   // Fetched once per session, the first time Settings is opened, then the panel
   // is redrawn with it. Doing it here rather than at sign in keeps one more
   // request off the critical path of getting into the desk.
-  if(!LI_TRIED){ LI_TRIED = true; loadLinkedIn().then(openSettings); }
+  if(!LI_TRIED){ LI_TRIED = true; Promise.all([loadLinkedIn(), loadN8nHook()]).then(openSettings); }
   modal(`
     <h2>Firm Settings</h2>
     <div class="eyebrow">Account</div>
@@ -1535,6 +1535,15 @@ function openSettings(){
     </div>
     `}
 
+    <label style="margin-top:14px">n8n webhook address, optional</label>
+    <input type="text" id="n8n-hook-field" placeholder="https://n8n.yourdomain.com/webhook/..." value="${esc(N8N_HOOK || '')}">
+    <p class="tiny" style="margin-top:6px">Where the engine tells n8n a batch has been written. Leave empty if n8n only ever calls the engine, which is the arrangement that needs no open port and no fixed address.</p>
+    ${N8N_HOOK_MSG ? `<p class="tiny" style="margin-top:6px;color:${N8N_HOOK_OK ? 'var(--gold)' : 'var(--rust)'}">${esc(N8N_HOOK_MSG)}</p>` : ''}
+    ${(N8N_HOOK_WARNINGS || []).map(w => `<p class="tiny" style="margin-top:6px;color:var(--rust)">${esc(w)}</p>`).join('')}
+    <div class="btnrow" style="margin-top:8px">
+      <button class="btn gold sm" id="n8n-hook-save" style="min-height:44px" onclick="saveN8nHook()">Save address</button>
+    </div>
+
     <label style="margin-top:14px">Engine base URL</label>
     <div class="pwwrap">
       <input type="text" id="n8n-base-field" readonly value="${esc(ENGINE_BASE)}">
@@ -1550,6 +1559,41 @@ function openSettings(){
     </div>
   `);
 }
+let N8N_HOOK = '';
+let N8N_HOOK_MSG = '';
+let N8N_HOOK_OK = false;
+let N8N_HOOK_WARNINGS = [];
+
+async function loadN8nHook(){
+  try{
+    const data = await engine('/social/n8n-webhook', null, 'GET');
+    N8N_HOOK = data.url || '';
+    N8N_HOOK_WARNINGS = (data.check && data.check.warnings) || [];
+  }catch(e){
+    N8N_HOOK = '';
+  }
+}
+
+async function saveN8nHook(){
+  const btn = document.getElementById('n8n-hook-save');
+  if(!btn || btn.disabled) return;
+  const url = (document.getElementById('n8n-hook-field') || {}).value || '';
+  btn.innerHTML = '<i class="spin"></i> Saving…'; btn.disabled = true;
+  try{
+    const data = await engine('/social/n8n-webhook', { url }, 'POST', { timeoutMs: 15000 });
+    N8N_HOOK = data.url || '';
+    N8N_HOOK_WARNINGS = (data.check && data.check.warnings) || [];
+    // Saved is saved, but an address that cannot work should not read as a
+    // clean success just because it was stored.
+    N8N_HOOK_MSG = N8N_HOOK_WARNINGS.length ? 'Saved, but read the warnings below before relying on it.' : 'Saved.';
+    N8N_HOOK_OK = N8N_HOOK_WARNINGS.length === 0;
+  }catch(e){
+    N8N_HOOK_MSG = e.message || 'Could not save that address.';
+    N8N_HOOK_OK = false;
+  }
+  openSettings();
+}
+
 let LI_STATUS = null;
 let LI_TRIED = false;
 let LI_MSG = '';

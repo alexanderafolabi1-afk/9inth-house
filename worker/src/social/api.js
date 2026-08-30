@@ -21,6 +21,7 @@ import {
 } from './db.js';
 import { publishPost } from './distribute.js';
 import { credentialDeliveries, credentialStatusFor, writeCredentialsFor } from './senders/index.js';
+import { getWebhookUrl, setWebhookUrl, describeWebhookUrl } from '../n8n.js';
 import { runGeneration } from './generate.js';
 import { ingestMetrics, ventureSummary } from './metrics.js';
 import { getVapidKeys, pushConfigured, notifyOwner } from './push.js';
@@ -394,6 +395,31 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
           return json(request, env, { ok: false, error: 'LOGIN_ATTEMPTS is not bound, so there is nowhere to store credentials. See worker/README.md.' }, 503);
         }
         return json(request, env, { ok: true, status: await credentialStatusFor(env, delivery) });
+      }
+
+      // The address the engine tells n8n things on, as opposed to the token
+      // n8n uses to call the engine. Kept out of the repository because this
+      // repository is public and a webhook address published to everyone is a
+      // way in for anyone.
+      case 'GET /social/n8n-webhook': {
+        const url = await getWebhookUrl(env);
+        return json(request, env, { ok: true, url, check: describeWebhookUrl(url) });
+      }
+
+      // Saved with its warnings rather than instead of them, so an address that
+      // will not work is not stored silently as though it will. Only an
+      // unreadable address is refused; the rest is the owner's call.
+      case 'POST /social/n8n-webhook': {
+        const url = String(body.url || '');
+        const check = describeWebhookUrl(url);
+        if (!check.ok) {
+          return json(request, env, { ok: false, error: check.problems.join(' ') }, 400);
+        }
+        const written = await setWebhookUrl(env, url);
+        if (!written) {
+          return json(request, env, { ok: false, error: 'LOGIN_ATTEMPTS is not bound, so there is nowhere to store the address. See worker/README.md.' }, 503);
+        }
+        return json(request, env, { ok: true, url: url.trim(), check });
       }
 
       case 'POST /social/push/subscribe': {
