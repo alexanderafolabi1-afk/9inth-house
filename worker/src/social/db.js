@@ -66,6 +66,29 @@ CREATE TABLE IF NOT EXISTS metrics (
 CREATE INDEX IF NOT EXISTS idx_metrics_post ON metrics (post_id);
 CREATE INDEX IF NOT EXISTS idx_metrics_captured ON metrics (captured_at);
 
+CREATE TABLE IF NOT EXISTS feedback (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  -- What was rejected. Deliberately not constrained to posts: the same table
+  -- carries a rejected docket item, a rejected prospect, a rejected scoring
+  -- change or a rejected facts sheet correction, because the owner's reason is
+  -- worth the same in every case and a second parallel store would guarantee
+  -- one of them gets forgotten.
+  item_kind TEXT NOT NULL,
+  item_id TEXT NOT NULL,
+  -- Who wrote the thing. This is the whole point: a reason filed against an
+  -- item teaches nobody, a reason filed against the persona that wrote it is
+  -- read back before that persona writes for the same venture again.
+  persona TEXT,
+  venture TEXT,
+  category TEXT,
+  verdict TEXT NOT NULL DEFAULT 'rejected',
+  reason TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_feedback_persona ON feedback (persona, venture);
+CREATE INDEX IF NOT EXISTS idx_feedback_created ON feedback (created_at);
+
 CREATE TABLE IF NOT EXISTS push_subs (
   endpoint TEXT PRIMARY KEY,
   p256dh TEXT NOT NULL,
@@ -413,4 +436,60 @@ export async function notePushResult(db, endpoint, ok) {
   } else {
     await db.prepare('UPDATE push_subs SET fail_count = fail_count + 1 WHERE endpoint = ?').bind(endpoint).run();
   }
+}
+
+
+/* ---------- rejection reasons ---------- */
+
+// Stored whether or not the owner typed anything. A reject with no reason is
+// still a verdict worth counting, and recording it the same way keeps the
+// weighting honest: a reason carries more than a bare no, but a bare no is not
+// nothing.
+export async function recordFeedback(db, { itemKind, itemId, persona, venture, category, verdict, reason }) {
+  await db.prepare(
+    `INSERT INTO feedback (item_kind, item_id, persona, venture, category, verdict, reason, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+  ).bind(
+    String(itemKind || 'unknown'),
+    String(itemId || ''),
+    persona ? String(persona) : null,
+    venture ? String(venture) : null,
+    category ? String(category) : null,
+    String(verdict || 'rejected'),
+    String(reason || '').slice(0, 2000),
+    nowIso()
+  ).run();
+}
+
+// What a persona is shown before it writes again. Narrowed to the venture it is
+// about to work on, because a reason given about one venture is often wrong
+// advice about another, and ordered newest first so a recent correction
+// outweighs an old one.
+export async function feedbackFor(db, { persona, venture, limit = 12 }) {
+  const where = ['reason != \'\''];
+  const binds = [];
+  if (persona) { where.push('persona = ?'); binds.push(String(persona)); }
+  if (venture) { where.push('venture = ?'); binds.push(String(venture)); }
+  const res = await db.prepare(
+    `SELECT item_kind, venture, category, verdict, reason, created_at
+       FROM feedback WHERE ${where.join(' AND ')}
+      ORDER BY created_at DESC LIMIT ?`
+  ).bind(...binds, Math.min(Number(limit) || 12, 50)).all();
+  return (res && res.results) || [];
+}
+
+// Reasons that have been given more than once for the same venture and content
+// type. Section 7 treats a repeated stated reason as enough to act on without
+// waiting for the sample size a silent no reply would need, so this is what
+// that rule reads.
+export async function repeatedReasons(db, { venture, minCount = 2 }) {
+  const res = await db.prepare(
+    `SELECT persona, venture, category, reason, COUNT(*) AS times, MAX(created_at) AS last_at
+       FROM feedback
+      WHERE reason != '' ${venture ? 'AND venture = ?' : ''}
+      GROUP BY persona, venture, category, lower(trim(reason))
+     HAVING times >= ?
+      ORDER BY times DESC, last_at DESC LIMIT 20`
+  ).bind(...(venture ? [String(venture)] : []), Number(minCount) || 2).all();
+  return (res && res.results) || [];
 }

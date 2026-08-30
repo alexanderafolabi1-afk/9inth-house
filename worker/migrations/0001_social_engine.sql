@@ -66,3 +66,27 @@ CREATE TABLE IF NOT EXISTS push_subs (
   last_ok TEXT,
   fail_count INTEGER NOT NULL DEFAULT 0
 );
+
+CREATE TABLE IF NOT EXISTS feedback (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  -- What was rejected. Deliberately not constrained to posts: the same table
+  -- carries a rejected docket item, a rejected prospect, a rejected scoring
+  -- change or a rejected facts sheet correction, because the owner's reason is
+  -- worth the same in every case and a second parallel store would guarantee
+  -- one of them gets forgotten.
+  item_kind TEXT NOT NULL,
+  item_id TEXT NOT NULL,
+  -- Who wrote the thing. This is the whole point: a reason filed against an
+  -- item teaches nobody, a reason filed against the persona that wrote it is
+  -- read back before that persona writes for the same venture again.
+  persona TEXT,
+  venture TEXT,
+  category TEXT,
+  verdict TEXT NOT NULL DEFAULT 'rejected',
+  reason TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_feedback_persona ON feedback (persona, venture);
+CREATE INDEX IF NOT EXISTS idx_feedback_created ON feedback (created_at);
+

@@ -17,7 +17,8 @@ import { PLATFORMS, CATEGORIES, SENDABLE, platformKeys, isPlatform } from './con
 import {
   hasStore, ensureSchema, seedVentures, listVentures, upsertVenture, getVenture,
   listPosts, getPost, setStatus, updatePostText, schedulePost, dueScheduled,
-  savePushSub, deletePushSub
+  savePushSub, deletePushSub,
+  recordFeedback, feedbackFor, repeatedReasons
 } from './db.js';
 import { publishPost } from './distribute.js';
 import { credentialDeliveries, credentialStatusFor, writeCredentialsFor } from './senders/index.js';
@@ -220,10 +221,61 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
 
       case 'POST /social/skip': {
         if (!body.id) return json(request, env, { ok: false, error: 'no post id was given' }, 400);
+        // Read before the status changes, so the reason can be filed against the
+        // persona and venture that actually produced it rather than against a
+        // bare id nobody can trace later.
+        const skipped = await getPost(db, body.id);
         const ok = await setStatus(db, body.id, 'skipped');
         // A skip is the strongest signal in the system, so it is kept rather than
         // deleted: generation reads it back as a negative weight on that category.
+        // The reason, where one was given, is worth more than the skip itself,
+        // and is recorded whether or not it is empty so the weighting stays
+        // honest about how often a verdict came with no explanation.
+        if (ok) {
+          await recordFeedback(db, {
+            itemKind: 'social_post',
+            itemId: body.id,
+            persona: body.persona || (skipped && skipped.persona) || null,
+            venture: skipped ? skipped.venture : null,
+            category: skipped ? skipped.category : null,
+            verdict: 'rejected',
+            reason: body.reason || ''
+          });
+        }
         return json(request, env, { ok, error: ok ? '' : 'that post has already gone out and cannot be skipped' }, ok ? 200 : 409);
+      }
+
+      // The reject reason for anything in the admin that is not a queued post:
+      // a docket item, a prospect, a scoring change, a facts sheet correction.
+      // One route rather than one per surface, so a new surface inherits the
+      // mechanism instead of quietly shipping without it.
+      case 'POST /social/feedback': {
+        if (!body.itemKind || !body.itemId) {
+          return json(request, env, { ok: false, error: 'itemKind and itemId are both required' }, 400);
+        }
+        await recordFeedback(db, {
+          itemKind: body.itemKind,
+          itemId: body.itemId,
+          persona: body.persona,
+          venture: body.venture,
+          category: body.category,
+          verdict: body.verdict || 'rejected',
+          reason: body.reason || ''
+        });
+        return json(request, env, { ok: true }, 201);
+      }
+
+      // What a persona is shown before it writes for this venture again, and
+      // the reasons given more than once, which Section 7 acts on without
+      // waiting for a full sample.
+      case 'GET /social/feedback': {
+        const persona = url.searchParams.get('persona') || undefined;
+        const venture = url.searchParams.get('venture') || undefined;
+        return json(request, env, {
+          ok: true,
+          recent: await feedbackFor(db, { persona, venture }),
+          repeated: await repeatedReasons(db, { venture })
+        });
       }
 
       case 'POST /social/unskip': {

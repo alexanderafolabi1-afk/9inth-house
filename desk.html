@@ -1024,9 +1024,9 @@ function vDocket(){
       <div class="btnrow" style="align-items:center">
         <button class="btn sm" onclick="viewItem('${d.id}')">Read deliverable</button>
         ${d.status==='pending'?`
-          <button class="btn sm ghost" style="color:var(--rust)" onclick="setStatus('${d.id}','rejected')">Reject</button>
+          <button class="btn sm ghost" style="min-height:44px;color:var(--rust)" onclick="rejectDocket('${d.id}')">Reject</button>
           <div style="flex:1"></div>
-          <button class="seal" onclick="approve('${d.id}', this)">Approve &amp; Seal</button>
+          <button class="seal" onclick="sealDocket('${d.id}', this)">Approve &amp; Seal</button>
         `:''}
       </div>
     </div>`;
@@ -1114,7 +1114,13 @@ function toggleShipped(id){ S.shipped[id] = !S.shipped[id]; save(); render(); }
 function saveWeeklyTarget(){ S.weeklyTarget = document.getElementById('war-target').value.trim(); save(); render(); }
 function setKpi(biz, m, v){ S.kpis[biz][m] = Number(v)||0; S.kpiDay[biz] = S.day; save(); }
 function setStatus(id, st){ const d = S.docket.find(x=>x.id===id); if(d){ d.status=st; save(); render(); } }
-function approve(id, el){
+// Named sealDocket rather than approve, which is what it used to be called.
+// There is another top-level approve() further down for the social queue, and
+// the later definition silently replaced this one: pressing Approve and Seal in
+// the Docket called the queue's version, which looked for a post id it could
+// never find and returned without doing anything. Sealing has therefore been
+// doing nothing at all.
+function sealDocket(id, el){
   el.classList.add('stamped'); el.textContent='Sealed';
   const d = S.docket.find(x=>x.id===id);
   setTimeout(()=>{ setStatus(id,'approved'); if(d) learnFromItem(d); }, 550);
@@ -1446,6 +1452,75 @@ KPIs: SetPostGo ${JSON.stringify(S.kpis.setpostgo)} | RenviaIT ${JSON.stringify(
 // actionable message: a timeout, a rate limit, a session expiry, or whatever
 // the Worker itself reported. This only ever adds what was being attempted,
 // so the owner never sees a bare status string with no context.
+// Reject with a reason, everywhere in the admin.
+//
+// One control, used by every approve or reject surface, so a new surface
+// inherits it rather than quietly shipping without it. The reason is asked for
+// every time and is never compulsory: the owner is often doing this one handed
+// on a phone, so Reject stays one tap away and the field is simply there if he
+// has something to say.
+//
+// What he writes is filed against the item AND against the persona that wrote
+// it, because a reason attached only to an item teaches nobody. The persona
+// reads it back before it works on that venture again.
+function rejectWithReason(opts){
+  const { title, itemKind, itemId, persona, venture, category, onConfirm } = opts;
+  REJECT_PENDING = { itemKind, itemId, persona, venture, category, onConfirm };
+  modal(`
+    <h2>${esc(title || 'Reject this')}</h2>
+    <p class="sub">Why, in a line? It goes to whoever wrote it, and they read it before working on this venture again. You can leave it blank.</p>
+    <label style="margin-top:12px">Reason, optional</label>
+    <textarea id="reject-reason" rows="3" placeholder="Numbers are out of date. Wrong person. Too pushy. Anything."></textarea>
+    <div class="btnrow" style="margin-top:12px">
+      <button class="btn wide" id="reject-go" style="min-height:44px;background:var(--rust);color:#fff;border-color:var(--rust)" onclick="confirmReject()">Reject</button>
+    </div>
+    <div class="btnrow" style="margin-top:8px">
+      <button class="btn ghost wide" style="min-height:44px" onclick="closeModal()">Keep it</button>
+    </div>
+  `);
+  setTimeout(() => { const t = document.getElementById('reject-reason'); if(t) t.focus(); }, 120);
+}
+
+let REJECT_PENDING = null;
+
+async function confirmReject(){
+  const p = REJECT_PENDING;
+  if(!p) return closeModal();
+  const btn = document.getElementById('reject-go');
+  const reason = ((document.getElementById('reject-reason') || {}).value || '').trim();
+  if(btn){ btn.innerHTML = '<i class="spin"></i> Rejecting…'; btn.disabled = true; }
+  REJECT_PENDING = null;
+  closeModal();
+  // The rejection itself happens whatever the reason does. Losing the verdict
+  // because the note failed to save would be the worse of the two failures.
+  try{
+    if(typeof p.onConfirm === 'function') await p.onConfirm(reason);
+  }catch(e){
+    toast(errMsg('Rejecting', e));
+  }
+  // A post carries its reason on the skip call itself, so filing it a second
+  // time here would double count it.
+  if(p.itemKind !== 'social_post'){
+    try{
+      await engine('/social/feedback', {
+        itemKind: p.itemKind, itemId: p.itemId,
+        persona: p.persona, venture: p.venture, category: p.category,
+        verdict: 'rejected', reason
+      }, 'POST', { timeoutMs: 15000 });
+    }catch(e){
+      // Kept locally so a reason given offline is not lost, and flushed with
+      // the rest of the pending actions when the signal returns.
+      queueOffline('/social/feedback', {
+        itemKind: p.itemKind, itemId: p.itemId,
+        persona: p.persona, venture: p.venture, category: p.category,
+        verdict: 'rejected', reason
+      });
+    }
+  }
+  if(reason) toast('Rejected, and the reason has gone to them.');
+  else toast('Rejected.');
+}
+
 function errMsg(action, e){
   const m = String((e && e.message) || e || 'unknown error');
   return action + ' failed: ' + m;
@@ -2117,7 +2192,7 @@ function qcard(p){
                ? `<button class="btn jade" onclick="copyManual('${p.id}')" ${busy ? 'disabled' : ''}>Copy text</button>`
                : `<button class="btn jade" onclick="approve('${p.id}')" ${busy ? 'disabled' : ''}>${p.status === 'failed' ? 'Retry' : 'Approve'}</button>`}
              <span class="spacer"></span>
-             <button class="btn danger" onclick="skip('${p.id}')" ${busy ? 'disabled' : ''}>Skip</button>
+             <button class="btn danger" onclick="rejectPost('${p.id}')" ${busy ? 'disabled' : ''}>Skip</button>
            </div>
            <div class="qmore">
              <button class="btn ghost" onclick="Q.editing['${p.id}']=true;render()">Edit</button>
@@ -2202,12 +2277,38 @@ async function approve(id){
   render();
 }
 
-async function skip(id){
+// The queue's reject. Named skip in the API for historical reasons; it is a
+// rejection and now carries a reason like every other one.
+function rejectPost(id){
+  const post = Q.posts.find(p => p.id === id);
+  rejectWithReason({
+    title: 'Skip this post',
+    itemKind: 'social_post',
+    itemId: id,
+    venture: post && post.venture,
+    category: post && post.category,
+    onConfirm: (reason) => skip(id, reason)
+  });
+}
+
+function rejectDocket(id){
+  const d = S.docket.find(x => x.id === id);
+  rejectWithReason({
+    title: 'Reject this work',
+    itemKind: 'docket_item',
+    itemId: id,
+    persona: d && d.charId,
+    venture: d && d.biz,
+    onConfirm: () => { setStatus(id, 'rejected'); }
+  });
+}
+
+async function skip(id, reason){
   const post = Q.posts.find(p => p.id === id);
   if(!post) return;
   const restore = Object.assign({}, post);
   if(!navigator.onLine){
-    queueOffline('/social/skip', { id });
+    queueOffline('/social/skip', { id, reason: reason || '' });
     Q.posts = Q.posts.filter(p => p.id !== id);
     render();
     toast('Skipped, and held until the signal returns.');
@@ -2215,7 +2316,7 @@ async function skip(id){
   }
   Q.busy[id] = true; render();
   try{
-    await engine('/social/skip', { id });
+    await engine('/social/skip', { id, reason: reason || '' });
     Q.posts = Q.posts.filter(p => p.id !== id);
     delete Q.busy[id];
     render();
@@ -2396,7 +2497,10 @@ function bindSwipe(){
       const manual = post && Q.platforms[post.platform] && Q.platforms[post.platform].automated === false;
       if(manual) copyManual(settledId); else approve(settledId);
     }
-    else if(travelled < -SWIPE_TRIGGER) skip(settledId);
+    // The swipe is the main way this is used one handed, so it asks for the
+    // reason like every other reject rather than being the one route that
+    // silently skips the question.
+    else if(travelled < -SWIPE_TRIGGER) rejectPost(settledId);
   };
 
   list.addEventListener('touchend', release, { passive: true });
