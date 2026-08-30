@@ -1492,13 +1492,14 @@ function openSettings(){
 
     <div class="hr"></div>
     <div class="eyebrow">n8n integration</div>
-    <p class="tiny" style="margin-top:2px">A bearer token for n8n's HTTP Request node, separate from your sign-in password. Point it at <code>${esc(ENGINE_BASE)}</code>, route <code>/n8n/queue</code> (GET), <code>/n8n/queue/push</code> (POST) or <code>/n8n/generate</code> (POST), with header <code>Authorization: Bearer &lt;token&gt;</code>.</p>
+    <p class="tiny" style="margin-top:2px">A bearer token for n8n's HTTP Request node, separate from your sign-in password. Routes: <code>/n8n/queue</code> (GET), <code>/n8n/queue/push</code> (POST), <code>/n8n/generate</code> (POST), with header <code>Authorization: Bearer &lt;token&gt;</code>.</p>
     ${N8N_MSG ? `<p class="sub" style="color:var(--rust);margin-top:4px">${esc(N8N_MSG)}</p>` : ''}
     ${N8N_TOKEN ? `
-    <div class="pwwrap" style="margin-top:8px">
+    <label style="margin-top:8px">Bearer token</label>
+    <div class="pwwrap">
       <input type="text" id="n8n-token-field" readonly value="${esc(N8N_TOKEN)}">
     </div>
-    <div class="btnrow" style="margin-top:10px">
+    <div class="btnrow" style="margin-top:8px">
       <button class="btn sm" onclick="navigator.clipboard.writeText(document.getElementById('n8n-token-field').value).then(()=>{this.textContent='Copied'})">Copy token</button>
       <button class="btn ghost sm" style="min-height:44px" onclick="regenerateN8nToken()">Regenerate</button>
     </div>
@@ -1508,6 +1509,14 @@ function openSettings(){
       <button class="btn gold" style="min-height:44px" onclick="revealN8nToken()">Reveal token</button>
     </div>
     `}
+
+    <label style="margin-top:14px">Engine base URL</label>
+    <div class="pwwrap">
+      <input type="text" id="n8n-base-field" readonly value="${esc(ENGINE_BASE)}">
+    </div>
+    <div class="btnrow" style="margin-top:8px">
+      <button class="btn sm" onclick="navigator.clipboard.writeText(document.getElementById('n8n-base-field').value).then(()=>{this.textContent='Copied'})">Copy base URL</button>
+    </div>
 
     <div class="hr"></div>
     <div class="btnrow">
