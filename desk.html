@@ -600,11 +600,24 @@ function vLogin(){
     <p class="sub">One owner, one password. The house waits for you.</p>
     ${LOGIN_MSG ? `<p class="sub" style="color:var(--rust);margin-top:8px">${esc(LOGIN_MSG)}</p>` : ''}
     <label style="margin-top:14px">Password</label>
-    <input type="password" id="login-password" autocomplete="current-password" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" onkeydown="if(event.key==='Enter')doLogin()">
+    <div style="position:relative">
+      <input type="password" id="login-password" autocomplete="current-password" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" onkeydown="if(event.key==='Enter')doLogin()" style="width:100%;padding-right:40px;box-sizing:border-box">
+      <button type="button" onclick="toggleLoginPasswordVisibility()" id="login-pw-toggle" aria-label="Show password" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;padding:4px;line-height:1">&#128065;</button>
+    </div>
     <div class="btnrow" style="margin-top:14px">
       <button class="btn gold wide" id="login-btn" style="min-height:44px" onclick="doLogin()">Sign in</button>
     </div>
   </div>`;
+}
+
+function toggleLoginPasswordVisibility(){
+  const input = document.getElementById('login-password');
+  const btn = document.getElementById('login-pw-toggle');
+  if(!input || !btn) return;
+  const showing = input.type === 'text';
+  input.type = showing ? 'password' : 'text';
+  btn.textContent = showing ? '\u{1F441}' : '\u{1F648}';
+  btn.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
 }
 
 async function doLogin(){
