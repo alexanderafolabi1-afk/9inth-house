@@ -299,15 +299,20 @@ export async function requireSession(request, env) {
   return verifySessionToken(token, env);
 }
 
-// desk.html now calls this Worker on its own workers.dev address directly
-// (see ENGINE_BASE in desk.html), not through the 9thpoint.com/api/* Route:
-// that Route stopped answering at all, GET included, with no way to see or
-// fix the DNS or zone side of it from this repo. That makes this a genuinely
-// cross-site request from the cookie's point of view, so SameSite=Strict,
-// which never sends on a cross-site fetch, would make login silently
-// useless again; SameSite=None is required here, and browsers require it to
-// be paired with Secure. Path is / rather than /api, since this cookie's
-// host is the Worker's own domain, where every route is part of the admin.
+// desk.html tries the 9thpoint.com/api/* Route first (see ROUTE_BASE in
+// desk.html), which is a genuinely same-site request as far as this cookie
+// is concerned; SameSite=None still works perfectly well there, it is just
+// more permissive than that path strictly needs. It stops being optional
+// the moment a call falls back to this Worker's own workers.dev address
+// (ENGINE_BASE), which the Route used to require, once, when the Route
+// itself stopped answering entirely with no way to see or fix the DNS or
+// zone side of it from this repo: SameSite=Strict never sends on a
+// cross-site fetch, which would make login on that fallback path silently
+// useless, and SameSite=None requires being paired with Secure. One cookie
+// setting has to serve both paths at once, since which one a given session
+// ends up using is decided client side, so None is what both need. Path is
+// / rather than /api on the same reasoning: whichever host actually issues
+// this cookie, every route under it is part of the admin.
 export function sessionCookie(token) {
   return `${COOKIE_NAME}=${token}; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=${SESSION_MAX_AGE}`;
 }

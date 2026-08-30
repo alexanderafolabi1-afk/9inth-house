@@ -33,11 +33,13 @@ const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8', 'cache
 
 // One place decides who may call this API from a browser. Anything not on the
 // list gets no CORS headers at all, which is what a browser needs in order to
-// refuse the response. Exported because desk.html now calls this Worker on
-// its own workers.dev address directly rather than through a same-site
-// Route, so every route in the Worker needs these headers, not only the
-// ones under /social; index.js applies this same function to everything it
-// answers, see the fetch wrapper there.
+// refuse the response. Exported because desk.html falls back to calling this
+// Worker on its own workers.dev address, a genuinely cross-origin request,
+// whenever the same-site 9thpoint.com/api/* Route does not answer, so every
+// route in the Worker needs these headers available, not only the ones under
+// /social; index.js applies this same function to everything it answers, see
+// the fetch wrapper there. Harmless, and simply unused, on the Route path,
+// since a real same-origin request needs no CORS headers at all.
 export function allowedOrigins(env) {
   const raw = env.DESK_ORIGIN || 'https://9thpoint.com,https://www.9thpoint.com';
   return raw.split(',').map((s) => s.trim()).filter(Boolean);

@@ -1822,30 +1822,52 @@ const engineReady = () => AUTHED === true;
 // answered before the request reached it. Saying "the house answered with an
 // error" in that case points the owner at the wrong thing entirely, and at
 // something they cannot fix, so this says what actually happened and ends
-// with one line worth reporting verbatim. desk.html calls the Worker on its
-// own workers.dev address directly (see ENGINE_BASE), bypassing the
-// 9thpoint.com/api/* Route entirely, so this should now only ever fire if
-// the Worker itself is not deployed or that address has changed.
+// with one line worth reporting verbatim. By the time this is ever called,
+// the ROUTE_BASE fallback above has already run and failed too, so API_BASE
+// here is always ENGINE_BASE; this should now only fire if the Worker itself
+// is not deployed, both addresses have changed, or something answers on the
+// Worker's own workers.dev address that is not the Worker.
 function notFromEngine(status, ctype, method, path){
   const kind = String(ctype || '').split(';')[0] || 'no type given';
   return 'That request never reached the engine. Something else answered it instead, with a '
     + status + '. Nothing is wrong with what you typed, and trying again will not help. Report this line '
-    + 'as it stands: ' + method + ' ' + ENGINE_BASE + path + ' answered ' + status + ' as ' + kind + '.';
+    + 'as it stands: ' + method + ' ' + API_BASE + path + ' answered ' + status + ' as ' + kind + '.';
 }
 
-// Called directly on the Worker's own workers.dev address rather than
-// through the 9thpoint.com/api/* Route: that Route sits in front of DNS and
-// zone configuration this page has no way to see or fix if it stops
-// resolving, and it did, for every method, not just POST. This address only
-// depends on the Worker itself being deployed, nothing else in between.
+// The Worker answers on both this address and, through Cloudflare's Route,
+// on 9thpoint.com/api/*. Which one desk.html actually uses matters for the
+// session cookie, not only for reachability: this address is a different
+// site from 9thpoint.com as far as a browser is concerned, so the cookie
+// it sets has to be SameSite=None to be sent back at all, which is exactly
+// the shape of cookie Safari's Intelligent Tracking Prevention treats with
+// the most suspicion, on the phone far more aggressively than on the
+// desktop build of the same browser. A cookie set through the Route never
+// has that problem, because nothing about that request is cross-site in
+// the first place. This address is what ROUTE_BASE below falls back to,
+// kept for exactly the failure it was built for: the Route sits in front of
+// DNS and zone configuration this page has no way to see or fix if it stops
+// resolving, and it has, before. Depending on the Worker being deployed and
+// nothing else in between is what makes it a fallback worth having, not
+// what makes it the first choice.
 const ENGINE_BASE = 'https://9inth-house-engine.alexanderafolabi1.workers.dev';
 
+// Tried first, every session. 9thpoint.com's DNS is confirmed on the same
+// Cloudflare account the Worker deploys to, and the Route is left connected
+// in wrangler.toml for exactly this. A same-site request needs no CORS
+// headers and sets a same-site cookie, which is the actual fix for the
+// mobile Safari case: signed in on a laptop, "session expired" on the
+// phone, every single time, because the cross-site cookie ENGINE_BASE has
+// to use was never reliably kept by that browser to begin with. See
+// ROUTE_UNAVAILABLE below for what happens if this address stops
+// resolving again the way it did once before.
+const ROUTE_BASE = 'https://9thpoint.com/api';
+
 // Something in front of the engine used to pass GET through and refuse POST,
-// which made every action on this desk fail, not just signing in. Kept as a
-// second line of defence now that ENGINE_BASE bypasses that layer entirely:
-// where a POST is still refused for some other reason, the same call is sent
-// again as a GET carrying the method and the body in headers, and the engine
-// rebuilds the real request from them.
+// which made every action on this desk fail, not just signing in. Independent
+// of which base a call is using: where a POST is refused for this reason on
+// whichever one that is, the same call is sent again as a GET carrying the
+// method and the body in headers, and the engine rebuilds the real request
+// from them.
 //
 // Off until a POST has actually failed, and remembered for the rest of the
 // session once it has, so a desk on a working connection never uses it and one
@@ -1853,6 +1875,17 @@ const ENGINE_BASE = 'https://9inth-house-engine.alexanderafolabi1.workers.dev';
 // a header rather than the query string on purpose: a password in a URL ends up
 // in history, logs and referrers.
 let TUNNEL = false;
+
+// Which of ROUTE_BASE and ENGINE_BASE this session is actually using, decided
+// once, on the first call, and kept for every call after that. It has to be
+// sticky: the two bases are different sites as far as cookies go, so a
+// session cookie set through one is never sent to the other, and switching
+// mid-session would look exactly like being signed out. False for the whole
+// session means the Route answered on the very first try; true means it did
+// not, and every call after that first one goes straight to ENGINE_BASE
+// without paying the cost of trying the Route again.
+let ROUTE_UNAVAILABLE = false;
+let API_BASE = ROUTE_BASE;
 
 async function engine(path, body, method, opts){
   opts = opts || {};
@@ -1871,14 +1904,18 @@ async function engine(path, body, method, opts){
         headers['X-NH-Method'] = wanted;
         if(body) headers['X-NH-Body'] = JSON.stringify(body);
       }
-      const res = await fetch(ENGINE_BASE + path, {
+      const res = await fetch(API_BASE + path, {
         method: useTunnel ? 'GET' : wanted,
         headers,
         body: (body && !useTunnel) ? JSON.stringify(body) : undefined,
-        // Genuinely cross-site now (9thpoint.com calling a workers.dev
-        // address), so the cookie only travels with credentials: 'include',
-        // matching the Worker's Access-Control-Allow-Credentials and the
-        // SameSite=None session cookie. same-origin would silently drop it.
+        // credentials: 'include' matters differently depending on which base
+        // this is. Same-origin (ROUTE_BASE) sends the cookie regardless of
+        // this setting; it only does something on ENGINE_BASE, a genuinely
+        // cross-site request, where it is what makes the SameSite=None
+        // session cookie travel at all, matching the Worker's own
+        // Access-Control-Allow-Credentials. Included unconditionally rather
+        // than branched on API_BASE, since it is harmless on the same-origin
+        // path and required on the other one.
         credentials: 'include',
         cache: 'no-store',
         signal: ctrl.signal
@@ -1894,6 +1931,20 @@ async function engine(path, body, method, opts){
       let data = {};
       try{ data = raw ? JSON.parse(raw) : {}; }catch(e){ data = {}; }
       const fromEngine = ctype.indexOf('application/json') !== -1;
+      // The Route answering with something that is not the engine (a static
+      // 404, a parked page, DNS not resolving the way it is meant to) is
+      // indistinguishable, from here, from the Route being broken outright,
+      // and it has been broken outright before. Rather than report that as a
+      // session problem or a generic error, switch to the known-working
+      // fallback and send this exact call again. Only while still on
+      // ROUTE_BASE: once this session is already on ENGINE_BASE, a bad
+      // response is a real error, not a routing one.
+      if(!fromEngine && API_BASE === ROUTE_BASE && !ROUTE_UNAVAILABLE){
+        ROUTE_UNAVAILABLE = true;
+        API_BASE = ENGINE_BASE;
+        clearTimeout(timer);
+        return await engine(path, body, method, opts);
+      }
       if(res.status === 401 && path !== '/auth/login'){
         AUTHED = false;
         LOGIN_MSG = 'Your session expired. Sign in again.';
@@ -1928,6 +1979,19 @@ async function engine(path, body, method, opts){
       const isTimeout = e && e.name === 'AbortError';
       const rawMsg = e && e.message;
       const isNetworkLevel = isTimeout || rawMsg === 'Failed to fetch' || rawMsg === 'Load failed';
+
+      // DNS for the Route not resolving, or Cloudflare refusing the zone,
+      // surfaces here rather than as a real HTTP answer, the same as it did
+      // the one time this actually happened. Same fallback as the non-JSON
+      // case above, only reached here when the failure happens before any
+      // response comes back at all. A timeout is excluded on purpose: the
+      // Route did answer, eventually, or is about to, and switching base
+      // would only start the same slow wait over again on the other one.
+      if(isNetworkLevel && !isTimeout && API_BASE === ROUTE_BASE && !ROUTE_UNAVAILABLE){
+        ROUTE_UNAVAILABLE = true;
+        API_BASE = ENGINE_BASE;
+        return await engine(path, body, method, opts);
+      }
 
       // The gap the tunnel had left. It only engaged on a reply that was not
       // JSON, which assumes something answered. A method the edge refuses can

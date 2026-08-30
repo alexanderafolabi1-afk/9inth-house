@@ -67,10 +67,11 @@ self.addEventListener('message', (event) => {
 });
 
 function isApiRequest(url) {
-  // desk.html calls the Worker on its own workers.dev address (see
-  // ENGINE_BASE there) rather than this origin's /api/*, so that is
-  // excluded by name too, explicitly, rather than relying on it simply not
-  // matching a same origin path below.
+  // desk.html tries the same-site 9thpoint.com/api/* Route first (see
+  // ROUTE_BASE there) and falls back to the Worker's own workers.dev
+  // address (ENGINE_BASE) if that Route does not answer, so both are
+  // excluded by name here, explicitly, rather than relying on the /api/*
+  // one simply not matching a same origin path below.
   if (url.hostname.endsWith('.workers.dev')) return true;
   if (url.pathname === '/social' || url.pathname.startsWith('/social/')) return true;
   if (url.pathname === '/api' || url.pathname.startsWith('/api/')) return true;
