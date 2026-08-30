@@ -26,7 +26,7 @@ import { notifyOwner } from './social/push.js';
 import { isSocialRoute, handleSocial, corsHeaders } from './social/api.js';
 import { SENDABLE, isPlatform, isCategory } from './social/config.js';
 import {
-  requireSession, mintSession, verifyPassword, sessionCookie, clearedSessionCookie,
+  requireSession, mintSession, verifyPassword,
   rateLimitConfigured, checkLockout, recordFailure, resetAttempts,
   hashPassword, getStoredPasswordHash, setStoredPasswordHash, hashIsVerifiable, passwordResetOpen,
   sessionSigningAvailable, getOrCreateN8nToken, regenerateN8nToken, verifyN8nToken
@@ -1321,36 +1321,39 @@ export default {
     );
   },
   async fetch(request, env, ctx) {
-    // desk.html tries the 9thpoint.com/api/* Route first (see ROUTE_BASE
-    // there), which is what gives the session cookie a genuinely same-site
-    // request to be set on; falling back to this Worker's own workers.dev
-    // address (ENGINE_BASE) only when the Route itself fails to answer.
-    // That fallback path is a real cross-origin request, so CORS is still
-    // needed here regardless, not just the /social routes' own copy of it.
-    // OPTIONS is answered here, before any routing, and everything else
-    // this function returns gets the same headers merged on afterwards, see
-    // respond() and its call at the end below.
+    // desk.html calls this Worker directly on its own workers.dev address
+    // (see ENGINE_BASE there), never through the 9thpoint.com/api/* Route:
+    // that Route sits in front of DNS and zone configuration this repo has
+    // no way to see or fix, and it has answered with a bare 404 before.
+    // That makes every call from the admin a genuinely cross-origin
+    // request, so CORS is needed here regardless, not just the /social
+    // routes' own copy of it, even though authentication itself no longer
+    // depends on that at all: login hands back a signed bearer token in
+    // the response body (see mintSession in auth.js) rather than a cookie,
+    // so there is nothing for a browser's cross-site cookie policy to
+    // block, on any origin, on any browser. OPTIONS is answered here,
+    // before any routing, and everything else this function returns gets
+    // the same headers merged on afterwards, see respond() and its call at
+    // the end below.
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: corsHeaders(request, env) });
     }
     const respond = async () => {
     const url = new URL(request.url);
 
-    // Two shapes reach this Worker now: a bare path from ENGINE_BASE, and
-    // an /api-prefixed one from the Route (see ROUTE_BASE and ENGINE_BASE
-    // in desk.html, and API_BASE, which decides which of the two a given
-    // session actually uses). Stripped here unconditionally so every route
-    // below can be written once, against the bare shape, regardless of
-    // which address answered.
+    // desk.html always calls this Worker with a bare path now (see
+    // ENGINE_BASE there); the /api prefix stripped here is only for
+    // whatever still reaches this Worker through the 9thpoint.com/api/*
+    // Route directly, curl included, so that path keeps working too rather
+    // than assumed dead.
     const apiPath = url.pathname.replace(/^\/api(?=\/|$)/, '') || '/';
 
-    // Method tunnelling, kept as a second line of defence regardless of
-    // which base a given call is using. The reason it originally had to
-    // exist:
+    // Method tunnelling, kept as a second line of defence. The reason it
+    // originally had to exist:
     //
     // Something in front of this Worker passes GET through and refuses POST.
-    // A GET to /api/auth/session is answered here; the POST to /api/auth/setup
-    // that the very same screen submits never arrives, and comes back as a bare
+    // A GET to /auth/session is answered here; the POST to /auth/setup that
+    // the very same screen submits never arrives, and comes back as a bare
     // 404 with no content type, which is the shape of a static host answering a
     // method it does not serve rather than anything this Worker returned. That
     // makes the entire desk unusable, not just login: every action on it is a
@@ -1467,7 +1470,7 @@ export default {
       }
       await setStoredPasswordHash(env, hash);
       const token = await mintSession(env);
-      return apiJson({ ok: true }, 200, { 'Set-Cookie': sessionCookie(token) });
+      return apiJson({ ok: true, token });
     }
 
     if (apiPath === '/auth/login' && effective.method === 'POST') {
@@ -1509,11 +1512,17 @@ export default {
       }
       await resetAttempts(env, ip);
       const token = await mintSession(env);
-      return apiJson({ ok: true }, 200, { 'Set-Cookie': sessionCookie(token) });
+      return apiJson({ ok: true, token });
     }
 
+    // The token is stateless and never stored anywhere server side (see
+    // mintSession/verifySessionToken in auth.js), so there is nothing here
+    // to revoke or delete. Signing out is really a client side action, the
+    // browser discarding what it was holding; this exists so the desk has
+    // one call to make when the owner taps it, rather than needing to know
+    // that fact and skip the network entirely.
     if (apiPath === '/auth/logout' && effective.method === 'POST') {
-      return apiJson({ ok: true }, 200, { 'Set-Cookie': clearedSessionCookie() });
+      return apiJson({ ok: true });
     }
 
     // Signed in only. The owner's way to rotate the password from inside the
@@ -1581,7 +1590,7 @@ export default {
       }
     }
 
-    // The distribution engine's admin API, behind the same session cookie.
+    // The distribution engine's admin API, behind the same session token.
     // Every route under /social is authenticated, including the read ones: an
     // endpoint that can fire posts must never answer to whoever finds the URL.
     if (isSocialRoute(apiPath)) {
@@ -1589,7 +1598,7 @@ export default {
     }
 
     // n8n integration: a machine to machine path for the n8n HTTP Request node,
-    // authenticated with a bearer token rather than the session cookie, since
+    // authenticated with a bearer token rather than the session token, since
     // n8n has no browser to hold one. The token lives in KV (see
     // getOrCreateN8nToken in auth.js), generated by the Worker itself the first
     // time the desk asks for it, with no Cloudflare dashboard step required;
@@ -1671,7 +1680,7 @@ export default {
     // Requires AUTHOR_DESK_TRIGGER_TOKEN to be set; declines closed by default if
     // it is not, rather than leaving an open endpoint that could force a rebuild
     // and burn Anthropic tokens on request from anyone who finds the URL. This is
-    // a machine path, deliberately separate from the session cookie: whoever
+    // a machine path, deliberately separate from the session token: whoever
     // triggers it (a script, a curl call from the CEO's terminal) has no browser
     // session to carry.
     if (apiPath === '/author-desk/media-pack' && effective.method === 'POST') {
@@ -1698,7 +1707,7 @@ export default {
       return new Response('Media pack rebuild triggered.', { status: 202 });
     }
     return new Response(
-      'Ninth House Autopilot Worker. Mostly a Cron Trigger worker. POST /author-desk/media-pack (bearer token) redoes the Author Desk press kit. GET /n8n/queue, POST /n8n/queue/push and POST /n8n/generate (bearer token) are the n8n integration. Everything under /social and /desk, and /auth/session, /auth/setup, /auth/login, /auth/logout, /auth/change-password, back the admin at desk.html and are session-cookie authenticated (setup and login are the two that work with no session yet). See /worker/README.md for deploy and secret setup.',
+      'Ninth House Autopilot Worker. Mostly a Cron Trigger worker. POST /author-desk/media-pack (bearer token) redoes the Author Desk press kit. GET /n8n/queue, POST /n8n/queue/push and POST /n8n/generate (bearer token) are the n8n integration. Everything under /social and /desk, and /auth/session, /auth/setup, /auth/login, /auth/logout, /auth/change-password, back the admin at desk.html and are authenticated with the bearer session token /auth/setup or /auth/login hands back (setup and login are the two that work with no token yet). See /worker/README.md for deploy and secret setup.',
       { status: 200, headers: { 'content-type': 'text/plain' } }
     );
     };

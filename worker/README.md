@@ -436,10 +436,22 @@ or a `wrangler secret`.
 
 There is no Route to connect and no `SESSION_SECRET` to set. `desk.html`
 calls the Worker on its own `.workers.dev` address directly (see
-`ENGINE_BASE` near the top of its script), not through a `9thpoint.com/api/*`
-Route, so the session cookie is set with `SameSite=None; Secure` and a
-Cloudflare Route is not part of the login path at all. The session-signing
-secret is generated the first time it is needed and stored in
+`ENGINE_BASE` near the top of its script), never through a
+`9thpoint.com/api/*` Route, so a Cloudflare Route is not part of the login
+path at all.
+
+Login is not a cookie. `desk.html` and this Worker are two different sites,
+and a cookie set across that boundary is a cross-site cookie no matter how
+it is configured; mobile Safari does not reliably keep that kind of cookie,
+which is why login used to work on a laptop and fail on a phone, every
+time, no matter how many times the app was closed and reopened. `POST
+/auth/setup` and `POST /auth/login` instead hand back a signed session
+token in the JSON response body, which `desk.html` stores in
+`localStorage` and attaches as an `Authorization: Bearer` header on every
+call after that (see `mintSession`/`requireSession` in `worker/src/auth.js`
+and `engine()` in `desk.html`). A bearer header has no cross-site cookie
+policy to run into, on any browser. The session-signing secret behind that
+token is generated the first time it is needed and stored in
 `LOGIN_ATTEMPTS`, the same pattern as the password hash; a dashboard
 `SESSION_SECRET` is still honoured if one is already set, but nothing
 requires setting one.
@@ -463,18 +475,20 @@ screen again.
 
 From then on, `desk.html` shows a login screen instead of the app, and stays
 that way until the right password is entered. Five wrong attempts from one IP
-lock it out for fifteen minutes. Signing in sets a cookie that lasts 30 days;
-"Sign out" in Settings clears it early.
+lock it out for fifteen minutes. Signing in stores a session token in
+`localStorage` that lasts 30 days, so it survives closing and reopening the
+app; "Sign out" in Settings clears it early.
 
 The `/author-desk/media-pack` trigger and everything under `/social` and
-`/desk` on the `.workers.dev` domain (bearer-token routes, or curl with a
-cookie jar as above) are unaffected by any of this and keep working exactly
-as documented; the login only gates the browser admin.
+`/desk` on the `.workers.dev` domain (bearer-token routes, or curl with an
+`Authorization: Bearer` header as above) are unaffected by any of this and
+keep working exactly as documented; the login only gates the browser admin.
 
 ## n8n integration
 
 Three routes let an n8n workflow drive the engine without a browser session,
-authenticated with a bearer token instead of the session cookie:
+authenticated with its own separate bearer token, independent of the desk
+admin's session token above:
 
 | Route | Method | Does |
 |---|---|---|

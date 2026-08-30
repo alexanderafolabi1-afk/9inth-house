@@ -2,14 +2,19 @@
 //
 // Every route here is authenticated. There is no read only route and no public
 // route: an endpoint that fires posts and answers to anyone who finds the URL is
-// a defect, not a convenience. Authentication is the same HttpOnly session
-// cookie the rest of the admin uses (see worker/src/auth.js): the browser logs
-// in once with the owner's password, and every call after that carries the
-// cookie automatically. If SESSION_SECRET is missing, sessions cannot be
-// verified and every route here declines, closed by default, rather than
-// falling open.
+// a defect, not a convenience. Authentication is the same bearer session token
+// the rest of the admin uses (see mintSession/requireSession in
+// worker/src/auth.js): the browser signs in once with the owner's password,
+// the Worker hands back a signed token in the response body, and desk.html
+// attaches it as an Authorization header on every call after that. Not a
+// cookie: desk.html lives on 9thpoint.com and this Worker answers on its own
+// workers.dev address, and a cookie set across those two is a cross-site
+// cookie no matter how it is configured, which mobile Safari does not
+// reliably keep. A bearer header has no such policy to run into. If
+// SESSION_SECRET is missing, sessions cannot be verified and every route
+// here declines, closed by default, rather than falling open.
 //
-// The session cookie is the only credential the admin ever holds. It cannot
+// The session token is the only credential the admin ever holds. It cannot
 // reach Anthropic, GitHub or the Make endpoint directly: those secrets stay on
 // the Worker and the admin only ever asks the Worker to act.
 
@@ -34,13 +39,11 @@ const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8', 'cache
 
 // One place decides who may call this API from a browser. Anything not on the
 // list gets no CORS headers at all, which is what a browser needs in order to
-// refuse the response. Exported because desk.html falls back to calling this
-// Worker on its own workers.dev address, a genuinely cross-origin request,
-// whenever the same-site 9thpoint.com/api/* Route does not answer, so every
-// route in the Worker needs these headers available, not only the ones under
-// /social; index.js applies this same function to everything it answers, see
-// the fetch wrapper there. Harmless, and simply unused, on the Route path,
-// since a real same-origin request needs no CORS headers at all.
+// refuse the response. Exported because desk.html calls this Worker on its
+// own workers.dev address, a genuinely cross-origin request from
+// 9thpoint.com's point of view, so every route in the Worker needs these
+// headers available, not only the ones under /social; index.js applies this
+// same function to everything it answers, see the fetch wrapper there.
 export function allowedOrigins(env) {
   const raw = env.DESK_ORIGIN || 'https://9thpoint.com,https://www.9thpoint.com';
   return raw.split(',').map((s) => s.trim()).filter(Boolean);
@@ -51,15 +54,14 @@ export function corsHeaders(request, env) {
   const headers = { 'Vary': 'Origin' };
   if (origin && allowedOrigins(env).includes(origin)) {
     headers['Access-Control-Allow-Origin'] = origin;
-    // Required alongside credentials: 'include' on the fetch and
-    // SameSite=None on the session cookie (see sessionCookie in auth.js):
-    // without this the browser neither sends the cookie nor accepts a
-    // Set-Cookie back, on a request that is now genuinely cross-site.
-    headers['Access-Control-Allow-Credentials'] = 'true';
     headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS';
-    // X-NH-Method/X-NH-Body: the method-tunnel fallback in desk.html's
-    // engine() still exists as a second line of defence and needs these
-    // allowed if it is ever the one that ends up firing.
+    // Authorization is what carries the bearer session token (see
+    // mintSession/requireSession in auth.js); without it listed here a
+    // cross-origin request could not send that header at all. X-NH-Method
+    // and X-NH-Body are for the method-tunnel fallback in desk.html's
+    // engine(), still kept as a second line of defence and needing these
+    // allowed if it is ever the one that ends up firing. No credentials
+    // header: nothing here is a cookie, so there is nothing that needs one.
     headers['Access-Control-Allow-Headers'] = 'Authorization, Content-Type, X-NH-Method, X-NH-Body';
     headers['Access-Control-Max-Age'] = '86400';
   }
@@ -391,7 +393,7 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
 
       // The token n8n's HTTP Request node authenticates with, against the
       // separate bearer-authenticated /n8n/* routes in index.js, not this
-      // session-cookie-authenticated /social API. Generated and stored in KV
+      // API's own session-token authentication. Generated and stored in KV
       // the first time this is called, same as VAPID keys above, so there is
       // nothing to set up in the Cloudflare dashboard: sign in, open
       // Settings, copy the token into n8n.
