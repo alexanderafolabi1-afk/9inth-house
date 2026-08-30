@@ -1516,6 +1516,23 @@ const engineReady = () => AUTHED === true;
 // harmless, and one place that turns a 401 into "go back to the login
 // screen" instead of a dead end, so nothing downstream has to know the
 // difference between "not signed in" and "any other failure."
+// A reply that is not JSON never came from the engine: the site host answered
+// it instead, before the request got that far. Saying "the house answered with
+// an error" in that case points the owner at the wrong thing entirely, and at
+// something they cannot fix, so this says what actually happened and ends with
+// one line worth reporting verbatim. The commonest cause is a method the site
+// host will not pass through: the pages here are served as a static site, which
+// answers GET but refuses POST outright, so a read can succeed on a path where
+// the matching write is refused before the engine ever sees it.
+function notFromEngine(status, ctype, method, path){
+  const kind = String(ctype || '').split(';')[0] || 'no type given';
+  const host = (typeof location !== 'undefined' && location.host) ? location.host : 'this site';
+  return 'That request never reached the engine. The website answered it instead, with a '
+    + status + '. Nothing is wrong with what you typed, and trying again will not help: the engine '
+    + 'is not wired to ' + method + ' on ' + host + '/api. Report this line as it stands: '
+    + method + ' /api' + path + ' answered ' + status + ' as ' + kind + '.';
+}
+
 async function engine(path, body, method, opts){
   opts = opts || {};
   const timeoutMs = opts.timeoutMs || 20000;
@@ -1534,8 +1551,16 @@ async function engine(path, body, method, opts){
         signal: ctrl.signal
       });
       clearTimeout(timer);
+      // Read the body as text first, so a reply that is not JSON can be told
+      // apart from one that is. The engine answers JSON on every path it
+      // handles, including its errors, so anything else did not come from the
+      // engine at all and must not be reported as though it had.
+      const ctype = res.headers.get('content-type') || '';
+      let raw = '';
+      try{ raw = await res.text(); }catch(e){ raw = ''; }
       let data = {};
-      try{ data = await res.json(); }catch(e){ data = {}; }
+      try{ data = raw ? JSON.parse(raw) : {}; }catch(e){ data = {}; }
+      const fromEngine = ctype.indexOf('application/json') !== -1;
       if(res.status === 401 && path !== '/auth/login'){
         AUTHED = false;
         LOGIN_MSG = 'Your session expired. Sign in again.';
@@ -1544,6 +1569,7 @@ async function engine(path, body, method, opts){
       }
       if(res.status === 429 && data.error) throw new Error(data.error);
       if(res.status === 503 && data.error) throw new Error(data.error);
+      if(!res.ok && !fromEngine) throw new Error(notFromEngine(res.status, ctype, method || (body ? 'POST' : 'GET'), path));
       if(!res.ok && !data.error) throw new Error('The house answered with an error (status ' + res.status + '). Try again shortly.');
       if(data.error && data.ok === false) throw new Error(data.error);
       return data;
