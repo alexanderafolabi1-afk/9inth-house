@@ -555,12 +555,27 @@ function ledgerForget(i){ if(S.ledger && i >= 0 && i < S.ledger.length){ S.ledge
    /desk/ask, which holds ANTHROPIC_API_KEY and is the only thing that calls
    Anthropic. Same session-cookie auth, same engine() helper, as every other
    admin action. */
+// Every partner the desk speaks to comes through here, and every one of them
+// was being cut off before it could answer.
+//
+// engine() waits twenty seconds by default, which is right for a queue read and
+// nowhere near enough for this. These calls carry the web search tool, so the
+// model runs several searches before it writes anything and a minute is
+// ordinary. The browser was giving up first, every time, which is why the
+// standup button appeared to do nothing and then complained it could not reach
+// the house: it never got an answer because it stopped listening for one.
+//
+// A hundred and ten seconds, so the Worker's own eighty five second bound on
+// Anthropic always expires first and what comes back is a readable reason
+// rather than a request that vanished.
+const AI_TIMEOUT_MS = 110000;
+
 async function callClaude(system, user, maxTokens, skipLedger){
   const data = await engine('/desk/ask', {
     system: skipLedger ? system : (system + ledgerBlock()),
     user,
     max_tokens: maxTokens || 1000
-  });
+  }, 'POST', { timeoutMs: AI_TIMEOUT_MS });
   return data.text || '';
 }
 
@@ -1157,17 +1172,35 @@ async function commission(charId){
 }
 
 /* Daily cycle */
+// A spinner that never changes is indistinguishable from a dead button, and
+// these calls genuinely run for the best part of a minute because the partners
+// search the web before they answer. Counting up says the difference out loud.
+// Returns the stopper; the caller's render() replaces the button either way, so
+// clearing the interval is all it has to do.
+function countUpOn(btn, label){
+  const started = Date.now();
+  const tick = () => {
+    const secs = Math.round((Date.now() - started) / 1000);
+    btn.innerHTML = `<i class="spin"></i> ${label} ${secs}s`;
+  };
+  tick();
+  const id = setInterval(tick, 1000);
+  return () => clearInterval(id);
+}
+
 async function runCycle(){
   const btn = document.getElementById('cyclebtn');
-  btn.innerHTML = '<i class="spin"></i> Convening standup…'; btn.disabled = true;
+  btn.disabled = true;
+  const stop = countUpOn(btn, 'Convening standup…');
   S.day += 1;
   try{
     const out = await callClaude(
       charById('maren').sys + '\n\n' + FIRM_CTX,
       `It is Day ${S.day} at Ninth House. Firm state:\n${firmState()}\n\nRun the daily standup. Deliver: ## Situation (3 lines max), ## Today's Top 3 Priorities (which partner should do what, for which business, and why), ## One Risk I'm Watching. Keep it tight.`, 800);
+    stop();
     S.standups.push({ day:S.day, text:out });
     save(); render();
-  }catch(e){ S.day -= 1; save(); render(); alert(errMsg('Convening the standup', e)); }
+  }catch(e){ stop(); S.day -= 1; save(); render(); alert(errMsg('Convening the standup', e)); }
 }
 
 /* Boardroom */
@@ -1847,8 +1880,23 @@ async function engine(path, body, method, opts){
       const isTimeout = e && e.name === 'AbortError';
       const rawMsg = e && e.message;
       const isNetworkLevel = isTimeout || rawMsg === 'Failed to fetch' || rawMsg === 'Load failed';
+
+      // The gap the tunnel had left. It only engaged on a reply that was not
+      // JSON, which assumes something answered. A method the edge refuses can
+      // just as easily produce no reply at all: a blocked preflight, or a
+      // connection dropped before anything came back, both surface here as a
+      // plain fetch failure with nothing to inspect. Treating that as simply
+      // offline was wrong, because on a non-GET it can equally be the same
+      // refusal the tunnel exists to get around. A timeout is excluded
+      // deliberately: something answered late, and sending it a second time
+      // would only ask the house to do the same slow work twice.
+      if(isNetworkLevel && !isTimeout && wanted !== 'GET' && !TUNNEL){
+        TUNNEL = true;
+        return await engine(path, body, method, opts);
+      }
+
       lastErr = isTimeout
-        ? new Error('The house did not answer in time. Check your connection and try again.')
+        ? new Error('The house did not answer in time. It searches the web before answering, so give it a full minute before deciding it is stuck.')
         : isNetworkLevel
           ? new Error('Could not reach the house. Check your connection and try again.')
           : (e instanceof Error ? e : new Error(String(e)));
