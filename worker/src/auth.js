@@ -1,8 +1,12 @@
 // Session auth for the desk admin. One owner, one password.
 //
-// The password itself is never stored: only a PBKDF2 hash, in the
-// ADMIN_PASSWORD_HASH secret, in the same "$" delimited format this file
-// writes and reads (see scripts/hash-password.mjs, which produces it).
+// The password itself is never stored: only a PBKDF2 hash, kept as a value in
+// the LOGIN_ATTEMPTS KV namespace (see PASSWORD_HASH_KV_KEY below), in the
+// same "$" delimited format this file writes and reads. There is no secret
+// to set in the Cloudflare dashboard for this: the very first person to open
+// desk.html chooses the password there, on a "Create your password" screen,
+// and this file hashes and stores it. See hashPassword/getStoredPasswordHash
+// below, and worker/src/index.js's POST /auth/setup for the one-time claim.
 //
 // The session is a stateless, signed cookie rather than a server-side
 // session store, so login does not depend on D1 being provisioned: it is a
@@ -46,10 +50,8 @@ function constantTimeEqual(a, b) {
 /* ---------- password hashing ---------- */
 
 // Format: pbkdf2$<iterations>$<salt base64url>$<hash base64url>
-// scripts/hash-password.mjs writes this same format with Node's crypto, and
-// PBKDF2-HMAC-SHA256 is a standard algorithm both runtimes implement
-// identically for the same inputs, so the two sides agree without either one
-// knowing about the other's implementation.
+// Produced and verified entirely on this side now (see hashPassword below);
+// nothing outside the Worker ever needs to write or read this format.
 async function derivePbkdf2(password, salt, iterations) {
   const keyMaterial = await crypto.subtle.importKey(
     'raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits']
@@ -60,6 +62,38 @@ async function derivePbkdf2(password, salt, iterations) {
     256
   );
   return new Uint8Array(bits);
+}
+
+// The KV key the password hash lives under, in the LOGIN_ATTEMPTS namespace
+// (there is no dedicated namespace for it; one owner, one hash, does not
+// justify provisioning another binding). Versioned the same way attemptsKey
+// is below, so a future format change can be rolled out by bumping this
+// string rather than migrating a stored value in place.
+const PASSWORD_HASH_KV_KEY = 'admin:password_hash:v1';
+
+async function generateSalt(bytes = 16) {
+  return crypto.getRandomValues(new Uint8Array(bytes));
+}
+
+// Same format and same PBKDF2 parameters verifyPassword expects, so a hash
+// produced here is indistinguishable from one that would have come from the
+// old wrangler-secret workflow.
+export async function hashPassword(password) {
+  const salt = await generateSalt();
+  const hash = await derivePbkdf2(password, salt, PBKDF2_ITERATIONS);
+  return `pbkdf2$${PBKDF2_ITERATIONS}$${b64urlEncode(salt)}$${b64urlEncode(hash)}`;
+}
+
+// null means "no password has ever been set" as much as it means "KV is not
+// bound" - both are treated as needing first-run setup by the caller, since
+// there is nothing to sign in against either way.
+export async function getStoredPasswordHash(env) {
+  if (!env.LOGIN_ATTEMPTS) return null;
+  return env.LOGIN_ATTEMPTS.get(PASSWORD_HASH_KV_KEY);
+}
+
+export async function setStoredPasswordHash(env, hash) {
+  await env.LOGIN_ATTEMPTS.put(PASSWORD_HASH_KV_KEY, hash);
 }
 
 export async function verifyPassword(password, stored) {
