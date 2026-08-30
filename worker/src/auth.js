@@ -316,6 +316,52 @@ export function clearedSessionCookie() {
   return `${COOKIE_NAME}=; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=0`;
 }
 
+/* ---------- n8n machine token ---------- */
+
+// Same LOGIN_ATTEMPTS namespace, same reason as SESSION_SECRET_KV_KEY above:
+// generated inside the Worker and written from inside the Worker, so it
+// either works every time or the binding itself is absent, with no dashboard
+// paste to go wrong. n8n authenticates with this token as a bearer header
+// rather than the session cookie, since its HTTP Request node is a server
+// calling this Worker directly, not a browser that can hold a cookie.
+const N8N_TOKEN_KV_KEY = 'n8n:token:v1';
+
+// Generated once and persisted, same race as getOrCreateSessionSecret: two
+// requests racing to be first would each generate their own token and the
+// later write wins, which only matters in the instant before anyone has
+// copied a token into n8n yet.
+export async function getOrCreateN8nToken(env) {
+  if (!env.LOGIN_ATTEMPTS) return null;
+  const existing = await env.LOGIN_ATTEMPTS.get(N8N_TOKEN_KV_KEY);
+  if (existing) return existing;
+  const generated = b64urlEncode(crypto.getRandomValues(new Uint8Array(32)));
+  await env.LOGIN_ATTEMPTS.put(N8N_TOKEN_KV_KEY, generated);
+  return generated;
+}
+
+// Overwrites whatever token n8n currently has configured, invalidating it.
+// Used by the desk's "Regenerate" action; the new value is handed back so
+// the caller can display it, the same as getOrCreateN8nToken does.
+export async function regenerateN8nToken(env) {
+  if (!env.LOGIN_ATTEMPTS) return null;
+  const generated = b64urlEncode(crypto.getRandomValues(new Uint8Array(32)));
+  await env.LOGIN_ATTEMPTS.put(N8N_TOKEN_KV_KEY, generated);
+  return generated;
+}
+
+// Constant time against the stored token, same reasoning as password
+// verification: a bearer header is attacker controlled input, and comparing
+// it with a fast-exit === would leak how many leading bytes matched through
+// timing.
+export async function verifyN8nToken(env, provided) {
+  if (!provided || !env.LOGIN_ATTEMPTS) return false;
+  const stored = await env.LOGIN_ATTEMPTS.get(N8N_TOKEN_KV_KEY);
+  if (!stored) return false;
+  const a = new TextEncoder().encode(String(provided));
+  const b = new TextEncoder().encode(stored);
+  return constantTimeEqual(a, b);
+}
+
 /* ---------- login rate limiting ---------- */
 
 export function rateLimitConfigured(env) {

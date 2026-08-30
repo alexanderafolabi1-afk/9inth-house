@@ -22,9 +22,9 @@ import {
 import { publishPost } from './distribute.js';
 import { runGeneration } from './generate.js';
 import { ingestMetrics, ventureSummary } from './metrics.js';
-import { generateVapidKeys, pushConfigured, notifyOwner } from './push.js';
+import { getVapidKeys, pushConfigured, notifyOwner } from './push.js';
 import { sanitiseSocialText, hasDashPunctuation, stripDashPunctuation } from './text.js';
-import { requireSession } from '../auth.js';
+import { requireSession, getOrCreateN8nToken, regenerateN8nToken } from '../auth.js';
 
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' };
 
@@ -108,7 +108,8 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
   }
 
   const db = env.DB;
-  const needsStore = path !== '/social/push/keys' && path !== '/social/selfcheck';
+  const noStoreNeeded = ['/social/push/keys', '/social/selfcheck', '/social/n8n-token', '/social/n8n-token/regenerate'];
+  const needsStore = !noStoreNeeded.includes(path);
   if (needsStore && !hasStore(env)) return noStore(request, env);
 
   const body = request.method === 'POST' ? await readJson(request) : {};
@@ -131,7 +132,8 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
           ok: true,
           storage: hasStore(env),
           makeWebhook: Boolean(env.MAKE_WEBHOOK_URL),
-          push: pushConfigured(env),
+          push: await pushConfigured(env),
+          n8n: Boolean(env.LOGIN_ATTEMPTS),
           emailFallback: Boolean(env.NOTIFY_EMAIL_WEBHOOK),
           metricsWebhook: Boolean(env.METRICS_WEBHOOK_URL),
           anthropic: Boolean(env.ANTHROPIC_API_KEY),
@@ -159,7 +161,7 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
           // own copy of anything platform specific.
           platforms: PLATFORMS,
           categories: CATEGORIES,
-          vapidPublicKey: env.VAPID_PUBLIC_KEY || null,
+          vapidPublicKey: (await getVapidKeys(env))?.publicKey || null,
           makeReady: Boolean(env.MAKE_WEBHOOK_URL)
         });
       }
@@ -309,14 +311,39 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
       /* ---- notifications ---- */
 
       case 'POST /social/push/keys': {
-        // Generated on demand and never stored here. The answer is the only copy,
-        // and it goes straight into wrangler secret put.
-        const keys = await generateVapidKeys();
-        return json(request, env, {
-          ok: true,
-          ...keys,
-          instructions: 'Store these on the Worker: npx wrangler secret put VAPID_PUBLIC_KEY, then VAPID_PRIVATE_KEY, then VAPID_SUBJECT as mailto:you@example.com. The private key is not saved anywhere and will not be shown again.'
-        });
+        // getVapidKeys generates and stores a pair in KV the first time this
+        // is called with none there yet, and returns the same pair on every
+        // call after that. The private key never leaves the Worker: only
+        // the public one, which is what the browser needs to subscribe, is
+        // returned here.
+        const keys = await getVapidKeys(env);
+        if (!keys) {
+          return json(request, env, { ok: false, error: 'LOGIN_ATTEMPTS is not bound, so there is nowhere to store notification keys. See worker/README.md.' }, 503);
+        }
+        return json(request, env, { ok: true, publicKey: keys.publicKey });
+      }
+
+      // The token n8n's HTTP Request node authenticates with, against the
+      // separate bearer-authenticated /n8n/* routes in index.js, not this
+      // session-cookie-authenticated /social API. Generated and stored in KV
+      // the first time this is called, same as VAPID keys above, so there is
+      // nothing to set up in the Cloudflare dashboard: sign in, open
+      // Settings, copy the token into n8n.
+      case 'GET /social/n8n-token': {
+        const token = await getOrCreateN8nToken(env);
+        if (!token) {
+          return json(request, env, { ok: false, error: 'LOGIN_ATTEMPTS is not bound, so there is nowhere to store an n8n token. See worker/README.md.' }, 503);
+        }
+        return json(request, env, { ok: true, token });
+      }
+
+      // Rotates the token, invalidating whatever n8n currently has configured.
+      case 'POST /social/n8n-token/regenerate': {
+        const token = await regenerateN8nToken(env);
+        if (!token) {
+          return json(request, env, { ok: false, error: 'LOGIN_ATTEMPTS is not bound, so there is nowhere to store an n8n token. See worker/README.md.' }, 503);
+        }
+        return json(request, env, { ok: true, token });
       }
 
       case 'POST /social/push/subscribe': {

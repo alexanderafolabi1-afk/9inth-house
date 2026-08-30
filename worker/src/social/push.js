@@ -5,14 +5,16 @@
 // Workers runtime provides. The owner gets told the batch is waiting without
 // opening anything, which is the whole point of the morning notification.
 //
-// Keys live in secrets, never in the repo:
-//   VAPID_PUBLIC_KEY   the base64url public key, also handed to the browser
-//   VAPID_PRIVATE_KEY  the matching private key
-//   VAPID_SUBJECT      mailto: address or site URL, required by the spec
-//
-// Generate a pair with the authenticated route POST /social/push/keys, which
-// returns both values ready to paste into wrangler secret put. The private key is
-// returned once and never stored by the Worker.
+// Keys live in the LOGIN_ATTEMPTS KV namespace, the same place the admin
+// password and the session signing key do, and for the same reason: a value
+// that has to survive being pasted into a masked Cloudflare dashboard field
+// turned out to be genuinely unreliable on this project. getVapidKeys below
+// generates a pair itself the first time one is needed, from inside the
+// Worker's own code, and writes it to KV, so there is nothing to generate on
+// a laptop and nothing to paste anywhere. A dashboard VAPID_PUBLIC_KEY /
+// VAPID_PRIVATE_KEY / VAPID_SUBJECT, if ever set, is still tried first and
+// still works exactly as before; the generated pair only matters when those
+// are absent.
 
 import { listPushSubs, deletePushSub, notePushResult } from './db.js';
 
@@ -112,27 +114,59 @@ async function importVapidPrivateKey(privateKeyStr, publicKeyStr) {
   );
 }
 
-export function pushConfigured(env) {
-  return Boolean(env && env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY && env.VAPID_SUBJECT);
+const VAPID_KV_KEY = 'push:vapid:v1';
+const DEFAULT_VAPID_SUBJECT = 'mailto:hello@9thpoint.com';
+
+// The one place every push route and every send goes through to get keys.
+// Dashboard secrets first, if they are all three set; otherwise KV, reading
+// what is there or generating and storing a fresh pair the first time this
+// is called with none. Returns null only when neither source can produce a
+// usable pair, which now only happens if LOGIN_ATTEMPTS itself is not
+// bound, the same closed-by-default rule the rest of this Worker uses.
+export async function getVapidKeys(env) {
+  if (env && env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY) {
+    return { publicKey: env.VAPID_PUBLIC_KEY, privateKey: env.VAPID_PRIVATE_KEY, subject: env.VAPID_SUBJECT || DEFAULT_VAPID_SUBJECT };
+  }
+  if (!env || !env.LOGIN_ATTEMPTS) return null;
+  const raw = await env.LOGIN_ATTEMPTS.get(VAPID_KV_KEY);
+  if (raw) {
+    try {
+      const stored = JSON.parse(raw);
+      if (stored && stored.publicKey && stored.privateKey) {
+        return { publicKey: stored.publicKey, privateKey: stored.privateKey, subject: env.VAPID_SUBJECT || stored.subject || DEFAULT_VAPID_SUBJECT };
+      }
+    } catch (e) {
+      // Falls through to generating a fresh pair below, same treatment a
+      // malformed stored password hash gets elsewhere in this codebase.
+    }
+  }
+  const generated = await generateVapidKeys();
+  const subject = env.VAPID_SUBJECT || DEFAULT_VAPID_SUBJECT;
+  await env.LOGIN_ATTEMPTS.put(VAPID_KV_KEY, JSON.stringify({ publicKey: generated.publicKey, privateKey: generated.privateKey, subject }));
+  return { publicKey: generated.publicKey, privateKey: generated.privateKey, subject };
+}
+
+export async function pushConfigured(env) {
+  return Boolean(await getVapidKeys(env));
 }
 
 /* ---------- VAPID authorization ---------- */
 
-async function vapidHeader(env, endpoint) {
+async function vapidHeader(keys, endpoint) {
   const aud = new URL(endpoint).origin;
   const header = { typ: 'JWT', alg: 'ES256' };
   const claims = {
     aud,
     // Twelve hours, comfortably inside the twenty four hour ceiling the spec sets.
     exp: Math.floor(Date.now() / 1000) + 12 * 3600,
-    sub: env.VAPID_SUBJECT
+    sub: keys.subject
   };
   const signingInput = `${bytesToB64url(utf8(JSON.stringify(header)))}.${bytesToB64url(utf8(JSON.stringify(claims)))}`;
-  const key = await importVapidPrivateKey(env.VAPID_PRIVATE_KEY, env.VAPID_PUBLIC_KEY);
+  const key = await importVapidPrivateKey(keys.privateKey, keys.publicKey);
   // WebCrypto returns the raw r||s pair, which is exactly what JWS ES256 wants.
   const sig = new Uint8Array(await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, key, utf8(signingInput)));
   const jwt = `${signingInput}.${bytesToB64url(sig)}`;
-  return `vapid t=${jwt}, k=${env.VAPID_PUBLIC_KEY}`;
+  return `vapid t=${jwt}, k=${keys.publicKey}`;
 }
 
 /* ---------- payload encryption ---------- */
@@ -185,7 +219,7 @@ export async function encryptPayload(p256dhB64, authB64, plaintextStr) {
 
 /* ---------- sending ---------- */
 
-async function sendToSubscription(env, sub, payloadStr) {
+async function sendToSubscription(keys, sub, payloadStr) {
   const body = await encryptPayload(sub.p256dh, sub.auth, payloadStr);
   const res = await fetch(sub.endpoint, {
     method: 'POST',
@@ -194,7 +228,7 @@ async function sendToSubscription(env, sub, payloadStr) {
       'Content-Type': 'application/octet-stream',
       'TTL': '86400',
       'Urgency': 'normal',
-      'Authorization': await vapidHeader(env, sub.endpoint)
+      'Authorization': await vapidHeader(keys, sub.endpoint)
     },
     body,
     signal: AbortSignal.timeout(15000)
@@ -208,7 +242,8 @@ async function sendToSubscription(env, sub, payloadStr) {
 // rather than retried forever. Anything else counts a failure against it, and
 // five consecutive failures takes it out of rotation.
 export async function sendPushToAll(env, db, { title, body, url, tag }) {
-  if (!pushConfigured(env)) return { sent: 0, failed: 0, reason: 'push keys are not configured' };
+  const keys = await getVapidKeys(env);
+  if (!keys) return { sent: 0, failed: 0, reason: 'push keys are not configured' };
 
   const subs = await listPushSubs(db);
   if (!subs.length) return { sent: 0, failed: 0, reason: 'nobody is subscribed to notifications yet' };
@@ -219,7 +254,7 @@ export async function sendPushToAll(env, db, { title, body, url, tag }) {
 
   for (const sub of subs) {
     try {
-      const res = await sendToSubscription(env, sub, payload);
+      const res = await sendToSubscription(keys, sub, payload);
       if (res.status === 404 || res.status === 410) {
         await deletePushSub(db, sub.endpoint);
         failed += 1;

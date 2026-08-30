@@ -1435,11 +1435,54 @@ function openSettings(){
     <p class="tiny" style="margin-top:6px">${'Notification' in window ? (Notification.permission === 'granted' ? 'Notifications are allowed on this device.' : Notification.permission === 'denied' ? 'Notifications are blocked on this device, so the engine will fall back to email. Allow them in the browser site settings.' : 'Notifications have not been asked for yet on this device.') : 'This browser does not do notifications, so the engine will fall back to email.'}</p>
 
     <div class="hr"></div>
+    <div class="eyebrow">n8n integration</div>
+    <p class="tiny" style="margin-top:2px">A bearer token for n8n's HTTP Request node, separate from your sign-in password. Point it at <code>${esc(ENGINE_BASE)}</code>, route <code>/n8n/queue</code> (GET), <code>/n8n/queue/push</code> (POST) or <code>/n8n/generate</code> (POST), with header <code>Authorization: Bearer &lt;token&gt;</code>.</p>
+    ${N8N_MSG ? `<p class="sub" style="color:var(--rust);margin-top:4px">${esc(N8N_MSG)}</p>` : ''}
+    ${N8N_TOKEN ? `
+    <div class="pwwrap" style="margin-top:8px">
+      <input type="text" id="n8n-token-field" readonly value="${esc(N8N_TOKEN)}">
+    </div>
+    <div class="btnrow" style="margin-top:10px">
+      <button class="btn sm" onclick="navigator.clipboard.writeText(document.getElementById('n8n-token-field').value).then(()=>{this.textContent='Copied'})">Copy token</button>
+      <button class="btn ghost sm" style="min-height:44px" onclick="regenerateN8nToken()">Regenerate</button>
+    </div>
+    <p class="tiny" style="margin-top:6px">Regenerating invalidates this token immediately; update n8n with the new one.</p>
+    ` : `
+    <div class="btnrow" style="margin-top:8px">
+      <button class="btn gold" style="min-height:44px" onclick="revealN8nToken()">Reveal token</button>
+    </div>
+    `}
+
+    <div class="hr"></div>
     <div class="btnrow">
       <button class="btn ghost" onclick="exportState()">Export firm data</button>
       <button class="btn ghost" style="color:var(--rust)" onclick="if(confirm('Dissolve the firm and start over?')){localStorage.removeItem(LS_KEY);S=defaultState();closeModal();render();}">Reset</button>
     </div>
   `);
+}
+let N8N_TOKEN = null;
+let N8N_MSG = '';
+async function revealN8nToken(){
+  N8N_MSG = '';
+  try{
+    const data = await engine('/social/n8n-token', null, 'GET', { timeoutMs: 15000 });
+    N8N_TOKEN = data.token;
+  }catch(e){
+    N8N_MSG = e.message || 'Could not fetch the n8n token.';
+  }
+  openSettings();
+}
+async function regenerateN8nToken(){
+  if(!confirm('This invalidates the current n8n token right away. Continue?')) return;
+  N8N_MSG = '';
+  try{
+    const data = await engine('/social/n8n-token/regenerate', {}, 'POST', { timeoutMs: 15000 });
+    N8N_TOKEN = data.token;
+    toast('n8n token regenerated.');
+  }catch(e){
+    N8N_MSG = e.message || 'Could not regenerate the n8n token.';
+  }
+  openSettings();
 }
 async function changePassword(){
   const btn = document.getElementById('cp-btn');
