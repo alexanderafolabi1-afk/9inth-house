@@ -47,6 +47,28 @@ zone_name = "9thpoint.com"
 binding = "LOGIN_ATTEMPTS"
 id = "9a1f764305b74398a0bcdc109586e713"
 
+# ============================================================================
+# PASSWORD RESET WINDOW
+# ============================================================================
+# While this timestamp is in the future, the desk shows "Create your password"
+# even though a password is already stored, and setting one writes over it.
+# Outside the window everything behaves normally and a stored password cannot be
+# overwritten.
+#
+# This exists because the password hash lives in KV with no route to it from the
+# desk, so an owner who does not know it is locked out of their own house with no
+# way back that does not involve the Cloudflare dashboard. Arming it needs a
+# commit and a deploy, which is the proof of ownership; there is deliberately no
+# endpoint or button that can open it, because those could be reached by whoever
+# found the address first.
+#
+# WHILE IT IS OPEN, THE FIRST PERSON TO REACH THE SCREEN CLAIMS THE DESK. Set the
+# password promptly, then close the window by deleting the line below or setting
+# a past date. It expires by itself regardless, so a forgotten line cannot leave
+# the door open indefinitely.
+[vars]
+PASSWORD_RESET_UNTIL = "2026-08-30T14:00:00Z"
+
 # Four shifts a day, matching the retired GitHub Actions schedule exactly.
 # All times UTC. Cloudflare Cron Triggers are always UTC, so no conversion
 # from the old workflow's cron lines is needed.
