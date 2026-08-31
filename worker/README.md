@@ -696,6 +696,46 @@ what went or is about to and gates approval; `recentlyDrafted` counts anything
 still alive and gates drafting. At thirty researched leads and twenty sends in a
 morning, the same kitchen turning up twice in one block is not hypothetical.
 
+### The SetPostGo campaign
+
+Sells the free plan first to a busy operator whose page has gone quiet. Free is
+21 posts a month with no card, Solo is GBP 15, Pro GBP 30, Write and You Post
+from GBP 249, Full Management from GBP 599 and never opened with. The floor is
+Solo: the free plan is the discount.
+
+**This is the first campaign that goes to three countries with statutory
+requirements**, at 8 United States, 4 Canada and 4 Australia a day. CAN-SPAM
+requires a valid physical postal address and a working opt-out in every
+commercial email; CASL and Australia's Spam Act 2003 require the sender to be
+identifiable and an unsubscribe to work. None of that was in the supplied
+copy, so `composeSetPostGo` appends it, refuses to compose without a postal
+address, and `no_missing_optout` and `no_postal_address` catch it if anyone
+strips it back out.
+
+The address lives in KV via `worker/src/postal.js` and is set once in Settings,
+for the same reason every other secret here is: a value only settable from a
+dashboard the owner cannot reach is a value that never gets set.
+
+**Consent is the part that is not mechanical.** CASL is consent based rather
+than opt-out based, and the exemption normally relied on for a conspicuously
+published business address is narrower than it sounds. That is a decision for
+the owner, not a default, and it is written on the board rather than buried
+here.
+
+**Two things in the copy are claims, and are treated as claims.**
+`silenceLine` will not invent a last post date: with one recorded it is used,
+without one the email says the page has gone quiet, which is true of every lead
+on this list by definition. `rivalLine` has two versions of the rival
+paragraph, because the brief's own note is that the rival posts in almost every
+category, and almost is not a basis for telling a stranger about their
+neighbour. Evidenced, the claim is stated. Unevidenced, it is softened to a
+statement about the town. Neither version drops the pressure.
+
+**The day seven email promises we will not write again**, so `closeTheFile`
+suppresses the address and withdraws anything still queued to it. A reply of
+STOP goes through the same door. A promise the system cannot keep is a promise
+the house should not make.
+
 ## Checking it yourself
 
 Forcing a fresh deploy after the workers.dev migration, so SESSION_SECRET

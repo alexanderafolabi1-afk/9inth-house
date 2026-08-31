@@ -30,7 +30,29 @@ import {
   CITY_PIN_SKIP, TIER_B_SIGNALS, CITY_PIN_VERTICALS_CLOSED, CITY_PIN_ON_REPLY
 } from './seeds/city-pin.js';
 
-export { VISIT_DUBAI_GUARDRAILS, CITY_PIN_GUARDRAILS };
+import {
+  SETPOSTGO_PRODUCT, SETPOSTGO_FACTS, SETPOSTGO_PLANS, SETPOSTGO_FLOOR_GBP,
+  SETPOSTGO_CURRENCY, SETPOSTGO_ASK, SETPOSTGO_FOOTER, SETPOSTGO_COMPLIANCE,
+  SETPOSTGO_TIERS, SETPOSTGO_SKIP, SETPOSTGO_GEOGRAPHY, SETPOSTGO_DAILY_MIX,
+  SETPOSTGO_PSYCHOLOGY, SETPOSTGO_NEVER, SETPOSTGO_RESEARCH_HARD, SETPOSTGO_RESEARCH_SOFT,
+  SETPOSTGO_TRADE_SUBJECT, SETPOSTGO_TRADE_EMAIL, SETPOSTGO_TRADE_EMAIL_ORIGINAL,
+  SETPOSTGO_HOSPITALITY_SUBJECT, SETPOSTGO_HOSPITALITY_EMAIL,
+  SETPOSTGO_PROFESSIONAL_SUBJECT, SETPOSTGO_PROFESSIONAL_EMAIL,
+  SETPOSTGO_AGENCY_SUBJECT, SETPOSTGO_AGENCY_EMAIL,
+  SETPOSTGO_RIVAL_LINE_EVIDENCED, SETPOSTGO_RIVAL_LINE_SAFE, SETPOSTGO_RIVAL_LINE_HOSPITALITY,
+  SETPOSTGO_FOLLOW_UP_DAY_3, SETPOSTGO_FOLLOW_UP_DAY_7, SETPOSTGO_CADENCE,
+  SETPOSTGO_ON_REPLY, SETPOSTGO_QUOTA, SETPOSTGO_GUARDRAILS, SETPOSTGO_VOICE
+} from './seeds/setpostgo.js';
+
+export { VISIT_DUBAI_GUARDRAILS, CITY_PIN_GUARDRAILS, SETPOSTGO_GUARDRAILS };
+export {
+  SETPOSTGO_PRODUCT, SETPOSTGO_FACTS, SETPOSTGO_PLANS, SETPOSTGO_FLOOR_GBP,
+  SETPOSTGO_CURRENCY, SETPOSTGO_ASK, SETPOSTGO_FOOTER, SETPOSTGO_COMPLIANCE,
+  SETPOSTGO_TIERS, SETPOSTGO_SKIP, SETPOSTGO_GEOGRAPHY, SETPOSTGO_DAILY_MIX,
+  SETPOSTGO_PSYCHOLOGY, SETPOSTGO_NEVER, SETPOSTGO_RESEARCH_HARD,
+  SETPOSTGO_RESEARCH_SOFT, SETPOSTGO_CADENCE, SETPOSTGO_ON_REPLY,
+  SETPOSTGO_QUOTA, SETPOSTGO_VOICE
+};
 export {
   CITY_PIN_SKUS, CITY_PIN_FLOOR_USD, CITY_PIN_VERTICALS, TIER_A_CITIES,
   CITY_PIN_RESEARCH_HARD, CITY_PIN_RESEARCH_SOFT, CITY_PIN_EMAIL_SOURCES,
@@ -57,6 +79,14 @@ export const CAMPAIGN_TYPES = {
   // The deliberate opposite of founding partner. That one waits on six
   // signatures; this one is sized to be decided alone, by an operator who needs
   // covers on Thursday, and it is meant to close inside the week.
+  // Same shape as the city pin and a different wound. That one sells a rival
+  // taking a slot; this one sells being seen again by a town that has started
+  // to assume you closed. The register is the whole product: the work is
+  // already good, and only the record of it is missing.
+  setpostgo: {
+    label: 'SetPostGo',
+    guidance: 'Sells the free plan first to a busy operator whose page has gone quiet. Never that their marketing is bad, always that the work is already good and the record of it is not. One action only: start free and pick the profession, or reply TRADE. No attachment, no call on the first email, nothing sold under Solo, and Full Management is never opened with.'
+  },
   city_pin: {
     label: 'City pin',
     guidance: 'Sells a named lock on one city and one vertical for 90 days to a single operator. Never the homepage, never a partnership of record. One offer, one city, one vertical, one price. The rival is a type and a direction, never a name. Priced at 490, 790 or 1900 with a floor of 390.'
@@ -158,6 +188,39 @@ export const OUTREACH_RULES = [
     campaigns: ['city_pin', 'need_led'],
     test: (t) => /\b(visit dubai|dubai corporation for tourism|\bDET\b)\b/i.test(t),
     finding: 'It mentions the Dubai conversation, which is open and unclosed. It cannot be used as proof to anyone.'
+  },
+  {
+    // Sixteen of every twenty SetPostGo sends go to the United States, Canada
+    // or Australia, and all three require a working opt-out. Canada and
+    // Australia also require sender identification. This is the mechanical half
+    // of that, and it is a rule rather than a template detail because a
+    // template can be edited at twenty a day and a rule cannot.
+    id: 'no_missing_optout',
+    campaigns: ['setpostgo'],
+    test: (t) => !/\breply STOP\b/i.test(t) || !/setpostgo\.xyz/i.test(t),
+    finding: 'It has no opt-out line, or does not identify the sender. Both are required in the United States, Canada and Australia, which is sixteen of every twenty sends.'
+  },
+  {
+    // A postal address is required by CAN-SPAM in every commercial email. The
+    // placeholder rule catches an unfilled one; this catches a missing one.
+    id: 'no_postal_address',
+    campaigns: ['setpostgo'],
+    test: (t) => !/\n[^\n]*\b(street|st\.|road|rd\.|avenue|ave\.|lane|suite|floor|unit|po box|p\.o\. box|house|building)\b[^\n]*/i.test(t),
+    finding: 'It carries no postal address. CAN-SPAM requires a valid physical address in every commercial email.'
+  },
+  {
+    id: 'no_full_management_first',
+    campaigns: ['setpostgo'],
+    test: (t) => /\b(GBP ?599|£599|full management)\b/i.test(t),
+    finding: 'It opens with Full Management, which is not sold first this week and is never opened with.'
+  },
+  {
+    // The prices are set in sterling. A bare foreign figure reads as a quote,
+    // and the rate will have moved by the time anyone is billed.
+    id: 'no_bare_foreign_price',
+    campaigns: ['setpostgo'],
+    test: (t) => /(?<!about )(?<!around )(?<!approximately )(?<!~)\b(US\$|C\$|A\$|USD|CAD|AUD) ?\d/i.test(t),
+    finding: 'It quotes a foreign currency as though it were the price. Sterling is the price; anything else is indicative and has to say so.'
   },
   {
     id: 'no_hype',
@@ -312,6 +375,176 @@ export async function openSlots(db, cities = TIER_A_CITIES) {
 
 function normaliseKey(v) {
   return String(v || '').trim().toLowerCase();
+}
+
+/* ---------- the SetPostGo gates ---------- */
+
+// Five fields that are the message itself, and three that shape it. The silence
+// proof is in the hard list on purpose: the entire email is an observation
+// about their page having gone quiet, and an agent who has not looked is
+// guessing about a stranger's business in writing.
+export function setPostGoGate(prospect) {
+  const r = (prospect && prospect.research) || {};
+  const has = (k) => Boolean(String(r[k] || '').trim());
+  const missingHard = SETPOSTGO_RESEARCH_HARD.filter((f) => !has(f.key));
+  const missingSoft = SETPOSTGO_RESEARCH_SOFT.filter((f) => !has(f.key));
+  const reasons = missingHard.map((f) => `${f.label} is missing, and nothing can be written without it.`);
+  if (missingSoft.length >= 2) {
+    reasons.push(`${missingSoft.length} of the three shaping fields are empty: ${missingSoft.map((f) => f.label.toLowerCase()).join(', ')}. Research the next lead and come back to this one.`);
+  }
+  return { ready: reasons.length === 0, reasons, missingHard, missingSoft };
+}
+
+// The date is checkable in one click, which is exactly why it must never be
+// invented. A recorded date is used; anything else becomes "gone quiet", which
+// is true of every lead on this list by definition.
+export function silenceLine(prospect) {
+  const raw = String(((prospect && prospect.research) || {}).silence_proof || '').trim();
+  if (!raw) return { ok: false, problem: 'There is no proof of silence on this lead, and the whole email is an observation about their page.' };
+  const looksLikeDate = /\b(19|20)\d{2}\b/.test(raw) || /\b\d{1,2}\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i.test(raw);
+  return { ok: true, line: raw, namesADate: looksLikeDate };
+}
+
+// That the rival posts is a claim about a real shop on a real street. The
+// brief's own note is that it is true in almost every category, and almost is
+// not a basis for telling a stranger something about their neighbour. So the
+// strong line needs evidence and the honest line is the default. Neither
+// version drops the pressure, which is the point of the paragraph.
+export function rivalLine(prospect) {
+  const r = (prospect && prospect.research) || {};
+  const evidenced = Boolean(String(r.rival_evidence || '').trim());
+  return {
+    evidenced,
+    template: evidenced ? SETPOSTGO_RIVAL_LINE_EVIDENCED : SETPOSTGO_RIVAL_LINE_SAFE,
+    note: evidenced
+      ? 'The rival claim is stated, because it is evidenced on this lead.'
+      : 'Nothing evidences that a named rival posts, so the line is softened from a statement about their neighbour to a statement about the town. The pressure stays, the claim goes.'
+  };
+}
+
+// "Reply TRADE if you want the {Profession} pack opened" promises a pack that
+// exists. There are 89 professions and this repository does not hold the list,
+// so the mapping cannot be verified here and is asserted by whoever researched
+// the lead. Recorded rather than assumed, so an unmapped trade is a refusal
+// instead of a promise nobody can keep.
+export function checkProfessionMapped(prospect) {
+  const r = (prospect && prospect.research) || {};
+  const profession = String(r.profession || '').trim();
+  if (!profession) {
+    return { ok: false, problem: 'No SetPostGo profession is recorded for this lead. The email offers to open a pack, so there has to be a pack.' };
+  }
+  if (r.profession_confirmed !== true && r.profession_confirmed !== 'true' && r.profession_confirmed !== 'yes') {
+    return { ok: false, problem: `"${profession}" is not confirmed against the 89 professions on setpostgo.xyz. This repository does not hold that list, so it is confirmed by looking, once, before the offer is made.` };
+  }
+  return { ok: true, profession };
+}
+
+const SETPOSTGO_TEMPLATES = {
+  trade: { subject: SETPOSTGO_TRADE_SUBJECT, body: SETPOSTGO_TRADE_EMAIL, rival: 'rival' },
+  hospitality: { subject: SETPOSTGO_HOSPITALITY_SUBJECT, body: SETPOSTGO_HOSPITALITY_EMAIL, rival: 'street' },
+  professional: { subject: SETPOSTGO_PROFESSIONAL_SUBJECT, body: SETPOSTGO_PROFESSIONAL_EMAIL, rival: null },
+  agency: { subject: SETPOSTGO_AGENCY_SUBJECT, body: SETPOSTGO_AGENCY_EMAIL, rival: null }
+};
+
+export function setPostGoTemplates() {
+  return Object.keys(SETPOSTGO_TEMPLATES);
+}
+
+export function composeSetPostGo(prospect, { template = 'trade', postalAddress, agentName } = {}) {
+  const blockers = [];
+  const warnings = [];
+  const r = (prospect && prospect.research) || {};
+
+  const gate = setPostGoGate(prospect);
+  if (!gate.ready) blockers.push(...gate.reasons);
+
+  const provenance = checkEmailProvenance(prospect);
+  if (!provenance.ok) blockers.push(provenance.problem);
+
+  const mapped = checkProfessionMapped(prospect);
+  if (!mapped.ok) blockers.push(mapped.problem);
+
+  const silence = silenceLine(prospect);
+  if (!silence.ok) blockers.push(silence.problem);
+
+  const spec = SETPOSTGO_TEMPLATES[template];
+  if (!spec) blockers.push(`"${template}" is not a SetPostGo email. It is one of: ${Object.keys(SETPOSTGO_TEMPLATES).join(', ')}.`);
+
+  // Without this the message is unlawful in the three countries taking sixteen
+  // of every twenty sends, so it is a blocker and not a warning.
+  if (!String(postalAddress || '').trim()) {
+    blockers.push('No postal address was given. CAN-SPAM requires a real one in every commercial email, and Canada and Australia require the sender to be identifiable.');
+  }
+
+  if (blockers.length) return { ok: false, blockers, warnings };
+
+  const rival = rivalLine(prospect);
+  warnings.push(rival.note);
+  if (!silence.namesADate) {
+    warnings.push('No last post date was recorded, so the email says the page has gone quiet rather than naming a date. A date is never invented.');
+  }
+
+  const fills = {
+    '{First name}': String(r.owner_first_name || '').trim(),
+    '{Business}': String(r.business_name || '').trim(),
+    '{Town}': String(r.town || '').trim(),
+    '{Trade}': String(r.trade || '').trim(),
+    '{Profession}': mapped.profession,
+    '{Street type}': String(r.street_type || '').trim(),
+    '{Postal address}': String(postalAddress).trim()
+  };
+
+  let body = spec.body;
+  let subject = spec.subject;
+
+  // The rival paragraph is chosen before anything is filled, so the strong line
+  // and the honest one go through exactly the same filling.
+  const rivalText = spec.rival === 'rival' ? rival.template
+    : spec.rival === 'street' ? SETPOSTGO_RIVAL_LINE_HOSPITALITY
+      : '';
+  body = body.split('{Rival line}').join(rivalText);
+  if (spec.rival === 'street' && !fills['{Street type}']) {
+    return { ok: false, warnings, blockers: ['This email closes on the other door on their street, and no street was recorded.'] };
+  }
+
+  if (!fills['{First name}']) {
+    body = body.replace(/^\{First name\},\n\n/, '');
+    warnings.push('No owner first name was found, so it opens on the business rather than inventing a greeting.');
+  }
+
+  for (const [token, value] of Object.entries(fills)) {
+    if (!value) continue;
+    body = body.split(token).join(value);
+    subject = subject.split(token).join(value);
+  }
+
+  body = body.trimEnd() + '\n\n' + SETPOSTGO_FOOTER.split('{Postal address}').join(String(postalAddress).trim());
+
+  const stillOpen = [...new Set(body.match(/\{[A-Za-z][A-Za-z ]{1,30}\}/g) || [])];
+  if (stillOpen.length) {
+    return { ok: false, warnings, blockers: [`These are still unfilled and would go out as written: ${stillOpen.join(', ')}.`] };
+  }
+
+  const findings = checkOutreachRules(body, 'setpostgo');
+
+  return {
+    ok: true,
+    warnings,
+    findings,
+    draft: {
+      subject,
+      body,
+      to: String(r.public_email || '').trim(),
+      town: String(r.town || '').trim(),
+      trade: String(r.trade || '').trim(),
+      profession: mapped.profession,
+      template,
+      rivalClaimEvidenced: rival.evidenced,
+      namesADate: silence.namesADate,
+      emailPublishedAt: provenance.published,
+      words: body.split(/\s+/).filter(Boolean).length
+    }
+  };
 }
 
 /* ---------- composing a City Pin draft ---------- */
@@ -586,6 +819,29 @@ export async function dueMessages(db, now = new Date()) {
 // One place that decides what a status may become, so a route cannot invent a
 // state the rest of the file does not understand.
 export const MESSAGE_STATUSES = ['awaiting_approval', 'approved', 'rejected', 'sent'];
+
+// The day seven email says, in those words, that we will not write again. A
+// promise a system cannot keep is a promise the house should not make, so
+// sending it suppresses the address rather than leaving it to whoever is at the
+// desk on the day. Suppression is keyed on the address alone and honoured by
+// every venture, which is exactly the promise that was made.
+//
+// A reply of STOP lands here too, which is the other half of the opt-out the
+// footer offers. An opt-out that is offered and not honoured is worse than one
+// never offered, in law and otherwise.
+export async function closeTheFile(db, { email, reason }) {
+  await suppress(db, email, reason || 'The final email promised we would not write again.');
+  const { results } = await db.prepare(
+    `SELECT m.id FROM outreach_messages m JOIN prospects p ON p.id = m.prospect_id
+      WHERE m.status IN ('awaiting_approval','approved')
+        AND (lower(m.to_addresses) = ? OR lower(m.cc_addresses) = ?)`
+  ).bind(String(email || '').trim().toLowerCase(), String(email || '').trim().toLowerCase()).all();
+  for (const row of results || []) {
+    await db.prepare('UPDATE outreach_messages SET status = ?, updated_at = ? WHERE id = ?')
+      .bind('rejected', nowIso(), row.id).run();
+  }
+  return { suppressed: String(email || '').trim().toLowerCase(), withdrawn: (results || []).length };
+}
 
 export async function setMessageStatus(db, id, status) {
   if (!MESSAGE_STATUSES.includes(status)) throw new Error(`"${status}" is not a message status`);
