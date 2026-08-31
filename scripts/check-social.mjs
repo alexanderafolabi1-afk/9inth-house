@@ -18,7 +18,8 @@ import { slotsDueToday, pickCategory, trimToLimit, buildBias } from '../worker/s
 import { validateForSend, buildPayload, readExternalId } from '../worker/src/social/distribute.js';
 import { streakFrom } from '../worker/src/social/metrics.js';
 import { generateVapidKeys, encryptPayload, b64urlToBytes, bytesToB64url } from '../worker/src/social/push.js';
-import { checkOutreachRules, researchGate, MESSAGE_STATUSES } from '../worker/src/social/outreach.js';
+import { checkOutreachRules, researchGate, MESSAGE_STATUSES, checkCityPinOffer, checkCityIsLive, checkEmailProvenance, CITY_PIN_SKUS, CITY_PIN_FLOOR_USD, TIER_A_CITIES } from '../worker/src/social/outreach.js';
+import { CITY_PIN_FOOD_EMAIL, CITY_PIN_NIGHT_EMAIL, CITY_PIN_ROOM_EMAIL, CITY_PIN_TOUR_EMAIL, CITY_PIN_FOOD_SUBJECT } from '../worker/src/social/seeds/city-pin.js';
 import { VISIT_DUBAI_EMAIL_BODY, VISIT_DUBAI_SUBJECT, VISIT_DUBAI_TO, VISIT_DUBAI_CC, VISIT_DUBAI_PROSPECT } from '../worker/src/social/seeds/visit-dubai.js';
 
 let passed = 0;
@@ -460,6 +461,60 @@ await test('the research gate refuses a prospect that cannot answer all three qu
   const gate = researchGate(thin);
   assert.equal(gate.ready, false, 'a prospect with no answer to why now was let through');
   assert.deepEqual(gate.missing.sort(), ['what_is_missing', 'why_now']);
+});
+
+/* ---------- the City Pin campaign ---------- */
+
+await test('the City Pin prices and floor are the ones the owner set', () => {
+  assert.equal(CITY_PIN_SKUS.pin_90.priceUsd, 490);
+  assert.equal(CITY_PIN_SKUS.exclusive_90.priceUsd, 790);
+  assert.equal(CITY_PIN_SKUS.anchor_12.priceUsd, 1900);
+  assert.equal(CITY_PIN_FLOOR_USD, 390);
+  assert.equal(CITY_PIN_SKUS.anchor_12.leadWith, false, 'the anchor must not be led with');
+  assert.equal(checkCityPinOffer({ sku: 'pin_90', priceUsd: 389 }).ok, false, 'below the floor was allowed');
+  assert.equal(checkCityPinOffer({ sku: 'pin_90', priceUsd: 390 }).ok, true, 'the floor itself was refused');
+});
+
+await test('the City Pin master emails are templates, and none carries an em dash', () => {
+  const emails = [CITY_PIN_FOOD_EMAIL, CITY_PIN_NIGHT_EMAIL, CITY_PIN_ROOM_EMAIL, CITY_PIN_TOUR_EMAIL];
+  for (const e of emails) {
+    assert.ok(!hasDashPunctuation(e), 'a master email carries an em dash');
+    assert.ok(/\{[A-Za-z]/.test(e), 'a master email has no placeholder, so it is a letter rather than a template');
+  }
+  assert.ok(!hasDashPunctuation(CITY_PIN_FOOD_SUBJECT), 'the food subject carries an em dash');
+  // A template that reached an operator unfilled is the failure this catches.
+  for (const e of emails) {
+    assert.ok(
+      checkOutreachRules(e, 'city_pin').some((f) => f.id === 'no_unfilled_placeholder'),
+      'an unfilled master email was not flagged'
+    );
+  }
+});
+
+await test('the Tier A city list carries no duplicates', () => {
+  assert.equal(TIER_A_CITIES.length, new Set(TIER_A_CITIES).size, 'a city appears twice');
+  assert.ok(TIER_A_CITIES.length >= 30, 'the list lost cities');
+});
+
+await test('a City Pin email is refused for a city that is not live', () => {
+  // Every master email opens by asserting the city already has a pulse. Sending
+  // that to an operator who can check it in one click is a false claim, so the
+  // gate is here rather than at invoice time.
+  assert.equal(checkCityIsLive({ research: { city: 'Kotor' } }).ok, false);
+  assert.equal(checkCityIsLive({ research: { city: 'Kotor', city_is_live: false } }).ok, false);
+  assert.equal(checkCityIsLive({ research: { city: 'Lisbon', city_is_live: true } }).ok, true);
+});
+
+await test('an address nobody published is never contacted', () => {
+  const src = (email_source) => checkEmailProvenance({ research: { public_email: 'a@b.com', email_source } }).ok;
+  assert.equal(src('guessed'), false);
+  assert.equal(src('bought_list'), false);
+  assert.equal(src('scraped'), false);
+  assert.equal(src(''), false, 'an address with no recorded source was allowed');
+  assert.equal(src('own_site'), true);
+  // The domain is not the test. A kitchen that published its own free-mail
+  // address on its own site published a business inbox.
+  assert.equal(checkEmailProvenance({ research: { public_email: 'ola@gmail.com', email_source: 'instagram_bio' } }).ok, true);
 });
 
 await test('a message status cannot become something the rest of the code does not know', () => {

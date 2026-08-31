@@ -2063,12 +2063,79 @@ function vOutreachCard(m){
 
 function vOutreach(){
   const live = outreachLive();
-  if(!live.length && !OUT.error && OUT.loaded) return '';
+  const board = vCityPinBoard();
+  if(!live.length && !board && !OUT.error && OUT.loaded) return '';
   return `
-    <div class="eyebrow">Outreach waiting on you</div>
+    ${live.length || OUT.error ? `<div class="eyebrow">Outreach waiting on you</div>` : ''}
     ${OUT.error ? `<div class="qerr">${esc(OUT.error)}</div>` : ''}
     ${live.map(vOutreachCard).join('')}
+    ${board}
     <div class="hr"></div>`;
+}
+
+/* ---------- the City Pin morning block ---------- */
+// The brief lives in a document nobody opens at seven in the morning. This is
+// the half of it an agent actually needs at the moment of working: what is
+// being sold, at what, and which slots are still free today. Everything here is
+// read from the engine, so the board and the ledger cannot disagree.
+const CP = { board: null, loading: false, open: false };
+
+async function loadCityPin(){
+  if(CP.loading) return;
+  CP.loading = true;
+  try{
+    CP.board = await engine('/social/outreach/city-pin', null, 'GET', { retries: 1, timeoutMs: 15000 });
+  }catch(e){
+    CP.board = { error: e.message || String(e) };
+  }
+  CP.loading = false;
+  render();
+}
+
+function cityPinToggle(){
+  CP.open = !CP.open;
+  if(CP.open && !CP.board) loadCityPin();
+  render();
+}
+
+function vCityPinBoard(){
+  const b = CP.board;
+  const head = `
+    <div class="eyebrow">The City Pin week</div>
+    <div class="card" style="margin-bottom:12px">
+      <div class="btnrow">
+        <button class="btn ghost wide" style="min-height:44px" onclick="cityPinToggle()">${CP.open ? 'Close the board' : 'Open the board'}</button>
+      </div>`;
+  if(!CP.open) return head + `<p class="tiny" style="margin-top:10px">What is being sold, at what price, and which city and vertical slots are still open.</p></div>`;
+  if(CP.loading || !b) return head + `<p class="sub" style="margin-top:10px"><span class="spin"></span> Reading the board.</p></div>`;
+  if(b.error) return head + `<div class="qerr" style="margin-top:10px">${esc(b.error)}</div></div>`;
+
+  const skus = Object.entries(b.skus || {}).map(([k, s]) => `
+    <div class="qnote" style="white-space:normal;margin-bottom:8px">
+      <b>${esc(s.label)}</b>, USD ${s.priceUsd}${s.exclusive ? ', exclusive' : ''}${s.leadWith === false ? '. Not led with.' : ''}
+      <br><span class="tiny">${esc((s.includes || []).join('. '))}</span>
+    </div>`).join('');
+
+  // Only the cities with something still free. A board that lists a full city
+  // is a board that wastes the first minute of the morning.
+  const slots = (b.openSlots || []).map(s => `
+    <div class="tiny" style="padding:6px 0;border-bottom:1px solid var(--line)">
+      <b>${esc(s.city)}</b> &#8226; ${s.open.map(v => esc((b.verticals[v] || {}).label || v)).join(', ')}
+    </div>`).join('');
+
+  return head + `
+      <p class="sub" style="margin-top:12px">${esc(b.product || '')}</p>
+      <div class="qnote" style="white-space:normal;margin:10px 0"><b>The floor is USD ${b.floorUsd}.</b> Below it this is not a discount, it is a different product, and that is not an agent's to invent.</div>
+      ${skus}
+      <div class="tiny" style="margin:12px 0 6px;letter-spacing:.08em;color:var(--muted)">TODAY</div>
+      <p class="tiny">${b.quota ? `${b.quota.researched} researched, ${b.quota.sent} sent, ${b.quota.followUps} follow ups. ${esc(b.quota.stackedBy || '')}` : ''}</p>
+      <details style="margin-top:12px"><summary class="tiny" style="cursor:pointer;min-height:44px;display:flex;align-items:center">Open slots, ${(b.openSlots || []).length} ${(b.openSlots || []).length === 1 ? 'city' : 'cities'}</summary>
+        <div style="margin-top:8px">${slots || '<p class="tiny">Every slot on the list is taken.</p>'}</div>
+      </details>
+      <details style="margin-top:8px"><summary class="tiny" style="cursor:pointer;min-height:44px;display:flex;align-items:center">The rules on this campaign</summary>
+        <ul class="sub" style="margin:8px 0 0;padding-left:18px">${(b.guardrails || []).map(g => `<li style="margin-bottom:6px">${esc(g.detail)}</li>`).join('')}</ul>
+      </details>
+    </div>`;
 }
 
 async function copyOutreach(id){

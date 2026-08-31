@@ -119,6 +119,13 @@ CREATE TABLE IF NOT EXISTS outreach_messages (
   -- rather than silent. Currently a subject line whose em dash was resolved.
   original_wording TEXT NOT NULL DEFAULT '',
   locale_note TEXT NOT NULL DEFAULT '',
+  -- The City Pin offer, kept on the message rather than only on the prospect,
+  -- because what was offered is a property of what was sent and has to stay
+  -- readable after the prospect record moves on.
+  city TEXT NOT NULL DEFAULT '',
+  vertical TEXT NOT NULL DEFAULT '',
+  sku TEXT NOT NULL DEFAULT '',
+  price_usd INTEGER NOT NULL DEFAULT 0,
   rule_findings TEXT NOT NULL DEFAULT '[]',
   status TEXT NOT NULL DEFAULT 'awaiting_approval',
   send_after TEXT,
@@ -133,6 +140,17 @@ CREATE TABLE IF NOT EXISTS suppression (
   email TEXT PRIMARY KEY,
   reason TEXT NOT NULL DEFAULT '',
   created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS exclusives (
+  -- One exclusive per vertical per city, enforced by the key rather than by
+  -- remembering. The 790 SKU is worth nothing the first time it is sold twice.
+  city TEXT NOT NULL,
+  vertical TEXT NOT NULL,
+  prospect_id TEXT NOT NULL,
+  organisation TEXT NOT NULL DEFAULT '',
+  sold_at TEXT NOT NULL,
+  PRIMARY KEY (city, vertical)
 );
 
 CREATE TABLE IF NOT EXISTS venture_facts (

@@ -26,7 +26,16 @@ import {
   recordFeedback, feedbackFor, repeatedReasons
 } from './db.js';
 import { publishPost } from './distribute.js';
-import { seedOutreach, listReferences, listProspects, listMessages, addReference, checkOutreachRules, setMessageStatus, CAMPAIGN_TYPES, VISIT_DUBAI_GUARDRAILS, recentlyApproached, isSuppressed } from './outreach.js';
+import {
+  seedOutreach, listReferences, listProspects, listMessages, addReference,
+  checkOutreachRules, setMessageStatus, recentlyApproached, recentlyDrafted, isSuppressed,
+  composeCityPin, claimExclusive, releaseExclusive, openSlots,
+  CAMPAIGN_TYPES, VISIT_DUBAI_GUARDRAILS, CITY_PIN_GUARDRAILS,
+  CITY_PIN_SKUS, CITY_PIN_FLOOR_USD, CITY_PIN_VERTICALS, CITY_PIN_VERTICALS_CLOSED,
+  TIER_A_CITIES, TIER_B_SIGNALS, CITY_PIN_SKIP, CITY_PIN_RESEARCH_HARD,
+  CITY_PIN_RESEARCH_SOFT, CITY_PIN_EMAIL_SOURCES, CITY_PIN_CADENCE, CITY_PIN_QUOTA,
+  CITY_PIN_ON_REPLY, CITY_PIN_PRODUCT, CITY_PIN_LINES, CITY_PIN_VOICE
+} from './outreach.js';
 import { factsFor, recentChanges, putFact, runFactsSweep, DEFAULT_STALE_HOURS } from './facts.js';
 import { SENDABLE as PENDING_STATUSES } from './config.js';
 import { credentialDeliveries, credentialStatusFor, writeCredentialsFor } from './senders/index.js';
@@ -521,6 +530,112 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
         await db.prepare('UPDATE outreach_messages SET status = ?, updated_at = ? WHERE id = ?')
           .bind('approved', new Date().toISOString(), body.id).run();
         return json(request, env, { ok: true, messages: await listMessages(db, { limit: 50 }) });
+      }
+
+      // The campaign board. Everything an agent needs to work a morning block
+      // without asking anyone: what is being sold, at what, to whom, in which
+      // cities, and which slots are still open.
+      case 'GET /social/outreach/city-pin': {
+        await ensureSchema(db);
+        return json(request, env, {
+          ok: true,
+          product: CITY_PIN_PRODUCT,
+          lines: CITY_PIN_LINES,
+          voice: CITY_PIN_VOICE,
+          skus: CITY_PIN_SKUS,
+          floorUsd: CITY_PIN_FLOOR_USD,
+          verticals: CITY_PIN_VERTICALS,
+          verticalsClosed: CITY_PIN_VERTICALS_CLOSED,
+          cities: TIER_A_CITIES,
+          tierBSignals: TIER_B_SIGNALS,
+          skip: CITY_PIN_SKIP,
+          research: { hard: CITY_PIN_RESEARCH_HARD, soft: CITY_PIN_RESEARCH_SOFT, emailSources: CITY_PIN_EMAIL_SOURCES },
+          cadence: CITY_PIN_CADENCE,
+          quota: CITY_PIN_QUOTA,
+          onReply: CITY_PIN_ON_REPLY,
+          guardrails: CITY_PIN_GUARDRAILS,
+          openSlots: await openSlots(db)
+        });
+      }
+
+      // One lead in, one draft out, or the reasons why not. This is the route
+      // that has to carry twenty a day, so it does the refusing itself rather
+      // than handing a half filled letter to whoever is sending.
+      case 'POST /social/outreach/draft': {
+        await ensureSchema(db);
+        const research = body.research || {};
+        const organisation = String(body.organisation || research.business_name || '').trim();
+        if (!organisation) return json(request, env, { ok: false, error: 'A lead needs a business name.' }, 400);
+
+        const prospect = { organisation, research };
+        const composed = composeCityPin(prospect, {
+          sku: body.sku || 'pin_90',
+          priceUsd: body.priceUsd,
+          agentName: body.agentName,
+          neighbourhood: body.neighbourhood,
+          street: body.street
+        });
+        if (!composed.ok) {
+          return json(request, env, { ok: false, blockers: composed.blockers, warnings: composed.warnings, error: composed.blockers[0] }, 422);
+        }
+
+        // The two checks that are about the house rather than the letter. Both
+        // run before anything is stored, so a refused lead leaves no trace.
+        if (await isSuppressed(db, composed.draft.to)) {
+          return json(request, env, { ok: false, error: `${composed.draft.to} is on the suppression list and is never contacted again, from any venture.` }, 409);
+        }
+        const already = await recentlyDrafted(db, organisation);
+        if (already.length) {
+          const state = String(already[0].status).replace(/_/g, ' ');
+          return json(request, env, { ok: false, error: `${organisation} already has a message from the last 30 days, ${state}, from ${already[0].venture}. Two letters from the same house in one week reads worse than none.` }, 409);
+        }
+
+        const prospectId = 'cp-' + crypto.randomUUID();
+        const now = new Date().toISOString();
+        await db.prepare(
+          `INSERT INTO prospects (id, venture, campaign_type, organisation, contacts, locale, research, evidence, score, status, notes, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        ).bind(
+          prospectId, 'glotemp', 'city_pin', organisation,
+          JSON.stringify([{ email: composed.draft.to, published: composed.draft.emailPublishedAt }]),
+          String(research.city || ''), JSON.stringify(research),
+          JSON.stringify(composed.warnings || []), 0, 'ready',
+          String(body.notes || ''), now, now
+        ).run();
+
+        const messageId = 'cp-msg-' + crypto.randomUUID();
+        await db.prepare(
+          `INSERT INTO outreach_messages
+            (id, prospect_id, venture, campaign_type, identity, to_addresses, cc_addresses, subject, body, original_wording, locale_note, city, vertical, sku, price_usd, rule_findings, status, send_after, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        ).bind(
+          messageId, prospectId, 'glotemp', 'city_pin', String(body.agentName || ''),
+          composed.draft.to, '', composed.draft.subject, composed.draft.body, '',
+          (composed.warnings || []).join(' '),
+          composed.draft.city, composed.draft.vertical, composed.draft.sku, composed.draft.priceUsd,
+          JSON.stringify(composed.findings || []), 'awaiting_approval',
+          body.sendAfter || null, now, now
+        ).run();
+
+        return json(request, env, { ok: true, id: messageId, draft: composed.draft, warnings: composed.warnings, findings: composed.findings });
+      }
+
+      // The exclusivity ledger. One per vertical per city, and the refusal
+      // names who holds it rather than saying no.
+      case 'POST /social/outreach/exclusive': {
+        await ensureSchema(db);
+        if (!body.city || !body.vertical) return json(request, env, { ok: false, error: 'A city and a vertical are both required.' }, 400);
+        if (body.release) {
+          await releaseExclusive(db, body.city, body.vertical);
+          return json(request, env, { ok: true, openSlots: await openSlots(db) });
+        }
+        if (!body.prospectId) return json(request, env, { ok: false, error: 'Claiming an exclusive needs the lead it is being held for.' }, 400);
+        const claim = await claimExclusive(db, {
+          city: body.city, vertical: body.vertical,
+          prospectId: body.prospectId, organisation: body.organisation
+        });
+        if (!claim.ok) return json(request, env, { ok: false, error: claim.problem, held: claim.held }, 409);
+        return json(request, env, { ok: true, alreadyOurs: claim.alreadyOurs, openSlots: await openSlots(db) });
       }
 
       // The verdict, filed. The reason itself goes through /social/feedback

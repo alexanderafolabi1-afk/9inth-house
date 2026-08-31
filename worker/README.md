@@ -654,6 +654,48 @@ assumption.
 **Suppression is keyed on the address alone,** never on the venture. Someone who
 asked the house to stop hearing from it did not mean one brand of it.
 
+### The City Pin campaign
+
+The deliberate opposite of the Visit Dubai approach. That one sells a homepage
+to a body that needs six signatures. This sells a named lock on one city and one
+vertical, for 90 days, to an operator who can decide alone. It lives in
+`worker/src/social/seeds/city-pin.js` with its gates in `outreach.js`.
+
+Priced at USD 490 named, USD 790 with the category exclusive, USD 1,900 for a
+twelve month anchor, with a floor of USD 390. `checkCityPinOffer` refuses below
+the floor: below it this is not a discount, it is a product nobody authorised.
+The anchor is marked `leadWith: false` and the offer check says so, because
+leading with the largest number turns a decision an operator could make alone
+into one they have to think about.
+
+**Four gates run before a draft exists**, and a lead that fails any of them is
+refused with the reason rather than half written:
+
+1. **Research.** Nine fields. The four that are the message itself, city,
+   vertical, business name and public email, can never be missing. Of the other
+   five, two gaps is a guess and the lead goes back for research.
+2. **Provenance.** Not a domain blocklist. What separates a public business
+   inbox from a scraped one is whether the operator published it, so the record
+   names where it was published and refuses anything marked guessed, inferred,
+   scraped or bought. A kitchen that lists its own free-mail address on its own
+   site has published a business inbox; a pattern-guessed address at a company
+   domain has not.
+3. **The city is live.** Every master email opens by asserting the city already
+   has a public pulse. Sending that for a city that is not on glo-temp.com is a
+   false claim to someone who can check it in one click, so the claim is gated
+   at send time rather than at invoice time.
+4. **The offer.** SKU and price, against the floor.
+
+**One exclusive per vertical per city** is a primary key in the `exclusives`
+table rather than a note, because the 790 SKU is worth nothing the first time it
+is sold twice. A refused claim names who holds it. `openSlots` is the honest
+half of the weekly scoreboard: what is still free.
+
+**Drafting is separately guarded from approving.** `recentlyApproached` counts
+what went or is about to and gates approval; `recentlyDrafted` counts anything
+still alive and gates drafting. At thirty researched leads and twenty sends in a
+morning, the same kitchen turning up twice in one block is not hypothetical.
+
 ## Checking it yourself
 
 Forcing a fresh deploy after the workers.dev migration, so SESSION_SECRET
