@@ -18,8 +18,22 @@ import { slotsDueToday, pickCategory, trimToLimit, buildBias } from '../worker/s
 import { validateForSend, buildPayload, readExternalId } from '../worker/src/social/distribute.js';
 import { streakFrom } from '../worker/src/social/metrics.js';
 import { generateVapidKeys, encryptPayload, b64urlToBytes, bytesToB64url } from '../worker/src/social/push.js';
-import { checkOutreachRules, researchGate, MESSAGE_STATUSES } from '../worker/src/social/outreach.js';
+import { checkOutreachRules, researchGate, MESSAGE_STATUSES, checkCityPinOffer, checkCityIsLive, checkEmailProvenance, CITY_PIN_SKUS, CITY_PIN_FLOOR_USD, TIER_A_CITIES } from '../worker/src/social/outreach.js';
+import { composeSetPostGo, SETPOSTGO_PLANS, SETPOSTGO_FLOOR_GBP, SETPOSTGO_GEOGRAPHY, SETPOSTGO_DAILY_MIX } from '../worker/src/social/outreach.js';
+import { CITY_PIN_FOOD_EMAIL, CITY_PIN_NIGHT_EMAIL, CITY_PIN_ROOM_EMAIL, CITY_PIN_TOUR_EMAIL, CITY_PIN_FOOD_SUBJECT } from '../worker/src/social/seeds/city-pin.js';
 import { VISIT_DUBAI_EMAIL_BODY, VISIT_DUBAI_SUBJECT, VISIT_DUBAI_TO, VISIT_DUBAI_CC, VISIT_DUBAI_PROSPECT } from '../worker/src/social/seeds/visit-dubai.js';
+
+// Every module the Worker actually ships. Kept in one place because two checks
+// read it and a file missing from the list is a file nothing checks.
+const WORKER_FILES = [
+  'worker/src/index.js', 'worker/src/aikey.js', 'worker/src/n8n.js', 'worker/src/auth.js',
+  'worker/src/postal.js',
+  'worker/src/social/facts.js', 'worker/src/social/generate.js', 'worker/src/social/api.js',
+  'worker/src/social/db.js', 'worker/src/social/distribute.js', 'worker/src/social/outreach.js',
+  'worker/src/social/metrics.js', 'worker/src/social/push.js', 'worker/src/social/text.js',
+  'worker/src/social/config.js', 'worker/src/social/seeds/visit-dubai.js',
+  'worker/src/social/seeds/city-pin.js', 'worker/src/social/seeds/setpostgo.js'
+];
 
 let passed = 0;
 const failures = [];
@@ -262,15 +276,74 @@ await test('no module branches on a platform name', () => {
 // simply undefined until the line runs. Where that line sits inside a try/catch,
 // as the sweep does, the failure is swallowed and the feature silently never
 // happens. This catches it at check time instead.
-await test('every worker module imports every name it uses at module scope', async () => {
-  const files = [
-    'worker/src/index.js', 'worker/src/aikey.js', 'worker/src/n8n.js', 'worker/src/auth.js',
-    'worker/src/social/facts.js', 'worker/src/social/generate.js', 'worker/src/social/api.js',
-    'worker/src/social/db.js', 'worker/src/social/distribute.js'
-  ];
-  for (const f of files) {
-    await import('../' + f);
+await test('every worker module resolves', async () => {
+  for (const f of WORKER_FILES) await import('../' + f);
+});
+
+// Importing a module only proves its own imports resolve. It does not prove the
+// module imports what its function bodies call: a name used inside a route
+// handler and never imported is a ReferenceError at request time, and if the
+// call sits inside a try/catch it is a silent one.
+//
+// This has now happened twice. runFactsSweep and listVentures were used in
+// index.js without being imported, and readPostalAddress the same way in
+// api.js, and both times the module imported cleanly. So the check is no longer
+// "does it load": every name any worker module exports is collected, and any
+// file that calls one without importing or defining it fails here.
+await test('every worker module imports every name its own code calls', async () => {
+  const sources = new Map();
+  for (const f of WORKER_FILES) sources.set(f, readFileSync(f, 'utf8'));
+
+  // Every name the worker exports anywhere, which is the set worth policing.
+  // A name a file defines for itself is not in question.
+  const exported = new Set();
+  for (const src of sources.values()) {
+    for (const m of src.matchAll(/^export\s+(?:async\s+)?function\s+(\w+)/gm)) exported.add(m[1]);
+    for (const m of src.matchAll(/^export\s+(?:const|let)\s+(\w+)/gm)) exported.add(m[1]);
   }
+
+  const problems = [];
+  for (const [file, src] of sources) {
+    // Names this file brings in, in any import form, plus everything it
+    // declares itself, plus its own parameters is too much to parse, so calls
+    // are matched conservatively: a bare identifier followed by an open
+    // parenthesis, never a method call, which a preceding dot rules out.
+    const available = new Set();
+    for (const m of src.matchAll(/import\s*\{([^}]*)\}\s*from/g)) {
+      for (const part of m[1].split(',')) {
+        const name = part.trim().split(/\s+as\s+/).pop().trim();
+        if (name) available.add(name);
+      }
+    }
+    for (const m of src.matchAll(/(?:^|\n)\s*(?:export\s+)?(?:async\s+)?function\s+(\w+)/g)) available.add(m[1]);
+    for (const m of src.matchAll(/(?:^|\n)\s*(?:export\s+)?(?:const|let|var)\s+(\w+)/g)) available.add(m[1]);
+    // Destructured bindings, which are how this codebase injects collaborators:
+    // runFactsSweep takes listPosts as a parameter rather than importing it, and
+    // that is a binding, not a missing import. Deliberately generous, since an
+    // object literal caught here only ever costs a name the check stops
+    // policing, while the bug this exists for, a name bound nowhere at all,
+    // still fails.
+    for (const m of src.matchAll(/\{([^{}]*)\}\s*(?:=[^=]|\)|,)/g)) {
+      for (const part of m[1].split(',')) {
+        const name = part.trim().split(/[:=]/)[0].trim();
+        if (/^\w+$/.test(name)) available.add(name);
+      }
+    }
+
+    // Comments hold prose that mentions these names on purpose, and a mention
+    // is not a call, so they are stripped before anything is matched.
+    const code = src
+      .replace(/\/\*[\s\S]*?\*\//g, ' ')
+      .replace(/(^|[^:])\/\/[^\n]*/g, '$1 ');
+
+    for (const m of code.matchAll(/(^|[^\w.$'"`])(\w+)\s*\(/g)) {
+      const name = m[2];
+      if (!exported.has(name)) continue;
+      if (available.has(name)) continue;
+      problems.push(`${file} calls ${name}() without importing or defining it`);
+    }
+  }
+  assert.deepEqual([...new Set(problems)], [], 'a worker module calls a name it never imported');
 });
 
 await test('the facts sheet refuses to invent, and reports rather than rewrites', async () => {
@@ -460,6 +533,128 @@ await test('the research gate refuses a prospect that cannot answer all three qu
   const gate = researchGate(thin);
   assert.equal(gate.ready, false, 'a prospect with no answer to why now was let through');
   assert.deepEqual(gate.missing.sort(), ['what_is_missing', 'why_now']);
+});
+
+/* ---------- the City Pin campaign ---------- */
+
+await test('the City Pin prices and floor are the ones the owner set', () => {
+  assert.equal(CITY_PIN_SKUS.pin_90.priceUsd, 490);
+  assert.equal(CITY_PIN_SKUS.exclusive_90.priceUsd, 790);
+  assert.equal(CITY_PIN_SKUS.anchor_12.priceUsd, 1900);
+  assert.equal(CITY_PIN_FLOOR_USD, 390);
+  assert.equal(CITY_PIN_SKUS.anchor_12.leadWith, false, 'the anchor must not be led with');
+  assert.equal(checkCityPinOffer({ sku: 'pin_90', priceUsd: 389 }).ok, false, 'below the floor was allowed');
+  assert.equal(checkCityPinOffer({ sku: 'pin_90', priceUsd: 390 }).ok, true, 'the floor itself was refused');
+});
+
+await test('the City Pin master emails are templates, and none carries an em dash', () => {
+  const emails = [CITY_PIN_FOOD_EMAIL, CITY_PIN_NIGHT_EMAIL, CITY_PIN_ROOM_EMAIL, CITY_PIN_TOUR_EMAIL];
+  for (const e of emails) {
+    assert.ok(!hasDashPunctuation(e), 'a master email carries an em dash');
+    assert.ok(/\{[A-Za-z]/.test(e), 'a master email has no placeholder, so it is a letter rather than a template');
+  }
+  assert.ok(!hasDashPunctuation(CITY_PIN_FOOD_SUBJECT), 'the food subject carries an em dash');
+  // A template that reached an operator unfilled is the failure this catches.
+  for (const e of emails) {
+    assert.ok(
+      checkOutreachRules(e, 'city_pin').some((f) => f.id === 'no_unfilled_placeholder'),
+      'an unfilled master email was not flagged'
+    );
+  }
+});
+
+await test('the Tier A city list carries no duplicates', () => {
+  assert.equal(TIER_A_CITIES.length, new Set(TIER_A_CITIES).size, 'a city appears twice');
+  assert.ok(TIER_A_CITIES.length >= 30, 'the list lost cities');
+});
+
+await test('a City Pin email is refused for a city that is not live', () => {
+  // Every master email opens by asserting the city already has a pulse. Sending
+  // that to an operator who can check it in one click is a false claim, so the
+  // gate is here rather than at invoice time.
+  assert.equal(checkCityIsLive({ research: { city: 'Kotor' } }).ok, false);
+  assert.equal(checkCityIsLive({ research: { city: 'Kotor', city_is_live: false } }).ok, false);
+  assert.equal(checkCityIsLive({ research: { city: 'Lisbon', city_is_live: true } }).ok, true);
+});
+
+await test('an address nobody published is never contacted', () => {
+  const src = (email_source) => checkEmailProvenance({ research: { public_email: 'a@b.com', email_source } }).ok;
+  assert.equal(src('guessed'), false);
+  assert.equal(src('bought_list'), false);
+  assert.equal(src('scraped'), false);
+  assert.equal(src(''), false, 'an address with no recorded source was allowed');
+  assert.equal(src('own_site'), true);
+  // The domain is not the test. A kitchen that published its own free-mail
+  // address on its own site published a business inbox.
+  assert.equal(checkEmailProvenance({ research: { public_email: 'ola@gmail.com', email_source: 'instagram_bio' } }).ok, true);
+});
+
+/* ---------- SetPostGo, and the law it has to obey ---------- */
+
+// Sixteen of every twenty sends go to the United States, Canada or Australia.
+// CAN-SPAM requires a physical postal address and a working opt-out in every
+// commercial email; CASL and the Spam Act require the sender to be
+// identifiable and an unsubscribe to work. None of the supplied master emails
+// carried any of that, so it is appended by the composer, and this is what
+// stops anyone removing it.
+await test('no SetPostGo email can be composed without an opt-out and a postal address', () => {
+  const lead = {
+    research: {
+      business_name: 'Northside Heating', town: 'Boise', trade: 'HVAC firm',
+      profession: 'HVAC', profession_confirmed: true,
+      public_email: 'office@northside.test', email_source: 'own_site',
+      silence_proof: 'No Instagram found', owner_first_name: 'Dale', street_type: 'Main Street'
+    }
+  };
+  const without = composeSetPostGo(lead, {});
+  assert.equal(without.ok, false, 'a draft was composed with no postal address');
+  assert.ok(without.blockers.join(' ').includes('CAN-SPAM'));
+
+  const with_ = composeSetPostGo(lead, { postalAddress: '1 High Street, London W1' });
+  assert.equal(with_.ok, true, with_.blockers && with_.blockers.join(' '));
+  assert.match(with_.draft.body, /reply STOP/i, 'no opt-out in the body');
+  assert.match(with_.draft.body, /1 High Street/, 'no postal address in the body');
+  assert.deepEqual(with_.findings, [], 'a composed email breaks a standing rule');
+
+  // And the rules catch it if either is later removed by hand.
+  const stripped = with_.draft.body.replace(/If you would rather not hear[^\n]*/, '');
+  assert.ok(checkOutreachRules(stripped, 'setpostgo').some((f) => f.id === 'no_missing_optout'));
+});
+
+await test('a SetPostGo date is never invented, and an unevidenced rival claim is softened', () => {
+  const base = {
+    research: {
+      business_name: 'Northside Heating', town: 'Boise', trade: 'HVAC firm',
+      profession: 'HVAC', profession_confirmed: true,
+      public_email: 'office@northside.test', email_source: 'own_site',
+      owner_first_name: 'Dale', street_type: 'Main Street'
+    }
+  };
+  const noProof = composeSetPostGo({ research: { ...base.research } }, { postalAddress: '1 High Street, London W1' });
+  assert.equal(noProof.ok, false, 'an email was written about a page nobody looked at');
+
+  const vague = composeSetPostGo({ research: { ...base.research, silence_proof: 'No Instagram found' } }, { postalAddress: '1 High Street, London W1' });
+  assert.equal(vague.ok, true);
+  assert.ok(!/\b(19|20)\d{2}\b/.test(vague.draft.body), 'a year appeared in an email with no recorded date');
+
+  // The brief's own note is that the rival posts in almost every category.
+  // Almost is not a basis for telling a stranger about their neighbour.
+  assert.equal(vague.draft.rivalClaimEvidenced, false);
+  assert.ok(!/The other HVAC firm in Boise posts/.test(vague.draft.body), 'an unevidenced claim was stated as fact');
+  assert.match(vague.draft.body, /another HVAC firm is posting/, 'the pressure was dropped rather than softened');
+
+  const evidenced = composeSetPostGo({ research: { ...base.research, silence_proof: 'No Instagram found', rival_evidence: 'The other firm posted four times this fortnight' } }, { postalAddress: '1 High Street, London W1' });
+  assert.match(evidenced.draft.body, /The other HVAC firm in Boise posts/, 'an evidenced claim was still softened');
+});
+
+await test('the SetPostGo ladder and the daily arithmetic are the ones in the brief', () => {
+  assert.equal(SETPOSTGO_PLANS.free.posts, 21);
+  assert.equal(SETPOSTGO_PLANS.solo.gbp, 15);
+  assert.equal(SETPOSTGO_PLANS.pro.gbp, 30);
+  assert.equal(SETPOSTGO_FLOOR_GBP, SETPOSTGO_PLANS.solo.gbp, 'the floor drifted off Solo');
+  assert.equal(SETPOSTGO_PLANS.full_management.leadWith, false);
+  assert.equal(SETPOSTGO_GEOGRAPHY.daily.reduce((n, g) => n + g.count, 0), 20, 'the geography no longer adds to twenty');
+  assert.equal(SETPOSTGO_DAILY_MIX.reduce((n, g) => n + g.count, 0), 20, 'the vertical mix no longer adds to twenty');
 });
 
 await test('a message status cannot become something the rest of the code does not know', () => {

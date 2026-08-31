@@ -1571,7 +1571,7 @@ function openSettings(){
   // Fetched once per session, the first time Settings is opened, then the panel
   // is redrawn with it. Doing it here rather than at sign in keeps one more
   // request off the critical path of getting into the desk.
-  if(!LI_TRIED){ LI_TRIED = true; Promise.all([loadLinkedIn(), loadN8nHook(), loadAnthropicKey(), loadFacts()]).then(openSettings); }
+  if(!LI_TRIED){ LI_TRIED = true; Promise.all([loadLinkedIn(), loadN8nHook(), loadAnthropicKey(), loadFacts(), loadPostal()]).then(openSettings); }
   modal(`
     <h2>Firm Settings</h2>
     <div class="eyebrow">Account</div>
@@ -1688,6 +1688,17 @@ function openSettings(){
     ${(N8N_HOOK_WARNINGS || []).map(w => `<p class="tiny" style="margin-top:6px;color:var(--rust)">${esc(w)}</p>`).join('')}
     <div class="btnrow" style="margin-top:8px">
       <button class="btn gold sm" id="n8n-hook-save" style="min-height:44px" onclick="saveN8nHook()">Save address</button>
+    </div>
+
+    <div class="hr"></div>
+    <div class="eyebrow">Postal address</div>
+    <p class="tiny" style="margin-bottom:8px">Goes in the footer of every outreach email. The United States requires a real one in every commercial message, and Canada and Australia require the sender to be identifiable. Sixteen of every twenty SetPostGo sends go to those three, so nothing can be drafted until this is set.</p>
+    <label>The address, as it should read</label>
+    <textarea id="postal-field" rows="3" placeholder="27 Old Gloucester Street, London WC1N 3AX">${esc(POSTAL || '')}</textarea>
+    ${POSTAL_MSG ? `<p class="tiny" style="margin-top:6px;color:${POSTAL_OK ? 'var(--gold)' : 'var(--rust)'}">${esc(POSTAL_MSG)}</p>` : ''}
+    ${(POSTAL_WARNINGS || []).map(w => `<p class="tiny" style="margin-top:6px;color:var(--rust)">${esc(w)}</p>`).join('')}
+    <div class="btnrow" style="margin-top:8px">
+      <button class="btn gold sm" id="postal-save" style="min-height:44px" onclick="savePostal()">Save address</button>
     </div>
 
     <label style="margin-top:14px">Engine base URL</label>
@@ -1820,6 +1831,43 @@ async function saveN8nHook(){
   }catch(e){
     N8N_HOOK_MSG = e.message || 'Could not save that address.';
     N8N_HOOK_OK = false;
+  }
+  openSettings();
+}
+
+// The address in the footer of every outreach email. Not house style: the
+// United States requires one in every commercial message, and without it a
+// SetPostGo draft is refused rather than written, which is why this sits in
+// Settings beside the other things that have to be set once.
+let POSTAL = '';
+let POSTAL_MSG = '';
+let POSTAL_OK = false;
+let POSTAL_WARNINGS = [];
+
+async function loadPostal(){
+  try{
+    const data = await engine('/social/postal-address', null, 'GET');
+    POSTAL = data.address || '';
+  }catch(e){
+    POSTAL = '';
+  }
+}
+
+async function savePostal(){
+  const btn = document.getElementById('postal-save');
+  if(!btn || btn.disabled) return;
+  const address = (document.getElementById('postal-field') || {}).value || '';
+  btn.innerHTML = '<i class="spin"></i> Saving…'; btn.disabled = true;
+  try{
+    const data = await engine('/social/postal-address', { address }, 'POST', { timeoutMs: 15000 });
+    POSTAL = data.address || '';
+    POSTAL_WARNINGS = data.warnings || [];
+    POSTAL_MSG = POSTAL_WARNINGS.length ? 'Saved, but read the warnings below.' : 'Saved. Every outreach email will carry it.';
+    POSTAL_OK = POSTAL_WARNINGS.length === 0;
+  }catch(e){
+    POSTAL_MSG = e.message || 'Could not save that address.';
+    POSTAL_OK = false;
+    POSTAL_WARNINGS = [];
   }
   openSettings();
 }
@@ -2063,12 +2111,116 @@ function vOutreachCard(m){
 
 function vOutreach(){
   const live = outreachLive();
-  if(!live.length && !OUT.error && OUT.loaded) return '';
+  const board = vCityPinBoard();
+  if(!live.length && !board && !OUT.error && OUT.loaded) return '';
   return `
-    <div class="eyebrow">Outreach waiting on you</div>
+    ${live.length || OUT.error ? `<div class="eyebrow">Outreach waiting on you</div>` : ''}
     ${OUT.error ? `<div class="qerr">${esc(OUT.error)}</div>` : ''}
     ${live.map(vOutreachCard).join('')}
+    ${board}
     <div class="hr"></div>`;
+}
+
+/* ---------- the City Pin morning block ---------- */
+// The brief lives in a document nobody opens at seven in the morning. This is
+// the half of it an agent actually needs at the moment of working: what is
+// being sold, at what, and which slots are still free today. Everything here is
+// read from the engine, so the board and the ledger cannot disagree.
+const CAMPAIGNS = [
+  { id: 'city_pin', path: '/social/outreach/city-pin', label: 'City Pin', eyebrow: 'The City Pin week' },
+  { id: 'setpostgo', path: '/social/outreach/setpostgo', label: 'SetPostGo', eyebrow: 'The SetPostGo week' }
+];
+const CP = { boards: {}, loading: '', open: false, which: 'city_pin' };
+
+function campaign(){ return CAMPAIGNS.find(c => c.id === CP.which) || CAMPAIGNS[0]; }
+
+async function loadCampaign(){
+  const c = campaign();
+  if(CP.loading === c.id || CP.boards[c.id]) return;
+  CP.loading = c.id;
+  try{
+    CP.boards[c.id] = await engine(c.path, null, 'GET', { retries: 1, timeoutMs: 15000 });
+  }catch(e){
+    CP.boards[c.id] = { error: e.message || String(e) };
+  }
+  CP.loading = '';
+  render();
+}
+
+function cityPinToggle(){
+  CP.open = !CP.open;
+  if(CP.open) loadCampaign();
+  render();
+}
+
+function pickCampaign(id){
+  CP.which = id;
+  loadCampaign();
+  render();
+}
+
+function vCityPinBoard(){
+  const c = campaign();
+  const b = CP.boards[c.id];
+  const tabs = CAMPAIGNS.map(x => `
+    <button class="btn ${x.id === CP.which ? 'gold' : 'ghost'}" style="min-height:44px" onclick="pickCampaign('${x.id}')">${esc(x.label)}</button>`).join('');
+
+  const head = `
+    <div class="eyebrow">${esc(c.eyebrow)}</div>
+    <div class="card" style="margin-bottom:12px">
+      <div class="btnrow">
+        <button class="btn ghost wide" style="min-height:44px" onclick="cityPinToggle()">${CP.open ? 'Close the board' : 'Open the board'}</button>
+      </div>`;
+  if(!CP.open) return head + `<p class="tiny" style="margin-top:10px">What each campaign sells, at what price, and what is still open today.</p></div>`;
+  const bar = `<div class="btnrow" style="margin-top:10px">${tabs}</div>`;
+  if(CP.loading === c.id || !b) return head + bar + `<p class="sub" style="margin-top:10px"><span class="spin"></span> Reading the board.</p></div>`;
+  if(b.error) return head + bar + `<div class="qerr" style="margin-top:10px">${esc(b.error)}</div></div>`;
+
+  // A free plan is labelled Free and priced at nothing, and printing both reads
+  // as a stutter, so the price is dropped when the label already is the price.
+  const money = (s) => {
+    if(s.priceUsd != null) return `USD ${s.priceUsd}`;
+    if(s.gbp === 0) return /free/i.test(s.label || '') ? '' : 'Free';
+    return `${s.from ? 'from ' : ''}GBP ${s.gbp}`;
+  };
+  const plans = Object.entries(b.skus || b.plans || {}).map(([k, s]) => {
+    const price = money(s);
+    return `<div class="qnote" style="white-space:normal;margin-bottom:8px">
+      <b>${esc(s.label)}</b>${price ? ', ' + price : ''}${s.exclusive ? ', exclusive' : ''}${s.posts ? `, ${s.posts} posts` : ''}${s.leadWith === false ? '. Not led with.' : ''}
+      <br><span class="tiny">${esc((s.includes || []).join('. ') || s.note || '')}</span>
+    </div>`;
+  }).join('');
+
+  const floor = b.floorUsd != null
+    ? `<b>The floor is USD ${b.floorUsd}.</b> Below it this is not a discount, it is a different product, and that is not an agent's to invent.`
+    : `<b>The floor is GBP ${b.floorGbp}.</b> Nothing is sold under Solo. The free plan is the discount.`;
+
+  // Only what is still free. A board that lists a full city wastes the first
+  // minute of the morning.
+  const slots = (b.openSlots || []).map(s => `
+    <div class="tiny" style="padding:6px 0;border-bottom:1px solid var(--line)">
+      <b>${esc(s.city)}</b> &#8226; ${s.open.map(v => esc((b.verticals[v] || {}).label || v)).join(', ')}
+    </div>`).join('');
+
+  const mix = (b.geography && b.geography.daily || []).map(g => `${g.count} ${esc(g.region)}`).join(', ');
+
+  return head + bar + `
+      <p class="sub" style="margin-top:12px">${esc(b.product || '')}</p>
+      <div class="qnote" style="white-space:normal;margin:10px 0">${floor}</div>
+      ${plans}
+      <div class="tiny" style="margin:12px 0 6px;letter-spacing:.08em;color:var(--muted)">TODAY</div>
+      <p class="tiny">${b.quota ? `${b.quota.researched ? b.quota.researched + ' researched, ' : ''}${b.quota.sent} sent${b.quota.followUps ? ', ' + b.quota.followUps + ' follow ups' : ''}. ${esc(b.quota.stackedBy || '')}` : ''}</p>
+      ${mix ? `<p class="tiny">${esc(mix)}.</p>` : ''}
+      ${slots ? `<details style="margin-top:12px"><summary class="tiny" style="cursor:pointer;min-height:44px;display:flex;align-items:center">Open slots, ${(b.openSlots || []).length} ${(b.openSlots || []).length === 1 ? 'city' : 'cities'}</summary>
+        <div style="margin-top:8px">${slots}</div>
+      </details>` : ''}
+      ${(b.compliance || []).length ? `<details style="margin-top:8px" open><summary class="tiny" style="cursor:pointer;min-height:44px;display:flex;align-items:center;color:var(--gold)">What the law requires on this one</summary>
+        <ul class="sub" style="margin:8px 0 0;padding-left:18px">${b.compliance.map(x => `<li style="margin-bottom:6px"><b>${esc((x.jurisdictions || []).join(', '))}.</b> ${esc(x.detail)}</li>`).join('')}</ul>
+      </details>` : ''}
+      <details style="margin-top:8px"><summary class="tiny" style="cursor:pointer;min-height:44px;display:flex;align-items:center">The rules on this campaign</summary>
+        <ul class="sub" style="margin:8px 0 0;padding-left:18px">${(b.guardrails || []).map(g => `<li style="margin-bottom:6px">${esc(g.detail)}</li>`).join('')}</ul>
+      </details>
+    </div>`;
 }
 
 async function copyOutreach(id){

@@ -26,12 +26,28 @@ import {
   recordFeedback, feedbackFor, repeatedReasons
 } from './db.js';
 import { publishPost } from './distribute.js';
-import { seedOutreach, listReferences, listProspects, listMessages, addReference, checkOutreachRules, setMessageStatus, CAMPAIGN_TYPES, VISIT_DUBAI_GUARDRAILS, recentlyApproached, isSuppressed } from './outreach.js';
+import {
+  seedOutreach, listReferences, listProspects, listMessages, addReference,
+  checkOutreachRules, setMessageStatus, recentlyApproached, recentlyDrafted, isSuppressed,
+  composeCityPin, claimExclusive, releaseExclusive, openSlots,
+  composeSetPostGo, setPostGoTemplates, closeTheFile,
+  SETPOSTGO_PRODUCT, SETPOSTGO_FACTS, SETPOSTGO_VOICE, SETPOSTGO_NEVER, SETPOSTGO_ASK,
+  SETPOSTGO_PLANS, SETPOSTGO_CURRENCY, SETPOSTGO_FLOOR_GBP, SETPOSTGO_TIERS, SETPOSTGO_SKIP,
+  SETPOSTGO_GEOGRAPHY, SETPOSTGO_DAILY_MIX, SETPOSTGO_PSYCHOLOGY, SETPOSTGO_RESEARCH_HARD,
+  SETPOSTGO_RESEARCH_SOFT, SETPOSTGO_CADENCE, SETPOSTGO_ON_REPLY, SETPOSTGO_QUOTA,
+  SETPOSTGO_COMPLIANCE, SETPOSTGO_GUARDRAILS,
+  CAMPAIGN_TYPES, VISIT_DUBAI_GUARDRAILS, CITY_PIN_GUARDRAILS,
+  CITY_PIN_SKUS, CITY_PIN_FLOOR_USD, CITY_PIN_VERTICALS, CITY_PIN_VERTICALS_CLOSED,
+  TIER_A_CITIES, TIER_B_SIGNALS, CITY_PIN_SKIP, CITY_PIN_RESEARCH_HARD,
+  CITY_PIN_RESEARCH_SOFT, CITY_PIN_EMAIL_SOURCES, CITY_PIN_CADENCE, CITY_PIN_QUOTA,
+  CITY_PIN_ON_REPLY, CITY_PIN_PRODUCT, CITY_PIN_LINES, CITY_PIN_VOICE
+} from './outreach.js';
 import { factsFor, recentChanges, putFact, runFactsSweep, DEFAULT_STALE_HOURS } from './facts.js';
 import { SENDABLE as PENDING_STATUSES } from './config.js';
 import { credentialDeliveries, credentialStatusFor, writeCredentialsFor } from './senders/index.js';
 import { getWebhookUrl, setWebhookUrl, describeWebhookUrl } from '../n8n.js';
 import { getAnthropicKey, setAnthropicKey, anthropicKeyStatus, describeAnthropicKey } from '../aikey.js';
+import { readPostalAddress, writePostalAddress, describePostalAddress } from '../postal.js';
 import { runGeneration } from './generate.js';
 import { ingestMetrics, ventureSummary } from './metrics.js';
 import { getVapidKeys, pushConfigured, notifyOwner } from './push.js';
@@ -127,7 +143,8 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
   const noStoreNeeded = [
     '/social/push/keys', '/social/selfcheck',
     '/social/n8n-token', '/social/n8n-token/regenerate',
-    '/social/anthropic-key', '/social/credentials', '/social/n8n-webhook'
+    '/social/anthropic-key', '/social/credentials', '/social/n8n-webhook',
+    '/social/postal-address'
   ];
   const needsStore = !noStoreNeeded.includes(path);
   if (needsStore && !hasStore(env)) return noStore(request, env);
@@ -521,6 +538,227 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
         await db.prepare('UPDATE outreach_messages SET status = ?, updated_at = ? WHERE id = ?')
           .bind('approved', new Date().toISOString(), body.id).run();
         return json(request, env, { ok: true, messages: await listMessages(db, { limit: 50 }) });
+      }
+
+      // The campaign board. Everything an agent needs to work a morning block
+      // without asking anyone: what is being sold, at what, to whom, in which
+      // cities, and which slots are still open.
+      case 'GET /social/outreach/city-pin': {
+        await ensureSchema(db);
+        return json(request, env, {
+          ok: true,
+          product: CITY_PIN_PRODUCT,
+          lines: CITY_PIN_LINES,
+          voice: CITY_PIN_VOICE,
+          skus: CITY_PIN_SKUS,
+          floorUsd: CITY_PIN_FLOOR_USD,
+          verticals: CITY_PIN_VERTICALS,
+          verticalsClosed: CITY_PIN_VERTICALS_CLOSED,
+          cities: TIER_A_CITIES,
+          tierBSignals: TIER_B_SIGNALS,
+          skip: CITY_PIN_SKIP,
+          research: { hard: CITY_PIN_RESEARCH_HARD, soft: CITY_PIN_RESEARCH_SOFT, emailSources: CITY_PIN_EMAIL_SOURCES },
+          cadence: CITY_PIN_CADENCE,
+          quota: CITY_PIN_QUOTA,
+          onReply: CITY_PIN_ON_REPLY,
+          guardrails: CITY_PIN_GUARDRAILS,
+          openSlots: await openSlots(db)
+        });
+      }
+
+      // The same board for the campaign that goes to three countries with
+      // statutory requirements. The compliance block is on it rather than in a
+      // document, because an agent at twenty a day reads what is on the screen.
+      case 'GET /social/outreach/setpostgo': {
+        await ensureSchema(db);
+        return json(request, env, {
+          ok: true,
+          product: SETPOSTGO_PRODUCT,
+          facts: SETPOSTGO_FACTS,
+          voice: SETPOSTGO_VOICE,
+          never: SETPOSTGO_NEVER,
+          ask: SETPOSTGO_ASK,
+          plans: SETPOSTGO_PLANS,
+          currency: SETPOSTGO_CURRENCY,
+          floorGbp: SETPOSTGO_FLOOR_GBP,
+          tiers: SETPOSTGO_TIERS,
+          skip: SETPOSTGO_SKIP,
+          geography: SETPOSTGO_GEOGRAPHY,
+          dailyMix: SETPOSTGO_DAILY_MIX,
+          psychology: SETPOSTGO_PSYCHOLOGY,
+          research: { hard: SETPOSTGO_RESEARCH_HARD, soft: SETPOSTGO_RESEARCH_SOFT, emailSources: CITY_PIN_EMAIL_SOURCES },
+          templates: setPostGoTemplates(),
+          cadence: SETPOSTGO_CADENCE,
+          onReply: SETPOSTGO_ON_REPLY,
+          quota: SETPOSTGO_QUOTA,
+          compliance: SETPOSTGO_COMPLIANCE,
+          guardrails: SETPOSTGO_GUARDRAILS
+        });
+      }
+
+      // A SetPostGo draft. The postal address is required rather than optional
+      // and is read from settings, so it is set once and cannot be forgotten on
+      // the nineteenth email of a morning.
+      case 'POST /social/outreach/setpostgo/draft': {
+        await ensureSchema(db);
+        const research = body.research || {};
+        const organisation = String(body.organisation || research.business_name || '').trim();
+        if (!organisation) return json(request, env, { ok: false, error: 'A lead needs a business name.' }, 400);
+
+        const postalAddress = String(body.postalAddress || '').trim() || (await readPostalAddress(env));
+        const composed = composeSetPostGo({ organisation, research }, {
+          template: body.template || 'trade',
+          postalAddress,
+          agentName: body.agentName
+        });
+        if (!composed.ok) {
+          return json(request, env, { ok: false, blockers: composed.blockers, warnings: composed.warnings, error: composed.blockers[0] }, 422);
+        }
+        if (await isSuppressed(db, composed.draft.to)) {
+          return json(request, env, { ok: false, error: `${composed.draft.to} is on the suppression list and is never contacted again, from any venture.` }, 409);
+        }
+        const seen = await recentlyDrafted(db, organisation);
+        if (seen.length) {
+          return json(request, env, { ok: false, error: `${organisation} already has a message from the last 30 days, ${String(seen[0].status).replace(/_/g, ' ')}.` }, 409);
+        }
+
+        const prospectId = 'sp-' + crypto.randomUUID();
+        const now = new Date().toISOString();
+        await db.prepare(
+          `INSERT INTO prospects (id, venture, campaign_type, organisation, contacts, locale, research, evidence, score, status, notes, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        ).bind(
+          prospectId, 'setpostgo', 'setpostgo', organisation,
+          JSON.stringify([{ email: composed.draft.to, published: composed.draft.emailPublishedAt }]),
+          String(research.town || ''), JSON.stringify(research),
+          JSON.stringify(composed.warnings || []), 0, 'ready',
+          String(body.notes || ''), now, now
+        ).run();
+
+        const messageId = 'sp-msg-' + crypto.randomUUID();
+        await db.prepare(
+          `INSERT INTO outreach_messages
+            (id, prospect_id, venture, campaign_type, identity, to_addresses, cc_addresses, subject, body, original_wording, locale_note, city, vertical, sku, price_usd, rule_findings, status, send_after, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        ).bind(
+          messageId, prospectId, 'setpostgo', 'setpostgo', String(body.agentName || ''),
+          composed.draft.to, '', composed.draft.subject, composed.draft.body, '',
+          (composed.warnings || []).join(' '),
+          composed.draft.town, composed.draft.trade, composed.draft.template, 0,
+          JSON.stringify(composed.findings || []), 'awaiting_approval',
+          body.sendAfter || null, now, now
+        ).run();
+
+        return json(request, env, { ok: true, id: messageId, draft: composed.draft, warnings: composed.warnings, findings: composed.findings });
+      }
+
+      // The opt-out, honoured. A reply of STOP lands here, and so does the day
+      // seven email, which promises in those words that we will not write
+      // again. An opt-out that is offered and not honoured is worse in law and
+      // otherwise than one never offered.
+      case 'POST /social/outreach/close': {
+        await ensureSchema(db);
+        if (!body.email) return json(request, env, { ok: false, error: 'An address is required to close a file.' }, 400);
+        const closed = await closeTheFile(db, { email: body.email, reason: body.reason });
+        return json(request, env, { ok: true, ...closed });
+      }
+
+      // One lead in, one draft out, or the reasons why not. This is the route
+      // that has to carry twenty a day, so it does the refusing itself rather
+      // than handing a half filled letter to whoever is sending.
+      case 'POST /social/outreach/draft': {
+        await ensureSchema(db);
+        const research = body.research || {};
+        const organisation = String(body.organisation || research.business_name || '').trim();
+        if (!organisation) return json(request, env, { ok: false, error: 'A lead needs a business name.' }, 400);
+
+        const prospect = { organisation, research };
+        const composed = composeCityPin(prospect, {
+          sku: body.sku || 'pin_90',
+          priceUsd: body.priceUsd,
+          agentName: body.agentName,
+          neighbourhood: body.neighbourhood,
+          street: body.street
+        });
+        if (!composed.ok) {
+          return json(request, env, { ok: false, blockers: composed.blockers, warnings: composed.warnings, error: composed.blockers[0] }, 422);
+        }
+
+        // The two checks that are about the house rather than the letter. Both
+        // run before anything is stored, so a refused lead leaves no trace.
+        if (await isSuppressed(db, composed.draft.to)) {
+          return json(request, env, { ok: false, error: `${composed.draft.to} is on the suppression list and is never contacted again, from any venture.` }, 409);
+        }
+        const already = await recentlyDrafted(db, organisation);
+        if (already.length) {
+          const state = String(already[0].status).replace(/_/g, ' ');
+          return json(request, env, { ok: false, error: `${organisation} already has a message from the last 30 days, ${state}, from ${already[0].venture}. Two letters from the same house in one week reads worse than none.` }, 409);
+        }
+
+        const prospectId = 'cp-' + crypto.randomUUID();
+        const now = new Date().toISOString();
+        await db.prepare(
+          `INSERT INTO prospects (id, venture, campaign_type, organisation, contacts, locale, research, evidence, score, status, notes, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        ).bind(
+          prospectId, 'glotemp', 'city_pin', organisation,
+          JSON.stringify([{ email: composed.draft.to, published: composed.draft.emailPublishedAt }]),
+          String(research.city || ''), JSON.stringify(research),
+          JSON.stringify(composed.warnings || []), 0, 'ready',
+          String(body.notes || ''), now, now
+        ).run();
+
+        const messageId = 'cp-msg-' + crypto.randomUUID();
+        await db.prepare(
+          `INSERT INTO outreach_messages
+            (id, prospect_id, venture, campaign_type, identity, to_addresses, cc_addresses, subject, body, original_wording, locale_note, city, vertical, sku, price_usd, rule_findings, status, send_after, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        ).bind(
+          messageId, prospectId, 'glotemp', 'city_pin', String(body.agentName || ''),
+          composed.draft.to, '', composed.draft.subject, composed.draft.body, '',
+          (composed.warnings || []).join(' '),
+          composed.draft.city, composed.draft.vertical, composed.draft.sku, composed.draft.priceUsd,
+          JSON.stringify(composed.findings || []), 'awaiting_approval',
+          body.sendAfter || null, now, now
+        ).run();
+
+        return json(request, env, { ok: true, id: messageId, draft: composed.draft, warnings: composed.warnings, findings: composed.findings });
+      }
+
+      // The exclusivity ledger. One per vertical per city, and the refusal
+      // names who holds it rather than saying no.
+      case 'POST /social/outreach/exclusive': {
+        await ensureSchema(db);
+        if (!body.city || !body.vertical) return json(request, env, { ok: false, error: 'A city and a vertical are both required.' }, 400);
+        if (body.release) {
+          await releaseExclusive(db, body.city, body.vertical);
+          return json(request, env, { ok: true, openSlots: await openSlots(db) });
+        }
+        if (!body.prospectId) return json(request, env, { ok: false, error: 'Claiming an exclusive needs the lead it is being held for.' }, 400);
+        const claim = await claimExclusive(db, {
+          city: body.city, vertical: body.vertical,
+          prospectId: body.prospectId, organisation: body.organisation
+        });
+        if (!claim.ok) return json(request, env, { ok: false, error: claim.problem, held: claim.held }, 409);
+        return json(request, env, { ok: true, alreadyOurs: claim.alreadyOurs, openSlots: await openSlots(db) });
+      }
+
+      // Set once, used by every SetPostGo draft. Kept beside the other settings
+      // rather than in a Cloudflare dashboard, for the reason every secret in
+      // this house is: a value only settable somewhere the owner cannot reach
+      // is a value that never gets set.
+      case 'GET /social/postal-address': {
+        const address = await readPostalAddress(env);
+        return json(request, env, { ok: true, address, set: Boolean(address) });
+      }
+
+      case 'POST /social/postal-address': {
+        const check = describePostalAddress(body.address);
+        if (!check.ok) return json(request, env, { ok: false, error: check.problems.join(' ') }, 400);
+        if (!(await writePostalAddress(env, check.value))) {
+          return json(request, env, { ok: false, error: 'LOGIN_ATTEMPTS is not bound, so there is nowhere to store it. See worker/README.md.' }, 503);
+        }
+        return json(request, env, { ok: true, address: check.value, warnings: check.warnings });
       }
 
       // The verdict, filed. The reason itself goes through /social/feedback

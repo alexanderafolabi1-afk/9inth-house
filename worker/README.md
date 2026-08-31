@@ -654,6 +654,88 @@ assumption.
 **Suppression is keyed on the address alone,** never on the venture. Someone who
 asked the house to stop hearing from it did not mean one brand of it.
 
+### The City Pin campaign
+
+The deliberate opposite of the Visit Dubai approach. That one sells a homepage
+to a body that needs six signatures. This sells a named lock on one city and one
+vertical, for 90 days, to an operator who can decide alone. It lives in
+`worker/src/social/seeds/city-pin.js` with its gates in `outreach.js`.
+
+Priced at USD 490 named, USD 790 with the category exclusive, USD 1,900 for a
+twelve month anchor, with a floor of USD 390. `checkCityPinOffer` refuses below
+the floor: below it this is not a discount, it is a product nobody authorised.
+The anchor is marked `leadWith: false` and the offer check says so, because
+leading with the largest number turns a decision an operator could make alone
+into one they have to think about.
+
+**Four gates run before a draft exists**, and a lead that fails any of them is
+refused with the reason rather than half written:
+
+1. **Research.** Nine fields. The four that are the message itself, city,
+   vertical, business name and public email, can never be missing. Of the other
+   five, two gaps is a guess and the lead goes back for research.
+2. **Provenance.** Not a domain blocklist. What separates a public business
+   inbox from a scraped one is whether the operator published it, so the record
+   names where it was published and refuses anything marked guessed, inferred,
+   scraped or bought. A kitchen that lists its own free-mail address on its own
+   site has published a business inbox; a pattern-guessed address at a company
+   domain has not.
+3. **The city is live.** Every master email opens by asserting the city already
+   has a public pulse. Sending that for a city that is not on glo-temp.com is a
+   false claim to someone who can check it in one click, so the claim is gated
+   at send time rather than at invoice time.
+4. **The offer.** SKU and price, against the floor.
+
+**One exclusive per vertical per city** is a primary key in the `exclusives`
+table rather than a note, because the 790 SKU is worth nothing the first time it
+is sold twice. A refused claim names who holds it. `openSlots` is the honest
+half of the weekly scoreboard: what is still free.
+
+**Drafting is separately guarded from approving.** `recentlyApproached` counts
+what went or is about to and gates approval; `recentlyDrafted` counts anything
+still alive and gates drafting. At thirty researched leads and twenty sends in a
+morning, the same kitchen turning up twice in one block is not hypothetical.
+
+### The SetPostGo campaign
+
+Sells the free plan first to a busy operator whose page has gone quiet. Free is
+21 posts a month with no card, Solo is GBP 15, Pro GBP 30, Write and You Post
+from GBP 249, Full Management from GBP 599 and never opened with. The floor is
+Solo: the free plan is the discount.
+
+**This is the first campaign that goes to three countries with statutory
+requirements**, at 8 United States, 4 Canada and 4 Australia a day. CAN-SPAM
+requires a valid physical postal address and a working opt-out in every
+commercial email; CASL and Australia's Spam Act 2003 require the sender to be
+identifiable and an unsubscribe to work. None of that was in the supplied
+copy, so `composeSetPostGo` appends it, refuses to compose without a postal
+address, and `no_missing_optout` and `no_postal_address` catch it if anyone
+strips it back out.
+
+The address lives in KV via `worker/src/postal.js` and is set once in Settings,
+for the same reason every other secret here is: a value only settable from a
+dashboard the owner cannot reach is a value that never gets set.
+
+**Consent is the part that is not mechanical.** CASL is consent based rather
+than opt-out based, and the exemption normally relied on for a conspicuously
+published business address is narrower than it sounds. That is a decision for
+the owner, not a default, and it is written on the board rather than buried
+here.
+
+**Two things in the copy are claims, and are treated as claims.**
+`silenceLine` will not invent a last post date: with one recorded it is used,
+without one the email says the page has gone quiet, which is true of every lead
+on this list by definition. `rivalLine` has two versions of the rival
+paragraph, because the brief's own note is that the rival posts in almost every
+category, and almost is not a basis for telling a stranger about their
+neighbour. Evidenced, the claim is stated. Unevidenced, it is softened to a
+statement about the town. Neither version drops the pressure.
+
+**The day seven email promises we will not write again**, so `closeTheFile`
+suppresses the address and withdraws anything still queued to it. A reply of
+STOP goes through the same door. A promise the system cannot keep is a promise
+the house should not make.
+
 ## Checking it yourself
 
 Forcing a fresh deploy after the workers.dev migration, so SESSION_SECRET

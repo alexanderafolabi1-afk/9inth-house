@@ -19,7 +19,47 @@ import {
   VISIT_DUBAI_SEND_AFTER
 } from './seeds/visit-dubai.js';
 
-export { VISIT_DUBAI_GUARDRAILS };
+import {
+  CITY_PIN_SKUS, CITY_PIN_FLOOR_USD, CITY_PIN_VERTICALS, TIER_A_CITIES,
+  CITY_PIN_RESEARCH_HARD, CITY_PIN_RESEARCH_SOFT,
+  CITY_PIN_EMAIL_SOURCES, CITY_PIN_EMAIL_SOURCES_REFUSED, CITY_PIN_GUARDRAILS,
+  CITY_PIN_FOOD_EMAIL, CITY_PIN_FOOD_SUBJECT, CITY_PIN_NIGHT_EMAIL, CITY_PIN_NIGHT_SUBJECT,
+  CITY_PIN_ROOM_EMAIL, CITY_PIN_ROOM_SUBJECT, CITY_PIN_TOUR_EMAIL, CITY_PIN_TOUR_SUBJECT,
+  CITY_PIN_FOLLOW_UP_DAY_3, CITY_PIN_FOLLOW_UP_DAY_7, CITY_PIN_CADENCE,
+  CITY_PIN_QUOTA, CITY_PIN_VOICE, CITY_PIN_PRODUCT, CITY_PIN_LINES,
+  CITY_PIN_SKIP, TIER_B_SIGNALS, CITY_PIN_VERTICALS_CLOSED, CITY_PIN_ON_REPLY
+} from './seeds/city-pin.js';
+
+import {
+  SETPOSTGO_PRODUCT, SETPOSTGO_FACTS, SETPOSTGO_PLANS, SETPOSTGO_FLOOR_GBP,
+  SETPOSTGO_CURRENCY, SETPOSTGO_ASK, SETPOSTGO_FOOTER, SETPOSTGO_COMPLIANCE,
+  SETPOSTGO_TIERS, SETPOSTGO_SKIP, SETPOSTGO_GEOGRAPHY, SETPOSTGO_DAILY_MIX,
+  SETPOSTGO_PSYCHOLOGY, SETPOSTGO_NEVER, SETPOSTGO_RESEARCH_HARD, SETPOSTGO_RESEARCH_SOFT,
+  SETPOSTGO_TRADE_SUBJECT, SETPOSTGO_TRADE_EMAIL, SETPOSTGO_TRADE_EMAIL_ORIGINAL,
+  SETPOSTGO_HOSPITALITY_SUBJECT, SETPOSTGO_HOSPITALITY_EMAIL,
+  SETPOSTGO_PROFESSIONAL_SUBJECT, SETPOSTGO_PROFESSIONAL_EMAIL,
+  SETPOSTGO_AGENCY_SUBJECT, SETPOSTGO_AGENCY_EMAIL,
+  SETPOSTGO_RIVAL_LINE_EVIDENCED, SETPOSTGO_RIVAL_LINE_SAFE, SETPOSTGO_RIVAL_LINE_HOSPITALITY,
+  SETPOSTGO_FOLLOW_UP_DAY_3, SETPOSTGO_FOLLOW_UP_DAY_7, SETPOSTGO_CADENCE,
+  SETPOSTGO_ON_REPLY, SETPOSTGO_QUOTA, SETPOSTGO_GUARDRAILS, SETPOSTGO_VOICE
+} from './seeds/setpostgo.js';
+
+export { VISIT_DUBAI_GUARDRAILS, CITY_PIN_GUARDRAILS, SETPOSTGO_GUARDRAILS };
+export {
+  SETPOSTGO_PRODUCT, SETPOSTGO_FACTS, SETPOSTGO_PLANS, SETPOSTGO_FLOOR_GBP,
+  SETPOSTGO_CURRENCY, SETPOSTGO_ASK, SETPOSTGO_FOOTER, SETPOSTGO_COMPLIANCE,
+  SETPOSTGO_TIERS, SETPOSTGO_SKIP, SETPOSTGO_GEOGRAPHY, SETPOSTGO_DAILY_MIX,
+  SETPOSTGO_PSYCHOLOGY, SETPOSTGO_NEVER, SETPOSTGO_RESEARCH_HARD,
+  SETPOSTGO_RESEARCH_SOFT, SETPOSTGO_CADENCE, SETPOSTGO_ON_REPLY,
+  SETPOSTGO_QUOTA, SETPOSTGO_VOICE
+};
+export {
+  CITY_PIN_SKUS, CITY_PIN_FLOOR_USD, CITY_PIN_VERTICALS, TIER_A_CITIES,
+  CITY_PIN_RESEARCH_HARD, CITY_PIN_RESEARCH_SOFT, CITY_PIN_EMAIL_SOURCES,
+  CITY_PIN_CADENCE, CITY_PIN_QUOTA, CITY_PIN_VOICE, CITY_PIN_PRODUCT,
+  CITY_PIN_LINES, CITY_PIN_SKIP, TIER_B_SIGNALS, CITY_PIN_VERTICALS_CLOSED,
+  CITY_PIN_ON_REPLY
+};
 
 
 // The two Glotemp campaign types, kept apart deliberately. Founding partner
@@ -35,6 +75,21 @@ export const CAMPAIGN_TYPES = {
   need_led: {
     label: 'Need led',
     guidance: 'Sells a solution to a problem the organisation visibly already has. The problem must be evidenced from their own public material, never assumed. It does not open by announcing that the product is new.'
+  },
+  // The deliberate opposite of founding partner. That one waits on six
+  // signatures; this one is sized to be decided alone, by an operator who needs
+  // covers on Thursday, and it is meant to close inside the week.
+  // Same shape as the city pin and a different wound. That one sells a rival
+  // taking a slot; this one sells being seen again by a town that has started
+  // to assume you closed. The register is the whole product: the work is
+  // already good, and only the record of it is missing.
+  setpostgo: {
+    label: 'SetPostGo',
+    guidance: 'Sells the free plan first to a busy operator whose page has gone quiet. Never that their marketing is bad, always that the work is already good and the record of it is not. One action only: start free and pick the profession, or reply TRADE. No attachment, no call on the first email, nothing sold under Solo, and Full Management is never opened with.'
+  },
+  city_pin: {
+    label: 'City pin',
+    guidance: 'Sells a named lock on one city and one vertical for 90 days to a single operator. Never the homepage, never a partnership of record. One offer, one city, one vertical, one price. The rival is a type and a direction, never a name. Priced at 490, 790 or 1900 with a floor of 390.'
   }
 };
 
@@ -92,9 +147,80 @@ export const OUTREACH_RULES = [
     // and [email] still in the signature block. Sending that to a government
     // body is the single most embarrassing way this could fail, and it is the
     // easiest one to miss on a phone at seven in the morning.
+    // Braces as well as brackets: the City Pin master emails are templates
+    // carrying {City} and {Trading name}, and an unfilled brace reaching an
+    // operator is the same failure as an unfilled signature reaching a ministry.
     id: 'no_unfilled_placeholder',
-    test: (t) => /\[[A-Za-z][A-Za-z ]{1,30}\]/.test(t),
-    finding: 'The signature block still has placeholders in it. Fill in the name, title, phone and address before this goes.'
+    test: (t) => /\[[A-Za-z][A-Za-z ]{1,30}\]/.test(t) || /\{[A-Za-z][A-Za-z ]{1,30}\}/.test(t),
+    finding: 'It still has placeholders in it. Fill every one of them from the research before this goes.'
+  },
+  {
+    // The brief bans emoji outright. Mechanical, so it is checked rather than
+    // trusted, and it catches the pictographic ranges rather than punctuation.
+    id: 'no_emoji',
+    test: (t) => /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/u.test(t),
+    finding: 'It uses an emoji. The house does not.'
+  },
+  {
+    id: 'no_hollow_opener',
+    test: (t) => /\b(hope this (email )?finds you well|hope (you'?re|you are) (doing )?well|hope all is well|trust this finds you)\b/i.test(t),
+    finding: 'It opens with a pleasantry that says nothing. Open on the city.'
+  },
+  {
+    // Rival language is a direction, never a name and never an injury. "Your
+    // neighbour will" is allowed; "your neighbour is dying" is the line.
+    id: 'no_disparagement',
+    test: (t) => /\b(is dying|are dying|is struggling|are struggling|going under|unlike (them|their)|better than (them|theirs)|they cannot compete|their food is|nobody goes there)\b/i.test(t),
+    finding: 'It disparages a competitor. The rival is a direction, never an injury and never a name.'
+  },
+  {
+    // Distinct from invented urgency: this is inventing scarcity of our own
+    // inventory, which is the specific lie the brief calls out.
+    id: 'no_fake_inventory_scarcity',
+    test: (t) => /\b(only \d+ (seats?|slots?|spots?|places?) (left|remaining) on the (homepage|instrument|site)|\d+ spots? left on the homepage)\b/i.test(t),
+    finding: 'It invents scarcity of our own inventory. The real constraint is one exclusive per vertical per city, and that is enough.'
+  },
+  {
+    // The DET conversation is open and unclosed. Implying otherwise to a
+    // restaurant in Lisbon would be a lie told to make a small sale. Scoped,
+    // because the letter to Visit Dubai itself obviously names them.
+    id: 'no_unearned_partner_claim',
+    campaigns: ['city_pin', 'need_led'],
+    test: (t) => /\b(visit dubai|dubai corporation for tourism|\bDET\b)\b/i.test(t),
+    finding: 'It mentions the Dubai conversation, which is open and unclosed. It cannot be used as proof to anyone.'
+  },
+  {
+    // Sixteen of every twenty SetPostGo sends go to the United States, Canada
+    // or Australia, and all three require a working opt-out. Canada and
+    // Australia also require sender identification. This is the mechanical half
+    // of that, and it is a rule rather than a template detail because a
+    // template can be edited at twenty a day and a rule cannot.
+    id: 'no_missing_optout',
+    campaigns: ['setpostgo'],
+    test: (t) => !/\breply STOP\b/i.test(t) || !/setpostgo\.xyz/i.test(t),
+    finding: 'It has no opt-out line, or does not identify the sender. Both are required in the United States, Canada and Australia, which is sixteen of every twenty sends.'
+  },
+  {
+    // A postal address is required by CAN-SPAM in every commercial email. The
+    // placeholder rule catches an unfilled one; this catches a missing one.
+    id: 'no_postal_address',
+    campaigns: ['setpostgo'],
+    test: (t) => !/\n[^\n]*\b(street|st\.|road|rd\.|avenue|ave\.|lane|suite|floor|unit|po box|p\.o\. box|house|building)\b[^\n]*/i.test(t),
+    finding: 'It carries no postal address. CAN-SPAM requires a valid physical address in every commercial email.'
+  },
+  {
+    id: 'no_full_management_first',
+    campaigns: ['setpostgo'],
+    test: (t) => /\b(GBP ?599|£599|full management)\b/i.test(t),
+    finding: 'It opens with Full Management, which is not sold first this week and is never opened with.'
+  },
+  {
+    // The prices are set in sterling. A bare foreign figure reads as a quote,
+    // and the rate will have moved by the time anyone is billed.
+    id: 'no_bare_foreign_price',
+    campaigns: ['setpostgo'],
+    test: (t) => /(?<!about )(?<!around )(?<!approximately )(?<!~)\b(US\$|C\$|A\$|USD|CAD|AUD) ?\d/i.test(t),
+    finding: 'It quotes a foreign currency as though it were the price. Sterling is the price; anything else is indicative and has to say so.'
   },
   {
     id: 'no_hype',
@@ -105,9 +231,17 @@ export const OUTREACH_RULES = [
 
 // Checked before the owner is asked to approve anything, so a message that
 // breaks a standing rule never reaches him looking finished.
-export function checkOutreachRules(text) {
+//
+// A rule with no campaigns list applies to everything, which is the default and
+// the right one: a rule that has to be opted into is a rule that gets forgotten
+// on the next campaign. Only a rule that would be wrong somewhere names where
+// it applies.
+export function checkOutreachRules(text, campaignType) {
   const body = String(text || '');
-  return OUTREACH_RULES.filter((r) => r.test(body)).map((r) => ({ id: r.id, finding: r.finding }));
+  return OUTREACH_RULES
+    .filter((r) => !r.campaigns || (campaignType && r.campaigns.includes(campaignType)))
+    .filter((r) => r.test(body))
+    .map((r) => ({ id: r.id, finding: r.finding }));
 }
 
 // Section 4's research gate. A message is not written until all three are
@@ -119,6 +253,418 @@ export function researchGate(prospect) {
   const research = (prospect && prospect.research) || {};
   const missing = RESEARCH_REQUIRED.filter((k) => !String(research[k] || '').trim());
   return { ready: missing.length === 0, missing };
+}
+
+/* ---------- the City Pin gates ---------- */
+
+// Nine fields, weighted. The four that are the message itself can never be
+// missing. For the other five the owner's rule is that two missing means do not
+// send, which is applied literally: one gap is a thin lead, two is a guess.
+export function cityPinGate(prospect) {
+  const r = (prospect && prospect.research) || {};
+  const has = (k) => Boolean(String(r[k] || '').trim());
+  const missingHard = CITY_PIN_RESEARCH_HARD.filter((f) => !has(f.key));
+  const missingSoft = CITY_PIN_RESEARCH_SOFT.filter((f) => !has(f.key));
+  const reasons = [];
+  for (const f of missingHard) reasons.push(`${f.label} is missing, and nothing can be written without it.`);
+  if (missingSoft.length >= 2) {
+    reasons.push(`${missingSoft.length} of the five research fields are empty: ${missingSoft.map((f) => f.label.toLowerCase()).join(', ')}. Two gaps is a guess. Research the next lead and come back to this one.`);
+  }
+  return { ready: reasons.length === 0, reasons, missingHard, missingSoft };
+}
+
+// Where the address came from, checked rather than assumed. What separates a
+// public business inbox from a scraped one is not the domain: a small kitchen
+// that lists its own free-mail address on its own site has published a business
+// inbox, and a pattern-guessed address at a company domain has not. So this
+// asks who published it, and refuses the answers that mean nobody did.
+export function checkEmailProvenance(prospect) {
+  const r = (prospect && prospect.research) || {};
+  const source = String(r.email_source || '').trim().toLowerCase();
+  const email = String(r.public_email || '').trim();
+  if (!email) return { ok: false, problem: 'There is no public email on this lead.' };
+  if (!source) {
+    return { ok: false, problem: 'Nothing records where this address was published. Name the source: their own site, Google Business, Instagram bio, TripAdvisor, or a municipal guide.' };
+  }
+  if (CITY_PIN_EMAIL_SOURCES_REFUSED.includes(source)) {
+    return { ok: false, problem: `This address is recorded as "${source}", which means nobody published it. Bought, guessed and scraped addresses are not contacted.` };
+  }
+  if (!Object.prototype.hasOwnProperty.call(CITY_PIN_EMAIL_SOURCES, source)) {
+    return { ok: false, problem: `"${source}" is not a source the house recognises. Use one of: ${Object.keys(CITY_PIN_EMAIL_SOURCES).join(', ')}.` };
+  }
+  return { ok: true, source, published: CITY_PIN_EMAIL_SOURCES[source] };
+}
+
+// The offer itself. An agent may discount within reason and may not invent a
+// product, and the difference between those two is a number.
+export function checkCityPinOffer({ sku, priceUsd } = {}) {
+  const problems = [];
+  const spec = CITY_PIN_SKUS[sku];
+  if (!spec) {
+    problems.push(`"${sku}" is not a City Pin product. It is one of: ${Object.keys(CITY_PIN_SKUS).join(', ')}.`);
+    return { ok: false, problems };
+  }
+  const price = Number(priceUsd);
+  if (!Number.isFinite(price) || price <= 0) problems.push('No price was set on this offer.');
+  else if (price < CITY_PIN_FLOOR_USD) {
+    problems.push(`USD ${price} is below the floor of USD ${CITY_PIN_FLOOR_USD}. Below the floor this is not a discount, it is a different product, and that is not an agent's to invent.`);
+  }
+  const warnings = [];
+  if (spec && Number.isFinite(price) && price < spec.priceUsd && price >= CITY_PIN_FLOOR_USD) {
+    warnings.push(`Discounted from the USD ${spec.priceUsd} list price for ${spec.label}.`);
+  }
+  if (spec && spec.leadWith === false) {
+    warnings.push('The 12 month anchor is not led with. It is offered when they ask what a year costs.');
+  }
+  return { ok: problems.length === 0, problems, warnings, spec };
+}
+
+// The master emails all open by saying the city is already live. That sentence
+// is either true or it is a false claim made to a stranger who is about to be
+// invoiced, and the brief allows a lead whose city is only planned, so the two
+// have to be reconciled somewhere. Here.
+export function checkCityIsLive(prospect) {
+  const r = (prospect && prospect.research) || {};
+  const live = r.city_is_live;
+  if (live === true || live === 'true' || live === 'yes') return { ok: true };
+  return {
+    ok: false,
+    problem: `${r.city || 'This city'} is not confirmed live on glo-temp.com. Every master email opens by saying the city already has a public pulse, and sending that to an operator who can check in one click is a false claim. Stand the city page up first, or write an opening that does not claim it.`
+  };
+}
+
+// One exclusive per vertical per city, honoured across every agent and every
+// day, because the whole 790 SKU is worth nothing the first time it is sold
+// twice. Keyed on city and vertical alone for exactly that reason.
+export async function exclusiveHolder(db, city, vertical) {
+  const row = await db.prepare(
+    `SELECT city, vertical, prospect_id, organisation, sold_at FROM exclusives
+      WHERE city = ? AND vertical = ?`
+  ).bind(normaliseKey(city), normaliseKey(vertical)).first();
+  return row || null;
+}
+
+export async function claimExclusive(db, { city, vertical, prospectId, organisation }) {
+  const held = await exclusiveHolder(db, city, vertical);
+  if (held) {
+    if (held.prospect_id === String(prospectId)) return { ok: true, alreadyOurs: true, held };
+    return { ok: false, held, problem: `The ${vertical} exclusive on ${city} is already held by ${held.organisation}. There is one per vertical per city, and selling it twice would end the only thing that makes it worth 790.` };
+  }
+  await db.prepare(
+    'INSERT INTO exclusives (city, vertical, prospect_id, organisation, sold_at) VALUES (?, ?, ?, ?, ?)'
+  ).bind(normaliseKey(city), normaliseKey(vertical), String(prospectId), String(organisation || ''), nowIso()).run();
+  return { ok: true, alreadyOurs: false };
+}
+
+export async function releaseExclusive(db, city, vertical) {
+  await db.prepare('DELETE FROM exclusives WHERE city = ? AND vertical = ?')
+    .bind(normaliseKey(city), normaliseKey(vertical)).run();
+}
+
+export async function openSlots(db, cities = TIER_A_CITIES) {
+  const { results } = await db.prepare('SELECT city, vertical FROM exclusives').bind().all();
+  const taken = new Set((results || []).map((r) => `${r.city}|${r.vertical}`));
+  const verticals = Object.keys(CITY_PIN_VERTICALS);
+  const out = [];
+  for (const city of cities) {
+    const free = verticals.filter((v) => !taken.has(`${normaliseKey(city)}|${normaliseKey(v)}`));
+    if (free.length) out.push({ city, open: free });
+  }
+  return out;
+}
+
+function normaliseKey(v) {
+  return String(v || '').trim().toLowerCase();
+}
+
+/* ---------- the SetPostGo gates ---------- */
+
+// Five fields that are the message itself, and three that shape it. The silence
+// proof is in the hard list on purpose: the entire email is an observation
+// about their page having gone quiet, and an agent who has not looked is
+// guessing about a stranger's business in writing.
+export function setPostGoGate(prospect) {
+  const r = (prospect && prospect.research) || {};
+  const has = (k) => Boolean(String(r[k] || '').trim());
+  const missingHard = SETPOSTGO_RESEARCH_HARD.filter((f) => !has(f.key));
+  const missingSoft = SETPOSTGO_RESEARCH_SOFT.filter((f) => !has(f.key));
+  const reasons = missingHard.map((f) => `${f.label} is missing, and nothing can be written without it.`);
+  if (missingSoft.length >= 2) {
+    reasons.push(`${missingSoft.length} of the three shaping fields are empty: ${missingSoft.map((f) => f.label.toLowerCase()).join(', ')}. Research the next lead and come back to this one.`);
+  }
+  return { ready: reasons.length === 0, reasons, missingHard, missingSoft };
+}
+
+// The date is checkable in one click, which is exactly why it must never be
+// invented. A recorded date is used; anything else becomes "gone quiet", which
+// is true of every lead on this list by definition.
+export function silenceLine(prospect) {
+  const raw = String(((prospect && prospect.research) || {}).silence_proof || '').trim();
+  if (!raw) return { ok: false, problem: 'There is no proof of silence on this lead, and the whole email is an observation about their page.' };
+  const looksLikeDate = /\b(19|20)\d{2}\b/.test(raw) || /\b\d{1,2}\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i.test(raw);
+  return { ok: true, line: raw, namesADate: looksLikeDate };
+}
+
+// That the rival posts is a claim about a real shop on a real street. The
+// brief's own note is that it is true in almost every category, and almost is
+// not a basis for telling a stranger something about their neighbour. So the
+// strong line needs evidence and the honest line is the default. Neither
+// version drops the pressure, which is the point of the paragraph.
+export function rivalLine(prospect) {
+  const r = (prospect && prospect.research) || {};
+  const evidenced = Boolean(String(r.rival_evidence || '').trim());
+  return {
+    evidenced,
+    template: evidenced ? SETPOSTGO_RIVAL_LINE_EVIDENCED : SETPOSTGO_RIVAL_LINE_SAFE,
+    note: evidenced
+      ? 'The rival claim is stated, because it is evidenced on this lead.'
+      : 'Nothing evidences that a named rival posts, so the line is softened from a statement about their neighbour to a statement about the town. The pressure stays, the claim goes.'
+  };
+}
+
+// "Reply TRADE if you want the {Profession} pack opened" promises a pack that
+// exists. There are 89 professions and this repository does not hold the list,
+// so the mapping cannot be verified here and is asserted by whoever researched
+// the lead. Recorded rather than assumed, so an unmapped trade is a refusal
+// instead of a promise nobody can keep.
+export function checkProfessionMapped(prospect) {
+  const r = (prospect && prospect.research) || {};
+  const profession = String(r.profession || '').trim();
+  if (!profession) {
+    return { ok: false, problem: 'No SetPostGo profession is recorded for this lead. The email offers to open a pack, so there has to be a pack.' };
+  }
+  if (r.profession_confirmed !== true && r.profession_confirmed !== 'true' && r.profession_confirmed !== 'yes') {
+    return { ok: false, problem: `"${profession}" is not confirmed against the 89 professions on setpostgo.xyz. This repository does not hold that list, so it is confirmed by looking, once, before the offer is made.` };
+  }
+  return { ok: true, profession };
+}
+
+const SETPOSTGO_TEMPLATES = {
+  trade: { subject: SETPOSTGO_TRADE_SUBJECT, body: SETPOSTGO_TRADE_EMAIL, rival: 'rival' },
+  hospitality: { subject: SETPOSTGO_HOSPITALITY_SUBJECT, body: SETPOSTGO_HOSPITALITY_EMAIL, rival: 'street' },
+  professional: { subject: SETPOSTGO_PROFESSIONAL_SUBJECT, body: SETPOSTGO_PROFESSIONAL_EMAIL, rival: null },
+  agency: { subject: SETPOSTGO_AGENCY_SUBJECT, body: SETPOSTGO_AGENCY_EMAIL, rival: null }
+};
+
+export function setPostGoTemplates() {
+  return Object.keys(SETPOSTGO_TEMPLATES);
+}
+
+export function composeSetPostGo(prospect, { template = 'trade', postalAddress, agentName } = {}) {
+  const blockers = [];
+  const warnings = [];
+  const r = (prospect && prospect.research) || {};
+
+  const gate = setPostGoGate(prospect);
+  if (!gate.ready) blockers.push(...gate.reasons);
+
+  const provenance = checkEmailProvenance(prospect);
+  if (!provenance.ok) blockers.push(provenance.problem);
+
+  const mapped = checkProfessionMapped(prospect);
+  if (!mapped.ok) blockers.push(mapped.problem);
+
+  const silence = silenceLine(prospect);
+  if (!silence.ok) blockers.push(silence.problem);
+
+  const spec = SETPOSTGO_TEMPLATES[template];
+  if (!spec) blockers.push(`"${template}" is not a SetPostGo email. It is one of: ${Object.keys(SETPOSTGO_TEMPLATES).join(', ')}.`);
+
+  // Without this the message is unlawful in the three countries taking sixteen
+  // of every twenty sends, so it is a blocker and not a warning.
+  if (!String(postalAddress || '').trim()) {
+    blockers.push('No postal address was given. CAN-SPAM requires a real one in every commercial email, and Canada and Australia require the sender to be identifiable.');
+  }
+
+  if (blockers.length) return { ok: false, blockers, warnings };
+
+  const rival = rivalLine(prospect);
+  warnings.push(rival.note);
+  if (!silence.namesADate) {
+    warnings.push('No last post date was recorded, so the email says the page has gone quiet rather than naming a date. A date is never invented.');
+  }
+
+  const fills = {
+    '{First name}': String(r.owner_first_name || '').trim(),
+    '{Business}': String(r.business_name || '').trim(),
+    '{Town}': String(r.town || '').trim(),
+    '{Trade}': String(r.trade || '').trim(),
+    '{Profession}': mapped.profession,
+    '{Street type}': String(r.street_type || '').trim(),
+    '{Postal address}': String(postalAddress).trim()
+  };
+
+  let body = spec.body;
+  let subject = spec.subject;
+
+  // The rival paragraph is chosen before anything is filled, so the strong line
+  // and the honest one go through exactly the same filling.
+  const rivalText = spec.rival === 'rival' ? rival.template
+    : spec.rival === 'street' ? SETPOSTGO_RIVAL_LINE_HOSPITALITY
+      : '';
+  body = body.split('{Rival line}').join(rivalText);
+  if (spec.rival === 'street' && !fills['{Street type}']) {
+    return { ok: false, warnings, blockers: ['This email closes on the other door on their street, and no street was recorded.'] };
+  }
+
+  if (!fills['{First name}']) {
+    body = body.replace(/^\{First name\},\n\n/, '');
+    warnings.push('No owner first name was found, so it opens on the business rather than inventing a greeting.');
+  }
+
+  for (const [token, value] of Object.entries(fills)) {
+    if (!value) continue;
+    body = body.split(token).join(value);
+    subject = subject.split(token).join(value);
+  }
+
+  body = body.trimEnd() + '\n\n' + SETPOSTGO_FOOTER.split('{Postal address}').join(String(postalAddress).trim());
+
+  const stillOpen = [...new Set(body.match(/\{[A-Za-z][A-Za-z ]{1,30}\}/g) || [])];
+  if (stillOpen.length) {
+    return { ok: false, warnings, blockers: [`These are still unfilled and would go out as written: ${stillOpen.join(', ')}.`] };
+  }
+
+  const findings = checkOutreachRules(body, 'setpostgo');
+
+  return {
+    ok: true,
+    warnings,
+    findings,
+    draft: {
+      subject,
+      body,
+      to: String(r.public_email || '').trim(),
+      town: String(r.town || '').trim(),
+      trade: String(r.trade || '').trim(),
+      profession: mapped.profession,
+      template,
+      rivalClaimEvidenced: rival.evidenced,
+      namesADate: silence.namesADate,
+      emailPublishedAt: provenance.published,
+      words: body.split(/\s+/).filter(Boolean).length
+    }
+  };
+}
+
+/* ---------- composing a City Pin draft ---------- */
+
+const CITY_PIN_TEMPLATES = {
+  food: { subject: CITY_PIN_FOOD_SUBJECT, body: CITY_PIN_FOOD_EMAIL },
+  night: { subject: CITY_PIN_NIGHT_SUBJECT, body: CITY_PIN_NIGHT_EMAIL },
+  rooms: { subject: CITY_PIN_ROOM_SUBJECT, body: CITY_PIN_ROOM_EMAIL },
+  tours: { subject: CITY_PIN_TOUR_SUBJECT, body: CITY_PIN_TOUR_EMAIL },
+  // The hybrid sells on the same tonight logic as food, so it opens the same way.
+  fashion_food: { subject: CITY_PIN_FOOD_SUBJECT, body: CITY_PIN_FOOD_EMAIL }
+};
+
+// Twenty a day is only possible if the filling is mechanical and the refusing is
+// automatic. This does both: it fills the template from the research, and it
+// refuses on every gate the owner set rather than producing something that looks
+// finished and is not.
+//
+// It returns a draft or it returns why not. It never returns a draft with a gap
+// papered over, because a papered gap is what reaches an operator who can check
+// it in one click.
+export function composeCityPin(prospect, { sku = 'pin_90', priceUsd, agentName, neighbourhood, street } = {}) {
+  const blockers = [];
+  const warnings = [];
+  const r = (prospect && prospect.research) || {};
+
+  const gate = cityPinGate(prospect);
+  if (!gate.ready) blockers.push(...gate.reasons);
+
+  const provenance = checkEmailProvenance(prospect);
+  if (!provenance.ok) blockers.push(provenance.problem);
+
+  const live = checkCityIsLive(prospect);
+  if (!live.ok) blockers.push(live.problem);
+
+  const vertical = String(r.vertical || '').trim().toLowerCase();
+  if (CITY_PIN_VERTICALS_CLOSED[vertical]) {
+    blockers.push(`${vertical} is closed this week. ${CITY_PIN_VERTICALS_CLOSED[vertical]}`);
+  }
+  const template = CITY_PIN_TEMPLATES[vertical];
+  if (!template) {
+    blockers.push(`There is no City Pin email for "${vertical}". The verticals in play are ${Object.keys(CITY_PIN_TEMPLATES).join(', ')}.`);
+  }
+
+  const spec = CITY_PIN_SKUS[sku];
+  const price = priceUsd == null ? (spec ? spec.priceUsd : undefined) : Number(priceUsd);
+  const offer = checkCityPinOffer({ sku, priceUsd: price });
+  if (!offer.ok) blockers.push(...offer.problems);
+  warnings.push(...offer.warnings);
+
+  if (vertical === 'tours' && !String(r.seasonal_hook || '').trim()) {
+    blockers.push('A tour desk email opens on the spike. Without a hook inside 45 days there is nothing to open on.');
+  }
+  if (vertical === 'fashion_food' && !String(r.booking_url || '').trim()) {
+    blockers.push('The fashion and food hybrid is only sold with a booking or shop URL.');
+  }
+
+  if (blockers.length) return { ok: false, blockers, warnings };
+
+  const fills = {
+    '{First name}': String(r.owner_first_name || '').trim(),
+    '{City}': String(r.city || '').trim(),
+    '{Trading name}': String(r.business_name || '').trim(),
+    '{Vertical}': (CITY_PIN_VERTICALS[vertical] || {}).label || vertical,
+    '{Seasonal hook}': String(r.seasonal_hook || '').trim(),
+    '{Neighbourhood}': String(neighbourhood || r.neighbourhood || '').trim(),
+    '{Street or barrio}': String(street || r.street || neighbourhood || r.neighbourhood || '').trim(),
+    '{Agent name}': String(agentName || '').trim()
+  };
+
+  let body = template.body;
+  let subject = template.subject;
+
+  // No name, no salutation. Inventing a greeting is worse than opening on the
+  // city, which is what the register wants anyway.
+  if (!fills['{First name}']) {
+    body = body.replace(/^\{First name\},\n\n/, '');
+    warnings.push('No owner first name was found, so it opens on the city rather than inventing a greeting.');
+  }
+
+  for (const [token, value] of Object.entries(fills)) {
+    if (!value) continue;
+    body = body.split(token).join(value);
+    subject = subject.split(token).join(value);
+  }
+
+  // The templates quote 490 and 790. If the agent priced it differently, the
+  // figures in the body have to move with it, or the email contradicts the
+  // invoice that follows it.
+  if (spec && price !== spec.priceUsd) {
+    body = body.split(`USD ${spec.priceUsd}`).join(`USD ${price}`);
+    warnings.push(`The body figure was moved from USD ${spec.priceUsd} to USD ${price} to match the offer.`);
+  }
+
+  const findings = checkOutreachRules(body, 'city_pin');
+  const stillOpen = (body.match(/\{[A-Za-z][A-Za-z ]{1,30}\}/g) || []);
+  if (stillOpen.length) {
+    return {
+      ok: false,
+      warnings,
+      blockers: [`These are still unfilled and would go out as written: ${[...new Set(stillOpen)].join(', ')}.`]
+    };
+  }
+
+  return {
+    ok: true,
+    warnings,
+    findings,
+    draft: {
+      subject,
+      body,
+      to: String(r.public_email || '').trim(),
+      city: String(r.city || '').trim(),
+      vertical,
+      sku,
+      priceUsd: price,
+      emailPublishedAt: provenance.published,
+      words: body.split(/\s+/).filter(Boolean).length
+    }
+  };
 }
 
 /* ---------- prospects, messages and the suppression list ---------- */
@@ -149,6 +695,23 @@ export async function recentlyApproached(db, organisation, withinDays = DUPLICAT
     `SELECT m.id, m.venture, m.status, m.created_at, p.organisation
        FROM outreach_messages m JOIN prospects p ON p.id = m.prospect_id
       WHERE lower(p.organisation) = ? AND m.created_at >= ? AND m.status IN ('sent','approved','scheduled')
+      ORDER BY m.created_at DESC`
+  ).bind(String(organisation || '').trim().toLowerCase(), since).all();
+  return results || [];
+}
+
+// Distinct from recentlyApproached on purpose. That one guards the approval and
+// so only counts what actually went or is about to. This guards the drafting,
+// and so counts anything still alive: at thirty researched leads and twenty
+// sends a morning, the same kitchen turning up twice in one agent's block is
+// not a hypothetical, and two letters from the same house in one week reads
+// worse than none.
+export async function recentlyDrafted(db, organisation, withinDays = DUPLICATE_WINDOW_DAYS) {
+  const since = new Date(Date.now() - withinDays * 86400000).toISOString();
+  const { results } = await db.prepare(
+    `SELECT m.id, m.venture, m.status, m.created_at
+       FROM outreach_messages m JOIN prospects p ON p.id = m.prospect_id
+      WHERE lower(p.organisation) = ? AND m.created_at >= ? AND m.status != 'rejected'
       ORDER BY m.created_at DESC`
   ).bind(String(organisation || '').trim().toLowerCase(), since).all();
   return results || [];
@@ -257,6 +820,29 @@ export async function dueMessages(db, now = new Date()) {
 // state the rest of the file does not understand.
 export const MESSAGE_STATUSES = ['awaiting_approval', 'approved', 'rejected', 'sent'];
 
+// The day seven email says, in those words, that we will not write again. A
+// promise a system cannot keep is a promise the house should not make, so
+// sending it suppresses the address rather than leaving it to whoever is at the
+// desk on the day. Suppression is keyed on the address alone and honoured by
+// every venture, which is exactly the promise that was made.
+//
+// A reply of STOP lands here too, which is the other half of the opt-out the
+// footer offers. An opt-out that is offered and not honoured is worse than one
+// never offered, in law and otherwise.
+export async function closeTheFile(db, { email, reason }) {
+  await suppress(db, email, reason || 'The final email promised we would not write again.');
+  const { results } = await db.prepare(
+    `SELECT m.id FROM outreach_messages m JOIN prospects p ON p.id = m.prospect_id
+      WHERE m.status IN ('awaiting_approval','approved')
+        AND (lower(m.to_addresses) = ? OR lower(m.cc_addresses) = ?)`
+  ).bind(String(email || '').trim().toLowerCase(), String(email || '').trim().toLowerCase()).all();
+  for (const row of results || []) {
+    await db.prepare('UPDATE outreach_messages SET status = ?, updated_at = ? WHERE id = ?')
+      .bind('rejected', nowIso(), row.id).run();
+  }
+  return { suppressed: String(email || '').trim().toLowerCase(), withdrawn: (results || []).length };
+}
+
 export async function setMessageStatus(db, id, status) {
   if (!MESSAGE_STATUSES.includes(status)) throw new Error(`"${status}" is not a message status`);
   const at = nowIso();
@@ -299,6 +885,34 @@ export async function seedOutreach(db, { sendAfter } = {}) {
       nowIso(), nowIso()
     ).run();
     created.prospect = true;
+  }
+
+  // The four City Pin master emails, held as reference standards for their
+  // campaign type. Unlike the Visit Dubai letter these are templates rather
+  // than a finished letter, so an agent fills them from research rather than
+  // taking their shape, and the placeholder rule is what stops a half filled
+  // one being approved.
+  const CITY_PIN_REFERENCES = [
+    { name: 'City Pin, food', subject: CITY_PIN_FOOD_SUBJECT, body: CITY_PIN_FOOD_EMAIL, notes: 'The first email for a restaurant. 110 to 160 words. One city, one ask, one price, one reply instruction.' },
+    { name: 'City Pin, night', subject: CITY_PIN_NIGHT_SUBJECT, body: CITY_PIN_NIGHT_EMAIL, notes: 'For a club, cocktail room or live house. Not a stadium.' },
+    { name: 'City Pin, rooms', subject: CITY_PIN_ROOM_SUBJECT, body: CITY_PIN_ROOM_EMAIL, notes: 'For a motel, casa, riad, pension or a host with three or more listings in one city.' },
+    { name: 'City Pin, tour desk', subject: CITY_PIN_TOUR_SUBJECT, body: CITY_PIN_TOUR_EMAIL, notes: 'For an owner operated desk. Needs a spike inside 45 days to open on.' },
+    { name: 'City Pin, day three', subject: 'Re: the first subject', body: CITY_PIN_FOLLOW_UP_DAY_3, notes: 'Sixty words. The exclusive is still open.' },
+    { name: 'City Pin, day seven', subject: 'Re: the first subject', body: CITY_PIN_FOLLOW_UP_DAY_7, notes: 'Forty words, and the last one. After this the file is let go.' }
+  ];
+  created.cityPinReferences = 0;
+  for (const ref of CITY_PIN_REFERENCES) {
+    const exists = await db.prepare(
+      'SELECT id FROM reference_examples WHERE campaign_type = ? AND name = ?'
+    ).bind('city_pin', ref.name).first();
+    if (exists) continue;
+    await addReference(db, {
+      campaignType: 'city_pin',
+      name: ref.name,
+      body: ref.body,
+      notes: `Subject: ${ref.subject}. ${ref.notes}`
+    });
+    created.cityPinReferences += 1;
   }
 
   const messageId = 'visit-dubai-founding-01';
