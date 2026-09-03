@@ -506,9 +506,10 @@ await test('nothing outbound in the Visit Dubai pack carries an em dash', () => 
 // The one finding it does carry is its own signature block, which arrived with
 // [Full name] and [Title] still in it. That is caught here on purpose rather
 // than quietly filled in with a guess at who is signing.
-await test('the Visit Dubai pack breaks no standing rule except its unfilled signature', () => {
+await test('the Visit Dubai pack breaks no standing rule, and carries no baked-in signature', () => {
   const findings = checkOutreachRules(VISIT_DUBAI_EMAIL_BODY);
-  assert.deepEqual(findings.map((f) => f.id), ['no_unfilled_placeholder'], 'the standard breaks a rule it should not');
+  assert.deepEqual(findings.map((f) => f.id), [], 'the standard breaks a rule it should not');
+  assert.ok(!/\[.*\]/.test(VISIT_DUBAI_EMAIL_BODY), 'the stored pack still carries an unfilled placeholder');
 });
 
 await test('the placeholder rule catches a signature block and leaves real prose alone', () => {
@@ -597,7 +598,9 @@ await test('an address nobody published is never contacted', () => {
 // identifiable and an unsubscribe to work. None of the supplied master emails
 // carried any of that, so it is appended by the composer, and this is what
 // stops anyone removing it.
-await test('no SetPostGo email can be composed without an opt-out and a postal address', () => {
+const TEST_OWNER = { venture: 'setpostgo', name: 'Dale Okafor', role: 'Growth', email: 'growth@setpostgo.xyz' };
+
+await test('no SetPostGo email can be composed without an owner, an opt-out or a postal address', () => {
   const lead = {
     research: {
       business_name: 'Northside Heating', town: 'Boise', trade: 'HVAC firm',
@@ -606,11 +609,15 @@ await test('no SetPostGo email can be composed without an opt-out and a postal a
       silence_proof: 'No Instagram found', owner_first_name: 'Dale', street_type: 'Main Street'
     }
   };
-  const without = composeSetPostGo(lead, {});
+  const noOwner = composeSetPostGo(lead, { postalAddress: '1 High Street, London W1' });
+  assert.equal(noOwner.ok, false, 'a draft was composed with no owner assigned');
+  assert.ok(noOwner.blockers.join(' ').includes('outreach owner'));
+
+  const without = composeSetPostGo(lead, { owner: TEST_OWNER });
   assert.equal(without.ok, false, 'a draft was composed with no postal address');
   assert.ok(without.blockers.join(' ').includes('CAN-SPAM'));
 
-  const with_ = composeSetPostGo(lead, { postalAddress: '1 High Street, London W1' });
+  const with_ = composeSetPostGo(lead, { postalAddress: '1 High Street, London W1', owner: TEST_OWNER });
   assert.equal(with_.ok, true, with_.blockers && with_.blockers.join(' '));
   assert.match(with_.draft.body, /reply STOP/i, 'no opt-out in the body');
   assert.match(with_.draft.body, /1 High Street/, 'no postal address in the body');
@@ -630,10 +637,10 @@ await test('a SetPostGo date is never invented, and an unevidenced rival claim i
       owner_first_name: 'Dale', street_type: 'Main Street'
     }
   };
-  const noProof = composeSetPostGo({ research: { ...base.research } }, { postalAddress: '1 High Street, London W1' });
+  const noProof = composeSetPostGo({ research: { ...base.research } }, { postalAddress: '1 High Street, London W1', owner: TEST_OWNER });
   assert.equal(noProof.ok, false, 'an email was written about a page nobody looked at');
 
-  const vague = composeSetPostGo({ research: { ...base.research, silence_proof: 'No Instagram found' } }, { postalAddress: '1 High Street, London W1' });
+  const vague = composeSetPostGo({ research: { ...base.research, silence_proof: 'No Instagram found' } }, { postalAddress: '1 High Street, London W1', owner: TEST_OWNER });
   assert.equal(vague.ok, true);
   assert.ok(!/\b(19|20)\d{2}\b/.test(vague.draft.body), 'a year appeared in an email with no recorded date');
 
@@ -643,7 +650,7 @@ await test('a SetPostGo date is never invented, and an unevidenced rival claim i
   assert.ok(!/The other HVAC firm in Boise posts/.test(vague.draft.body), 'an unevidenced claim was stated as fact');
   assert.match(vague.draft.body, /another HVAC firm is posting/, 'the pressure was dropped rather than softened');
 
-  const evidenced = composeSetPostGo({ research: { ...base.research, silence_proof: 'No Instagram found', rival_evidence: 'The other firm posted four times this fortnight' } }, { postalAddress: '1 High Street, London W1' });
+  const evidenced = composeSetPostGo({ research: { ...base.research, silence_proof: 'No Instagram found', rival_evidence: 'The other firm posted four times this fortnight' } }, { postalAddress: '1 High Street, London W1', owner: TEST_OWNER });
   assert.match(evidenced.draft.body, /The other HVAC firm in Boise posts/, 'an evidenced claim was still softened');
 });
 

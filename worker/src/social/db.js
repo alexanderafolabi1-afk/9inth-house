@@ -97,6 +97,11 @@ CREATE TABLE IF NOT EXISTS prospects (
   score INTEGER NOT NULL DEFAULT 0,
   status TEXT NOT NULL DEFAULT 'researching',
   notes TEXT NOT NULL DEFAULT '',
+  -- Set the moment a draft attempt fails a hard gate or a standing rule, and
+  -- cleared the moment one succeeds. A prospect with this set is never a
+  -- message: it sits in the needs-research list until the gap it names is
+  -- closed, rather than reaching the owner looking finished.
+  last_blocker TEXT NOT NULL DEFAULT '',
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
@@ -130,11 +135,27 @@ CREATE TABLE IF NOT EXISTS outreach_messages (
   status TEXT NOT NULL DEFAULT 'awaiting_approval',
   send_after TEXT,
   sent_at TEXT,
+  -- Set by hand, the same as sent_at: there is no inbound mail rail here
+  -- either, so a reply is recorded when the owner says one arrived. Null
+  -- means either never sent or sent and not yet replied to.
+  replied_at TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_messages_status ON outreach_messages (status, send_after);
+
+-- Who signs a venture's outreach, set from the desk rather than hardcoded
+-- anywhere in a template. A message with nobody named in it is not from a
+-- legacy business, it is from a machine, so composing a draft for a venture
+-- with no row here is refused rather than left to sign itself "the house".
+CREATE TABLE IF NOT EXISTS outreach_owners (
+  venture TEXT PRIMARY KEY,
+  name TEXT NOT NULL DEFAULT '',
+  role TEXT NOT NULL DEFAULT '',
+  email TEXT NOT NULL DEFAULT '',
+  updated_at TEXT NOT NULL
+);
 
 CREATE TABLE IF NOT EXISTS suppression (
   email TEXT PRIMARY KEY,
@@ -220,6 +241,17 @@ export function hasStore(env) {
   return Boolean(env && env.DB && typeof env.DB.prepare === 'function');
 }
 
+// Columns added to tables that already shipped, so CREATE TABLE IF NOT
+// EXISTS above never sees them on a database that already has the table.
+// ALTER TABLE has no IF NOT EXISTS in SQLite, and D1 errors "duplicate
+// column name" on a second run, which is exactly the case every boot after
+// the first: caught and ignored below rather than avoided, since there is
+// no cheap way to ask D1 whether a column already exists first.
+const ADDITIVE_COLUMNS = [
+  "ALTER TABLE prospects ADD COLUMN last_blocker TEXT NOT NULL DEFAULT ''",
+  'ALTER TABLE outreach_messages ADD COLUMN replied_at TEXT'
+];
+
 export async function ensureSchema(db) {
   // D1 will not take several statements in one prepare, so they are split and run
   // in a batch. Every statement is IF NOT EXISTS, so this is safe to call on
@@ -230,6 +262,9 @@ export async function ensureSchema(db) {
     .filter(Boolean)
     .map((s) => db.prepare(s));
   await db.batch(statements);
+  for (const ddl of ADDITIVE_COLUMNS) {
+    try { await db.prepare(ddl).run(); } catch (e) { /* already there */ }
+  }
 }
 
 export const nowIso = () => new Date().toISOString();
