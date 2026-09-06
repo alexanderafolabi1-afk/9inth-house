@@ -18,7 +18,12 @@
 // job and the iwriteyouread job all carry on exactly as before. Nothing in this
 // file's existing behaviour depends on it.
 import { stripDashPunctuation } from './social/text.js';
-import { hasStore, ensureSchema, seedVentures, dueScheduled, insertPost, listPosts, getVenture, listVentures } from './social/db.js';
+import {
+  hasStore, ensureSchema, seedVentures, dueScheduled, insertPost, listPosts, getPost,
+  getVenture, listVentures, claimNextDue, releaseStrandedClaims, releaseClaim, markPosted
+} from './social/db.js';
+import { pageFor } from './social/pages.js';
+import { seedNinthHousePosts } from './social/seeds/ninth-house-linkedin.js';
 import { runFactsSweep } from './social/facts.js';
 import { seedOutreach, dueMessages } from './social/outreach.js';
 import { runGeneration } from './social/generate.js';
@@ -1243,6 +1248,14 @@ async function runSocial(env, shift) {
   // hand for the tables to exist before the first generation run.
   await ensureSchema(db);
   await seedVentures(db);
+  // The 9thpoint LinkedIn batch. Idempotent and cheap, so it lands on the next
+  // shift after deploy without the owner having to run anything by hand.
+  try {
+    const seeded = await seedNinthHousePosts(db, { insertPost });
+    if (seeded.created) console.log(`Seed: ${seeded.created} 9thpoint LinkedIn posts queued.`);
+  } catch (e) {
+    console.error('Seed: the 9thpoint batch failed. ' + String(e && e.message ? e.message : e).slice(0, 300));
+  }
 
   // Anything scheduled that has come due, on every shift. This runs before
   // generation so a due post is never delayed by a slow generation run.
@@ -1679,6 +1692,99 @@ export default {
       const limit = url.searchParams.get('limit') || undefined;
       const posts = await listPosts(db, { status, venture, limit });
       return apiJson({ ok: true, posts });
+    }
+
+    // The scheduled poster's rail. Three routes, and they are deliberately not
+    // the read only /n8n/queue above: that one lists rows and changes nothing,
+    // so a scheduler calling it every few hours reads the same top row every
+    // time and publishes it again. This claims.
+    //
+    // GET /n8n/next-post claims exactly one due post and returns it once.
+    // POST /n8n/posted records that it went, with the URN the platform gave back.
+    // POST /n8n/failed puts it back so it can be retried rather than lost.
+    //
+    // The claim is the same conditional UPDATE the Worker's own sender uses, so
+    // the two rails cannot both publish one row: whichever claims first wins and
+    // the other is told there is nothing to do.
+    if (apiPath === '/n8n/next-post' && effective.method === 'GET') {
+      const provided = (effective.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
+      if (!(await verifyN8nToken(env, provided))) return apiJson({ ok: false, error: 'Unauthorized' }, 401);
+      if (!hasStore(env)) return apiJson({ ok: false, error: 'D1 is not connected. See worker/README.md.' }, 503);
+      const db = env.DB;
+      const url = new URL(effective.url);
+      const venture = url.searchParams.get('venture') || undefined;
+      const platform = url.searchParams.get('platform') || undefined;
+
+      // Before claiming anything, hand back whatever a previous crashed run
+      // left holding, or those rows are stranded until somebody notices.
+      const recovered = await releaseStrandedClaims(db, { olderThanMinutes: 30 });
+
+      const post = await claimNextDue(db, {
+        venture, platform, statuses: SENDABLE, now: new Date().toISOString()
+      });
+      if (!post) return apiJson({ ok: true, post: null, recovered, reason: 'Nothing is due.' });
+
+      // The page the claimed post belongs to. Without it the rail would have to
+      // guess, and a guess here posts one venture's copy to another venture's
+      // page. Refused instead, and the claim is handed straight back so the
+      // post is not stranded by a configuration gap.
+      const author = post.platform === 'linkedin' ? await pageFor(env, post.venture) : '';
+      if (post.platform === 'linkedin' && !author) {
+        await releaseClaim(db, post.id, 'queued', `No LinkedIn page is recorded for ${post.venture}.`);
+        return apiJson({ ok: false, error: `No LinkedIn page URN is recorded for "${post.venture}". Set it in the desk before this rail can post.` }, 409);
+      }
+
+      return apiJson({
+        ok: true,
+        recovered,
+        post: {
+          id: post.id,
+          venture: post.venture,
+          platform: post.platform,
+          category: post.category,
+          text: post.text,
+          image_url: post.image_url,
+          link: post.link,
+          scheduled_for: post.scheduled_for
+        },
+        author
+      });
+    }
+
+    if (apiPath === '/n8n/posted' && effective.method === 'POST') {
+      const provided = (effective.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
+      if (!(await verifyN8nToken(env, provided))) return apiJson({ ok: false, error: 'Unauthorized' }, 401);
+      if (!hasStore(env)) return apiJson({ ok: false, error: 'D1 is not connected. See worker/README.md.' }, 503);
+      const db = env.DB;
+      let body = {};
+      try { body = await effective.json(); } catch (e) { body = {}; }
+      const id = String(body.id || '').trim();
+      if (!id) return apiJson({ ok: false, error: 'id is required.' }, 400);
+      const existing = await getPost(db, id);
+      if (!existing) return apiJson({ ok: false, error: `No post with id "${id}".` }, 404);
+      // Only a row this rail actually claimed may be marked sent. Anything else
+      // is a report about a post nobody claimed, which is a bug worth seeing
+      // rather than a status to write.
+      if (existing.status !== 'posting') {
+        return apiJson({ ok: false, error: `That post is "${existing.status}", not claimed for sending. Nothing was changed.`, status: existing.status }, 409);
+      }
+      await markPosted(db, id, body.urn || body.external_id || null);
+      return apiJson({ ok: true, id, external_id: body.urn || body.external_id || null });
+    }
+
+    if (apiPath === '/n8n/failed' && effective.method === 'POST') {
+      const provided = (effective.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
+      if (!(await verifyN8nToken(env, provided))) return apiJson({ ok: false, error: 'Unauthorized' }, 401);
+      if (!hasStore(env)) return apiJson({ ok: false, error: 'D1 is not connected. See worker/README.md.' }, 503);
+      const db = env.DB;
+      let body = {};
+      try { body = await effective.json(); } catch (e) { body = {}; }
+      const id = String(body.id || '').trim();
+      if (!id) return apiJson({ ok: false, error: 'id is required.' }, 400);
+      // Back to failed rather than lost. The desk shows a failed post with its
+      // reason and offers Retry, which is the whole point of not swallowing it.
+      await releaseClaim(db, id, 'failed', body.error || 'The posting rail reported a failure.');
+      return apiJson({ ok: true, id });
     }
 
     if (apiPath === '/n8n/queue/push' && effective.method === 'POST') {

@@ -468,6 +468,57 @@ export async function dueScheduled(db, nowIsoStr, limit = 25) {
   return results || [];
 }
 
+// One post, claimed, for an external rail.
+//
+// The whole point is that it hands the same row to exactly one caller. The
+// selection is ordinary, the claim is the conditional UPDATE above, and the
+// loop is what makes the two safe together: candidates are tried in order and
+// the first successful claim wins, so two schedulers arriving in the same
+// second get different rows rather than the same row twice. A caller that
+// claims nothing is told there is nothing, which is the correct answer and not
+// an error.
+//
+// A row with no scheduled_for is due immediately. A row with one is not due
+// until its hour, which is what lets twelve posts sit in the table from today
+// and leave one at a time over four weeks.
+export async function claimNextDue(db, { venture, platform, statuses, now, limit = 10 } = {}) {
+  const where = ['status IN (' + statuses.map(() => '?').join(',') + ')'];
+  const binds = [...statuses];
+  if (venture) { where.push('venture = ?'); binds.push(String(venture).toLowerCase()); }
+  if (platform) { where.push('platform = ?'); binds.push(String(platform).toLowerCase()); }
+  where.push('(scheduled_for IS NULL OR scheduled_for <= ?)');
+  binds.push(now);
+
+  const { results } = await db.prepare(
+    `SELECT * FROM posts WHERE ${where.join(' AND ')}
+      ORDER BY scheduled_for IS NULL, scheduled_for ASC, created_at ASC, id
+      LIMIT ?`
+  ).bind(...binds, Math.min(Number(limit) || 10, 50)).all();
+
+  for (const row of results || []) {
+    if (await claimForSend(db, row.id, statuses)) {
+      return await getPost(db, row.id);
+    }
+  }
+  return null;
+}
+
+// A rail that crashes between claiming and reporting leaves a row in posting
+// with nobody coming back for it. Without this that row is stranded until
+// somebody notices by hand, which on a three times a week cadence could be a
+// fortnight. Anything held longer than the window is put back where it came
+// from, so the next call picks it up again rather than skipping it forever.
+export async function releaseStrandedClaims(db, { olderThanMinutes = 30, now = new Date() } = {}) {
+  const cutoff = new Date(now.getTime() - olderThanMinutes * 60000).toISOString();
+  const res = await db.prepare(
+    `UPDATE posts SET status = 'queued',
+        error = 'Claimed for sending and never reported back, so it was returned to the queue.',
+        updated_at = ?
+      WHERE status = 'posting' AND updated_at <= ?`
+  ).bind(nowIso(), cutoff).run();
+  return res && res.meta ? res.meta.changes : 0;
+}
+
 export async function postsNeedingMetrics(db, sinceIso, limit = 50) {
   const { results } = await db.prepare(
     'SELECT * FROM posts WHERE status = \'posted\' AND posted_at >= ? ORDER BY posted_at DESC LIMIT ?'

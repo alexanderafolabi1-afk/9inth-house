@@ -279,12 +279,39 @@ hello@9thpoint.com
   }
 ];
 
+/* ---------- when they go ---------- */
+
+// Monday, Wednesday and Friday, which is the venture's own registered cadence
+// of three a week spread evenly rather than three in one day. Twelve posts is
+// therefore four weeks exactly.
+//
+// 08:30 Europe/London. September and the first days of October are British
+// Summer Time, one hour ahead of UTC, so the stored instants are 07:30Z. Held
+// as explicit instants rather than computed from a rolling "next Monday",
+// because a seed that recalculates its own dates gives a different answer
+// depending on the day it happens to run.
+export const NINTH_HOUSE_FIRST_SLOT = '2026-09-07T07:30:00.000Z';
+
+export const NINTH_HOUSE_SLOTS = [
+  '2026-09-07T07:30:00.000Z', '2026-09-09T07:30:00.000Z', '2026-09-11T07:30:00.000Z',
+  '2026-09-14T07:30:00.000Z', '2026-09-16T07:30:00.000Z', '2026-09-18T07:30:00.000Z',
+  '2026-09-21T07:30:00.000Z', '2026-09-23T07:30:00.000Z', '2026-09-25T07:30:00.000Z',
+  '2026-09-28T07:30:00.000Z', '2026-09-30T07:30:00.000Z', '2026-10-02T07:30:00.000Z'
+];
+
 // Idempotent, like every other seed in this engine: it can only create what
 // does not already exist, so it is safe on every shift and every deploy. The
 // ids are fixed rather than generated for exactly that reason.
-export async function seedNinthHousePosts(db, { insertPost, scheduledFor } = {}) {
+//
+// Written as queued rather than scheduled on purpose. The Worker's own shift
+// picks up rows whose status is scheduled and publishes them through its own
+// LinkedIn sender, which would race the external rail for the same twelve
+// rows. Queued rows are invisible to that shift, so the external rail is the
+// only thing that will ever claim these, while scheduled_for still holds the
+// hour and keeps them from going early.
+export async function seedNinthHousePosts(db, { insertPost, slots = NINTH_HOUSE_SLOTS } = {}) {
   let created = 0;
-  for (const post of NINTH_HOUSE_POSTS) {
+  for (const [index, post] of NINTH_HOUSE_POSTS.entries()) {
     const existing = await db.prepare('SELECT id FROM posts WHERE id = ?').bind(post.id).first();
     if (existing) continue;
     await insertPost(db, {
@@ -294,7 +321,7 @@ export async function seedNinthHousePosts(db, { insertPost, scheduledFor } = {})
       category: post.category,
       text: post.text,
       status: 'queued',
-      scheduled_for: scheduledFor ? scheduledFor(post) : null,
+      scheduled_for: slots[index] || null,
       notes: `Seed batch, ${post.pillar} pillar. Every fact in it is published on 9thpoint.com.`
     });
     created += 1;
