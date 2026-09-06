@@ -253,6 +253,12 @@ CREATE TABLE IF NOT EXISTS city_register (
   -- register actually said rather than to what somebody assumed it meant.
   dmo_contact TEXT NOT NULL DEFAULT '',
   operator_email_if_public TEXT NOT NULL DEFAULT '',
+  -- The organisation's own site (the board's for a board row, the
+  -- operator's for everything else), never Glotemp's own city page about
+  -- them. This is what "use form on board URL" in dmo_contact actually
+  -- points at, and a form route with no other target opens this rather
+  -- than a page on glo-temp.com.
+  organisation_url TEXT NOT NULL DEFAULT '',
   resolved_contact_email TEXT NOT NULL DEFAULT '',
   contact_source TEXT NOT NULL DEFAULT '',
   route_type TEXT NOT NULL DEFAULT '',

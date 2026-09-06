@@ -43,33 +43,130 @@ export function parseCsv(text) {
   return rows.filter((r) => !(r.length === 1 && r[0] === ''));
 }
 
-// A row that came in with unquoted commas inside one field reads as extra
-// columns: the Naples fault, named in the brief, is exactly this. Rather
-// than guess which extra column is the overflow, the overflow is merged
-// back into the named column, since that is the one place in this register
-// a board name is long enough to plausibly contain a comma. Any row still
-// the wrong length after this is reported rather than guessed at further.
+// Two distinct faults land here, both reported rather than guessed at
+// beyond what is safe to assume.
+//
+// Overflow: a row that came in with unquoted commas inside one field reads
+// as extra columns. The Naples fault named in the brief is exactly this,
+// and the overflow is merged back into the named column, since that is the
+// one place in this register a name is long enough to plausibly contain a
+// comma.
+//
+// Underflow: a row shorter than the header. Found in the register actually
+// supplied, not named in the brief: every row was short by one field, in
+// the trailing block of optional columns (photo, status, agent, the two
+// window dates, notes), which reads as an export that trims empty trailing
+// columns rather than a fault in any one row. Padded with empty strings at
+// the end, and only up to a small shortfall (three fields), since a row
+// missing more than that is not this pattern and is reported instead of
+// guessed at.
 export function repairOverflowRows(rows, headerLen, mergeColumnIndex) {
+  // What a row actually looks like when nothing about it has gone wrong.
+  // Almost always equal to headerLen, but a source that trims trailing
+  // empty columns produces a shorter shape on every row uniformly, and
+  // overflow has to be measured against that real shape: measured against
+  // the full header instead, a row with an embedded-comma fault is
+  // undercounted by exactly the gap every other row already has, and one
+  // piece of the overflowing field is lost rather than merged back in.
+  const counts = new Map();
+  for (const row of rows) counts.set(row.length, (counts.get(row.length) || 0) + 1);
+  let normalLen = headerLen;
+  let best = 0;
+  for (const [len, n] of counts.entries()) {
+    if (len <= headerLen && n > best) { best = n; normalLen = len; }
+  }
+
+  const padTo = (arr, len) => (arr.length < len ? [...arr, ...Array(len - arr.length).fill('')] : arr);
+
   const repaired = [];
   const stillWrong = [];
+  const padded = [];
   for (const row of rows) {
     if (row.length === headerLen) { repaired.push(row); continue; }
-    if (row.length > headerLen) {
-      const overflow = row.length - headerLen;
+
+    if (row.length > normalLen) {
+      const overflow = row.length - normalLen;
       const before = row.slice(0, mergeColumnIndex);
       const merged = row.slice(mergeColumnIndex, mergeColumnIndex + overflow + 1).map((s) => String(s).trim()).join(', ');
       const after = row.slice(mergeColumnIndex + overflow + 1);
-      const fixed = [...before, merged, ...after];
-      if (fixed.length === headerLen) { repaired.push(fixed); continue; }
+      const fixed = padTo([...before, merged, ...after], headerLen);
+      if (fixed.length === headerLen) { repaired.push(fixed); padded.push(row[0]); continue; }
     }
+
+    if (row.length < headerLen && headerLen - row.length <= 3) {
+      repaired.push(padTo(row, headerLen));
+      padded.push(row[0]);
+      continue;
+    }
+
     stillWrong.push(row);
   }
-  return { rows: repaired, stillWrong };
+  return { rows: repaired, stillWrong, padded };
 }
 
 /* ---------- register rows ---------- */
 
-const REQUIRED_HEADERS = ['city', 'vertical'];
+// Recognised under either name: the placeholder header shape this importer
+// was built against before the real register existed, and the actual
+// export's own names once it arrived. Both are read the same way, so
+// nothing about the import logic below has to know which one it got.
+const HEADER_ALIASES = {
+  city: ['city', 'city_name'],
+  country: ['country'],
+  vertical: ['vertical', 'who_pays_first'],
+  language: ['language'],
+  wave: ['wave'],
+  food_url: ['food_url', 'glotemp_food_url'],
+  pulse_url: ['pulse_url', 'glotemp_pulse_url'],
+  dmo_contact: ['dmo_contact'],
+  operator_email_if_public: ['operator_email_if_public'],
+  board_name: ['organisation', 'board_name', 'board', 'dmo_or_board_name'],
+  board_url: ['dmo_or_board_url'],
+  operator_name: ['operator_name'],
+  operator_url: ['operator_url'],
+  notes: ['notes', 'why_they_pay']
+};
+
+// The export's language column names a language, not a code, and the sign
+// off and the copy both key on the short code. Anything not listed falls
+// through to the raw value lower cased, so an unrecognised language does
+// not silently become English; it is treated as its own value and the copy
+// system's own fallback to the English source text still applies.
+const LANGUAGE_NAME_TO_CODE = {
+  english: 'en', spanish: 'es', greek: 'el', croatian: 'hr', dutch: 'nl',
+  icelandic: 'is', french: 'fr', japanese: 'ja'
+};
+
+// Country names, the same way. Only the ones the sign-off actually branches
+// on need to resolve to a code; everything else keeps its name; owners.js
+// falls back to "Kind regards" for anything it does not recognise, which is
+// the correct default for a market with no closing convention named yet.
+const COUNTRY_NAME_TO_CODE = {
+  'united states': 'US', iceland: 'IS', croatia: 'HR', spain: 'ES', greece: 'GR', malta: 'MT',
+  'curaçao': 'CW', curacao: 'CW', aruba: 'AW', 'french polynesia': 'PF',
+  'united kingdom': 'GB', france: 'FR', japan: 'JP', 'united arab emirates': 'AE'
+};
+
+export function normaliseLanguage(value) {
+  const v = String(value || 'en').trim().toLowerCase();
+  return LANGUAGE_NAME_TO_CODE[v] || v;
+}
+
+export function normaliseCountry(value) {
+  const v = String(value || '').trim().toLowerCase();
+  return COUNTRY_NAME_TO_CODE[v] || String(value || '').trim();
+}
+
+// "club" is not one of the three verticals the owner's copy covers, but the
+// register carries it (Pacha Ibiza, Scorpios Mykonos, Tootsie's Nashville).
+// A club is closest in shape to a restaurant row: one venue, a quiet
+// fourteen day placement, the same food_url field. Flagged rather than
+// silent, since this is a judgement call the copy itself never made.
+export function templateVerticalFor(vertical) {
+  return vertical === 'club' ? 'restaurant' : vertical;
+}
+
+const REQUIRED_CANONICAL = ['city', 'vertical'];
 
 // The register's own row shape, one level above the raw CSV. Anything the
 // header does not name comes through empty rather than undefined, so every
@@ -77,29 +174,75 @@ const REQUIRED_HEADERS = ['city', 'vertical'];
 export function rowsFromParsedCsv(rows, { venture = 'glotemp', wave = 0 } = {}) {
   if (!rows.length) return { records: [], errors: ['The file has no rows.'] };
   const header = rows[0].map((h) => String(h || '').trim().toLowerCase());
+
+  // Resolve each canonical field to whichever alias is actually present.
+  const columnFor = {};
+  for (const [canonical, aliases] of Object.entries(HEADER_ALIASES)) {
+    const found = aliases.find((a) => header.includes(a));
+    if (found) columnFor[canonical] = header.indexOf(found);
+  }
+
   const errors = [];
-  for (const h of REQUIRED_HEADERS) {
-    if (!header.includes(h)) errors.push(`The register is missing a required column: "${h}".`);
+  for (const c of REQUIRED_CANONICAL) {
+    if (columnFor[c] === undefined) errors.push(`The register is missing a required column. None of these were found: ${HEADER_ALIASES[c].join(', ')}.`);
   }
   if (errors.length) return { records: [], errors };
 
-  const idx = (name) => header.indexOf(name);
-  const at = (row, name) => { const i = idx(name); return i === -1 ? '' : String(row[i] || '').trim(); };
+  const at = (row, canonical) => {
+    const i = columnFor[canonical];
+    return i === undefined ? '' : String(row[i] || '').trim();
+  };
 
-  const records = rows.slice(1).map((row) => ({
-    venture,
-    city: at(row, 'city'),
-    country: at(row, 'country'),
-    organisation: at(row, 'organisation') || at(row, 'board_name') || at(row, 'board'),
-    vertical: at(row, 'vertical').toLowerCase(),
-    language: (at(row, 'language') || 'en').toLowerCase(),
-    wave: Number(at(row, 'wave')) || wave,
-    food_url: at(row, 'food_url'),
-    pulse_url: at(row, 'pulse_url'),
-    dmo_contact: at(row, 'dmo_contact'),
-    operator_email_if_public: at(row, 'operator_email_if_public')
-  }));
+  const records = rows.slice(1).map((row) => {
+    const vertical = at(row, 'vertical').toLowerCase();
+    // A board is contacted as the board; everything else is contacted as
+    // the named operator, since "who_pays_first" names a business, not the
+    // destination marketing organisation, for every vertical but board.
+    const organisation = vertical === 'board'
+      ? (at(row, 'board_name') || at(row, 'operator_name'))
+      : (at(row, 'operator_name') || at(row, 'board_name'));
+    // The organisation's own site, never Glotemp's page about them: a board
+    // is contacted at its board_url, everything else at the operator's own
+    // url, mirroring exactly how the organisation name itself is chosen
+    // above.
+    const organisationUrl = vertical === 'board'
+      ? (at(row, 'board_url') || at(row, 'operator_url'))
+      : (at(row, 'operator_url') || at(row, 'board_url'));
+    return {
+      venture,
+      city: at(row, 'city'),
+      country: normaliseCountry(at(row, 'country')),
+      organisation,
+      organisation_url: organisationUrl,
+      vertical,
+      language: normaliseLanguage(at(row, 'language')),
+      wave: Number(at(row, 'wave')) || wave,
+      food_url: at(row, 'food_url'),
+      pulse_url: at(row, 'pulse_url'),
+      dmo_contact: at(row, 'dmo_contact'),
+      operator_email_if_public: at(row, 'operator_email_if_public'),
+      notes: at(row, 'notes')
+    };
+  });
   return { records, errors: [] };
+}
+
+// The brief's own send order, section 3, encoded here because the register
+// itself carries no wave column: waves one, two and four are a fixed list
+// of named cities, and wave three is a separate list (the Florida window)
+// applied by importFloridaWindow below, not by name matching here.
+export const WAVE_CITY_LISTS = {
+  1: ['Ibiza', 'Santorini', 'Mykonos', 'Palma de Mallorca', 'Malta', 'Key West', 'Naples', 'Dubrovnik', 'Aruba', 'Curaçao', 'Curacao'],
+  2: ['Savannah', 'Charleston', 'Asheville', 'Scottsdale', 'Tampa', 'Jacksonville'],
+  4: ['London', 'New York', 'Paris', 'Tokyo', 'Dubai']
+};
+
+export function waveForCity(city) {
+  const c = String(city || '').trim().toLowerCase();
+  for (const [wave, list] of Object.entries(WAVE_CITY_LISTS)) {
+    if (list.some((name) => name.toLowerCase() === c)) return Number(wave);
+  }
+  return 0;
 }
 
 // City and vertical together, lower cased: the same organisation is one row
@@ -171,16 +314,17 @@ export async function upsertRegisterRow(db, row) {
   await db.prepare(`
     INSERT INTO city_register (
       id, venture, city, country, organisation, vertical, language, wave,
-      food_url, pulse_url, dmo_contact, operator_email_if_public,
+      food_url, pulse_url, dmo_contact, operator_email_if_public, organisation_url,
       resolved_contact_email, contact_source, route_type, form_url,
       url_check_ok, url_check_note, status, notes, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET
       venture = excluded.venture, city = excluded.city, country = excluded.country,
       organisation = excluded.organisation, vertical = excluded.vertical,
       language = excluded.language, wave = excluded.wave,
       food_url = excluded.food_url, pulse_url = excluded.pulse_url,
       dmo_contact = excluded.dmo_contact, operator_email_if_public = excluded.operator_email_if_public,
+      organisation_url = excluded.organisation_url,
       resolved_contact_email = excluded.resolved_contact_email, contact_source = excluded.contact_source,
       route_type = excluded.route_type, form_url = excluded.form_url,
       url_check_ok = excluded.url_check_ok, url_check_note = excluded.url_check_note,
@@ -189,6 +333,7 @@ export async function upsertRegisterRow(db, row) {
     id, row.venture || 'glotemp', row.city, row.country || '', row.organisation || '',
     row.vertical, row.language || 'en', Number(row.wave) || 0,
     row.food_url || '', row.pulse_url || '', row.dmo_contact || '', row.operator_email_if_public || '',
+    row.organisation_url || '',
     row.resolved_contact_email || '', row.contact_source || '', row.route_type || '', row.form_url || '',
     row.url_check_ok ? 1 : 0, row.url_check_note || '', row.status || 'pending', row.notes || '',
     row.created_at || ts, ts
@@ -215,8 +360,12 @@ export function decideRoute(row) {
     return { route_type: 'email', resolved_contact_email: dmo, contact_source: 'dmo_contact' };
   }
   if (/^https?:\/\//i.test(dmo)) return { route_type: 'form', form_url: dmo };
-  if (/\bform\b/i.test(dmo) && (row.pulse_url || row.food_url)) {
-    return { route_type: 'form', form_url: row.pulse_url || row.food_url };
+  // "use form on board URL" names where the form lives: the organisation's
+  // own site, never a Glotemp page about them. Falling back to food_url or
+  // pulse_url here would open our own city page instead of the board's, so
+  // organisation_url is the only fallback used.
+  if (/\bform\b/i.test(dmo) && row.organisation_url) {
+    return { route_type: 'form', form_url: row.organisation_url };
   }
   return { route_type: 'none' };
 }
@@ -227,12 +376,19 @@ export function decideRoute(row) {
 // the actual research step (finding a real address the register does not
 // yet have) is section 5's agent step, run separately against rows this
 // import leaves at route_type "none".
-export async function importRegisterCsv(db, text, { venture = 'glotemp', wave = 0, mergeColumnHint = 'organisation', fetchImpl } = {}) {
+export async function importRegisterCsv(db, text, { venture = 'glotemp', wave = 0, mergeColumnHint, fetchImpl } = {}) {
   const raw = parseCsv(text);
   if (!raw.length) return { imported: 0, errors: ['The file is empty.'] };
   const headerLen = raw[0].length;
-  const mergeIndex = Math.max(0, raw[0].map((h) => String(h).trim().toLowerCase()).indexOf(mergeColumnHint));
-  const { rows: repaired, stillWrong } = repairOverflowRows(raw.slice(1), headerLen, mergeIndex);
+  const header = raw[0].map((h) => String(h).trim().toLowerCase());
+  // Resolved against whichever alias for the name column the header
+  // actually carries, the same way every other field is, rather than a
+  // single hardcoded name: the real register calls it dmo_or_board_name,
+  // not organisation, and a literal string match against the wrong header
+  // silently merges overflow into column zero instead of refusing to guess.
+  const nameAlias = mergeColumnHint || HEADER_ALIASES.board_name.find((a) => header.includes(a));
+  const mergeIndex = nameAlias ? Math.max(0, header.indexOf(nameAlias)) : 0;
+  const { rows: repaired, stillWrong, padded } = repairOverflowRows(raw.slice(1), headerLen, mergeIndex);
   const { records, errors } = rowsFromParsedCsv([raw[0], ...repaired], { venture, wave });
   if (errors.length) return { imported: 0, errors };
 
@@ -241,6 +397,11 @@ export async function importRegisterCsv(db, text, { venture = 'glotemp', wave = 
   let imported = 0;
   const urlIssues = [];
   for (const r of kept) {
+    // The register carries no wave column of its own; the brief's four-wave
+    // order is a fixed list of named cities, applied here. An explicit wave
+    // already on the row (a hand edit, or the import options) is never
+    // overridden by it.
+    if (!r.wave) r.wave = waveForCity(r.city);
     const foodCheck = await checkUrl(r.food_url, { fetchImpl });
     const pulseCheck = await checkUrl(r.pulse_url, { fetchImpl });
     if (!foodCheck.ok) { urlIssues.push({ city: r.city, field: 'food_url', note: foodCheck.note }); r.food_url = ''; }
@@ -262,9 +423,55 @@ export async function importRegisterCsv(db, text, { venture = 'glotemp', wave = 
     imported,
     duplicatesRemoved: dropped.map((r) => `${r.city} (${r.vertical})`),
     rowsStillMisaligned: stillWrong.length,
+    rowsPadded: padded.length,
     urlIssues,
     errors: []
   };
+}
+
+// Wave three, section 3: "Florida hotels for the 19 November window", a
+// separate list rather than a column on the main register. Four of its
+// eight cities (Tampa, Jacksonville, Key West, Naples) are already named in
+// wave one or two, and are not double-booked into a third wave on top of
+// that: the conflict is reported rather than resolved silently, since which
+// wave actually owns that organisation's one contact is the owner's call.
+// The remaining four (Miami, Orlando, Fort Lauderdale, Tallahassee) are
+// genuinely new to the ordered campaign and are assigned wave three,
+// against the row the main register import already created for them.
+export async function importFloridaWindowCsv(db, text, { venture = 'glotemp' } = {}) {
+  const raw = parseCsv(text);
+  if (!raw.length) return { assigned: [], conflicts: [], notFound: [], errors: ['The file is empty.'] };
+  const header = raw[0].map((h) => String(h).trim().toLowerCase());
+  const idx = (name) => header.indexOf(name);
+  const at = (row, name) => { const i = idx(name); return i === -1 ? '' : String(row[i] || '').trim(); };
+
+  const assigned = [];
+  const conflicts = [];
+  const notFound = [];
+  const ts = nowIso();
+
+  for (const row of raw.slice(1)) {
+    const city = at(row, 'city_name');
+    const vertical = at(row, 'who_pays_first').toLowerCase();
+    if (!city || !vertical) continue;
+    const id = `${city.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${vertical}`;
+    const existing = await getRegisterRow(db, id);
+    if (!existing) { notFound.push(`${city} (${vertical})`); continue; }
+    if (existing.wave === 1 || existing.wave === 2) {
+      conflicts.push(`${city} is already in wave ${existing.wave} and was not also booked into the Florida window.`);
+      continue;
+    }
+    const note = [
+      at(row, 'window_product') && `Florida window product: ${at(row, 'window_product')}.`,
+      at(row, 'suggested_band') && `Suggested band: ${at(row, 'suggested_band')}.`,
+      at(row, 'window_end') && `Send by ${at(row, 'window_end')}.`,
+      at(row, 'why_this_city')
+    ].filter(Boolean).join(' ');
+    await db.prepare('UPDATE city_register SET wave = 3, notes = ?, updated_at = ? WHERE id = ?').bind(note, ts, id).run();
+    assigned.push(city);
+  }
+
+  return { assigned, conflicts, notFound, errors: [] };
 }
 
 export async function listRegisterRows(db, { wave, status, venture, vertical, limit = 500 } = {}) {
@@ -444,14 +651,21 @@ export async function composeRegisterMessage(db, row, { owner } = {}) {
 
   if (!owner) blockers.push('No outreach owner is assigned for Glotemp yet. Assign one in Settings before this can be sent under anybody\'s name.');
 
-  if (!REGISTER_CAMPAIGN_VERTICALS.includes(row.vertical)) {
-    blockers.push(`"${row.vertical}" is not a register campaign vertical. It is one of: ${REGISTER_CAMPAIGN_VERTICALS.join(', ')}.`);
+  // A club (Pacha Ibiza, Scorpios Mykonos) is not one of the three verticals
+  // the copy covers, and is sent on the restaurant shape: one venue, the
+  // same food_url field, the closest fit of the three. templateVerticalFor
+  // makes that mapping explicit rather than the row silently taking on a
+  // vertical it does not actually have; row.vertical itself is untouched,
+  // so reporting and filtering still see "club" for what it is.
+  const templateVertical = templateVerticalFor(row.vertical);
+  if (!REGISTER_CAMPAIGN_VERTICALS.includes(templateVertical)) {
+    blockers.push(`"${row.vertical}" has no register campaign template. Templates exist for: ${REGISTER_CAMPAIGN_VERTICALS.join(', ')} (club uses the restaurant template).`);
   }
 
   if (blockers.length) return { ok: false, blockers };
 
   const copy = registerCampaignCopy({
-    vertical: row.vertical,
+    vertical: templateVertical,
     language: row.language,
     city: row.city,
     foodUrl: row.food_url,

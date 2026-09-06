@@ -44,7 +44,7 @@ import {
 } from './outreach.js';
 import { listOutreachOwners, getOutreachOwner, setOutreachOwner, describeOutreachOwner } from './owners.js';
 import {
-  importRegisterCsv, listRegisterRows, getRegisterRow, upsertRegisterRow, routeSplitReport,
+  importRegisterCsv, importFloridaWindowCsv, listRegisterRows, getRegisterRow, upsertRegisterRow, routeSplitReport,
   currentWave, waveComplete, WAVES,
   isRivalLocked, releaseRivalLock, relockRival,
   recordLiveSlot, listLiveSlots, expiringLiveSlots, markSlotNotified, sweepExpiredSlots,
@@ -575,6 +575,16 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
           wave: Number(body.wave) || 0,
           mergeColumnHint: body.mergeColumnHint || 'organisation'
         });
+        return json(request, env, { ok: true, ...result });
+      }
+
+      // Wave three: a separate list, section 3, merged against rows the
+      // main import already created rather than inserted fresh, and never
+      // double-booking a city already sitting in wave one or two.
+      case 'POST /social/register/import-florida-window': {
+        await ensureSchema(db);
+        if (!String(body.csv || '').trim()) return json(request, env, { ok: false, error: 'No CSV text was given.' }, 400);
+        const result = await importFloridaWindowCsv(db, body.csv, { venture: body.venture || 'glotemp' });
         return json(request, env, { ok: true, ...result });
       }
 

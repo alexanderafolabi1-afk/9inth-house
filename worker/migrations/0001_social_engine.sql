@@ -243,6 +243,7 @@ CREATE TABLE IF NOT EXISTS city_register (
   pulse_url TEXT NOT NULL DEFAULT '',
   dmo_contact TEXT NOT NULL DEFAULT '',
   operator_email_if_public TEXT NOT NULL DEFAULT '',
+  organisation_url TEXT NOT NULL DEFAULT '',
   resolved_contact_email TEXT NOT NULL DEFAULT '',
   contact_source TEXT NOT NULL DEFAULT '',
   route_type TEXT NOT NULL DEFAULT '',

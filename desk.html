@@ -1617,7 +1617,7 @@ function openSettings(){
   // Fetched once per session, the first time Settings is opened, then the panel
   // is redrawn with it. Doing it here rather than at sign in keeps one more
   // request off the critical path of getting into the desk.
-  if(!LI_TRIED){ LI_TRIED = true; Promise.all([loadLinkedIn(), loadN8nHook(), loadAnthropicKey(), loadFacts(), loadPostal(), loadOutreachOwners()]).then(openSettings); }
+  if(!LI_TRIED){ LI_TRIED = true; Promise.all([loadLinkedIn(), loadN8nHook(), loadAnthropicKey(), loadFacts(), loadPostal(), loadOutreachOwners(), loadRegisterStatus()]).then(openSettings); }
   modal(`
     <h2>Firm Settings</h2>
     <div class="eyebrow">Account</div>
@@ -1644,6 +1644,26 @@ function openSettings(){
     <input type="text" id="owner-email" placeholder="marketing@glo-temp.com">
     <div class="btnrow" style="margin-top:10px">
       <button class="btn gold" id="owner-save" style="min-height:44px" onclick="saveOutreachOwner()">Assign or update</button>
+    </div>
+
+    <div class="hr"></div>
+    <div class="eyebrow">&#127758; Glotemp city register</div>
+    <p class="tiny" style="margin-top:2px">The wave campaign's target list. Paste the register CSV to import it; adding a city this way needs no code change. The main register carries waves one, two and four by city name; the Florida window is a separate list that becomes wave three.</p>
+    ${REGISTER_STATUS ? `
+      <div class="qnote" style="white-space:normal;margin-top:10px">
+        <b>${REGISTER_STATUS.routeSplit.total}</b> rows &middot; <b>${REGISTER_STATUS.routeSplit.email}</b> by email &middot; <b>${REGISTER_STATUS.routeSplit.form}</b> by form &middot; <b>${REGISTER_STATUS.routeSplit.none}</b> with no route yet
+        <br>Current wave: ${REGISTER_STATUS.currentWave || 'none open'}
+      </div>` : '<p class="tiny" style="margin-top:8px">Not loaded yet.</p>'}
+    ${REGISTER_MSG ? `<p class="tiny" style="margin-top:8px;color:${REGISTER_OK ? 'var(--gold)' : 'var(--rust)'}">${esc(REGISTER_MSG)}</p>` : ''}
+    <label style="margin-top:10px">Main register CSV</label>
+    <textarea id="register-csv" rows="4" placeholder="city_name,country,..."></textarea>
+    <div class="btnrow" style="margin-top:8px">
+      <button class="btn gold sm" id="register-import" style="min-height:44px" onclick="importRegisterCsv()">Import main register</button>
+    </div>
+    <label style="margin-top:12px">Florida window CSV (becomes wave three)</label>
+    <textarea id="register-florida-csv" rows="4" placeholder="city_name,glotemp_city_url,window_product,..."></textarea>
+    <div class="btnrow" style="margin-top:8px">
+      <button class="btn gold sm" id="register-florida-import" style="min-height:44px" onclick="importFloridaWindow()">Import Florida window</button>
     </div>
 
     <div class="hr"></div>
@@ -1966,6 +1986,63 @@ async function saveOutreachOwner(){
   }catch(e){
     OWNER_MSG = e.message || 'Could not save that owner.';
     OWNER_OK = false;
+  }
+  openSettings();
+}
+
+let REGISTER_STATUS = null;
+let REGISTER_MSG = '';
+let REGISTER_OK = false;
+
+async function loadRegisterStatus(){
+  try{
+    const data = await engine('/social/register', null, 'GET');
+    REGISTER_STATUS = { routeSplit: data.routeSplit, currentWave: data.currentWave };
+  }catch(e){
+    REGISTER_STATUS = null;
+  }
+}
+
+async function importRegisterCsv(){
+  const btn = document.getElementById('register-import');
+  if(!btn || btn.disabled) return;
+  const csv = (document.getElementById('register-csv') || {}).value || '';
+  if(!csv.trim()){ REGISTER_MSG = 'Paste the register CSV first.'; REGISTER_OK = false; openSettings(); return; }
+  btn.innerHTML = '<i class="spin"></i> Importing…'; btn.disabled = true;
+  try{
+    const data = await engine('/social/register/import', { csv }, 'POST', { timeoutMs: 30000 });
+    const bits = [`${data.imported} rows imported`];
+    if(data.duplicatesRemoved && data.duplicatesRemoved.length) bits.push(`${data.duplicatesRemoved.length} duplicate(s) removed: ${data.duplicatesRemoved.join(', ')}`);
+    if(data.rowsPadded) bits.push(`${data.rowsPadded} row(s) had a short trailing column padded`);
+    if(data.rowsStillMisaligned) bits.push(`${data.rowsStillMisaligned} row(s) still misaligned, not imported`);
+    if(data.urlIssues && data.urlIssues.length) bits.push(`${data.urlIssues.length} broken link(s) dropped: ${data.urlIssues.map(u => u.city + ' ' + u.field).join(', ')}`);
+    REGISTER_MSG = bits.join('. ') + '.';
+    REGISTER_OK = true;
+    await loadRegisterStatus();
+  }catch(e){
+    REGISTER_MSG = e.message || 'Could not import that register.';
+    REGISTER_OK = false;
+  }
+  openSettings();
+}
+
+async function importFloridaWindow(){
+  const btn = document.getElementById('register-florida-import');
+  if(!btn || btn.disabled) return;
+  const csv = (document.getElementById('register-florida-csv') || {}).value || '';
+  if(!csv.trim()){ REGISTER_MSG = 'Paste the Florida window CSV first.'; REGISTER_OK = false; openSettings(); return; }
+  btn.innerHTML = '<i class="spin"></i> Importing…'; btn.disabled = true;
+  try{
+    const data = await engine('/social/register/import-florida-window', { csv }, 'POST', { timeoutMs: 30000 });
+    const bits = [`${data.assigned.length} row(s) assigned to wave three: ${data.assigned.join(', ') || 'none'}`];
+    if(data.conflicts && data.conflicts.length) bits.push(...data.conflicts);
+    if(data.notFound && data.notFound.length) bits.push(`Not found in the main register yet: ${data.notFound.join(', ')}`);
+    REGISTER_MSG = bits.join('. ') + '.';
+    REGISTER_OK = true;
+    await loadRegisterStatus();
+  }catch(e){
+    REGISTER_MSG = e.message || 'Could not import the Florida window.';
+    REGISTER_OK = false;
   }
   openSettings();
 }
