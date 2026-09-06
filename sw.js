@@ -26,13 +26,21 @@ const RUNTIME = `${VERSION}-runtime`;
 
 // Cached by content hash below, not cached-first by path. Never desk.html,
 // never anything under /api or /social: see the fetch handler.
+//
+// The icon paths carry a -v2 suffix because content hashing alone was not
+// enough to get a corrected icon onto a phone: the file that actually
+// controls what iOS shows on the home screen is fetched by Safari's own
+// touch icon loader, outside this service worker and its own cache
+// entirely, and that loader kept the old bytes for the old path regardless
+// of anything done here or in Safari's site data. A path nothing has ever
+// fetched before has nothing cached anywhere to be stale.
 const STATIC_ASSET_PATHS = [
   '/manifest.webmanifest',
   '/favicon.svg',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
-  '/icons/icon-180.png',
-  '/icons/icon-192-maskable.png'
+  '/icons/icon-192-v2.png',
+  '/icons/icon-512-v2.png',
+  '/icons/icon-180-v2.png',
+  '/icons/icon-192-v2-maskable.png'
 ];
 
 self.addEventListener('install', (event) => {
@@ -193,8 +201,8 @@ self.addEventListener('push', (event) => {
   const title = data.title || 'Ninth House';
   const options = {
     body: data.body || 'The queue has something waiting.',
-    icon: '/icons/icon-192.png',
-    badge: '/icons/icon-192-maskable.png',
+    icon: '/icons/icon-192-v2.png',
+    badge: '/icons/icon-192-v2-maskable.png',
     // One tag, so a second notification replaces the first rather than stacking a
     // pile of them on the lock screen.
     tag: data.tag || 'nh-queue',

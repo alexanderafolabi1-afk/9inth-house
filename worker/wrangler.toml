@@ -69,6 +69,17 @@ id = "9a1f764305b74398a0bcdc109586e713"
 [vars]
 PASSWORD_RESET_UNTIL = "2026-08-30T14:00:00Z"
 
+# Who the browser is allowed to be when it calls this Worker. The code already
+# falls back to this exact value when the variable is absent, but "absent" and
+# "set by hand in the dashboard to something that no longer matches" look
+# identical from the outside: both mean desk.html gets no
+# Access-Control-Allow-Origin header back, and every fetch fails before it
+# ever reaches a route, reporting as "cannot reach the house" for a right
+# password and a wrong one alike. Committing it here means it deploys with
+# everything else on every push to main, rather than living as an invisible
+# setting nothing in this repo can see or fix.
+DESK_ORIGIN = "https://9thpoint.com,https://www.9thpoint.com"
+
 # Four shifts a day, matching the retired GitHub Actions schedule exactly.
 # All times UTC. Cloudflare Cron Triggers are always UTC, so no conversion
 # from the old workflow's cron lines is needed.
