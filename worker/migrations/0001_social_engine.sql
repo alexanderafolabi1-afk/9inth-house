@@ -193,6 +193,8 @@ CREATE TABLE IF NOT EXISTS outreach_messages (
   -- either, so a reply is recorded when the owner says one arrived. Null
   -- means either never sent or sent and not yet replied to.
   replied_at TEXT,
+  delivery_type TEXT NOT NULL DEFAULT 'email',
+  form_url TEXT NOT NULL DEFAULT '',
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
@@ -227,3 +229,54 @@ CREATE TABLE IF NOT EXISTS exclusives (
   sold_at TEXT NOT NULL,
   PRIMARY KEY (city, vertical)
 );
+
+CREATE TABLE IF NOT EXISTS city_register (
+  id TEXT PRIMARY KEY,
+  venture TEXT NOT NULL DEFAULT 'glotemp',
+  city TEXT NOT NULL,
+  country TEXT NOT NULL DEFAULT '',
+  organisation TEXT NOT NULL DEFAULT '',
+  vertical TEXT NOT NULL,
+  language TEXT NOT NULL DEFAULT 'en',
+  wave INTEGER NOT NULL DEFAULT 0,
+  food_url TEXT NOT NULL DEFAULT '',
+  pulse_url TEXT NOT NULL DEFAULT '',
+  dmo_contact TEXT NOT NULL DEFAULT '',
+  operator_email_if_public TEXT NOT NULL DEFAULT '',
+  resolved_contact_email TEXT NOT NULL DEFAULT '',
+  contact_source TEXT NOT NULL DEFAULT '',
+  route_type TEXT NOT NULL DEFAULT '',
+  form_url TEXT NOT NULL DEFAULT '',
+  url_check_ok INTEGER NOT NULL DEFAULT 0,
+  url_check_note TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'pending',
+  notes TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_register_wave ON city_register (wave, status);
+CREATE INDEX IF NOT EXISTS idx_register_city ON city_register (city);
+
+CREATE TABLE IF NOT EXISTS rival_locks (
+  city TEXT PRIMARY KEY,
+  locked INTEGER NOT NULL DEFAULT 1,
+  released_at TEXT,
+  released_note TEXT NOT NULL DEFAULT '',
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS live_slots (
+  id TEXT PRIMARY KEY,
+  city TEXT NOT NULL,
+  vertical TEXT NOT NULL,
+  name TEXT NOT NULL,
+  url TEXT NOT NULL,
+  window_start TEXT NOT NULL,
+  window_end TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active',
+  notified_expiring INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_live_slots_status ON live_slots (status, window_end);

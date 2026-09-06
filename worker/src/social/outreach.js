@@ -91,6 +91,13 @@ export const CAMPAIGN_TYPES = {
   city_pin: {
     label: 'City pin',
     guidance: 'Sells a named lock on one city and one vertical for 90 days to a single operator. Never the homepage, never a partnership of record. One offer, one city, one vertical, one price. The rival is a type and a direction, never a name. Priced at 490, 790 or 1900 with a floor of 390.'
+  },
+  // The wave-based city register campaign: a single fourteen day trial
+  // offer, in the order the register's waves say, never a rival name until
+  // the owner has confirmed one is live in that city.
+  register_wave: {
+    label: 'City register',
+    guidance: 'One fourteen day trial offer per organisation: On the table, Staying here, or the city pack, depending on vertical. No rival is named until the owner has recorded a live slot in that city and released the lock. Sent in the wave order the register sets, never out of turn.'
   }
 };
 
@@ -227,6 +234,14 @@ export const OUTREACH_RULES = [
     id: 'no_hype',
     test: (t) => /\b(game changer|revolutionary|unlock|unleash|supercharge|cutting edge|world class|best in class|synergy)\b/i.test(t),
     finding: 'It reaches for hype instead of saying something specific.'
+  },
+  {
+    // Named explicitly in the register campaign's own standing rules. Global
+    // rather than scoped: no outreach this house sends has a reason to name
+    // either one.
+    id: 'no_gta_mention',
+    test: (t) => /\b(GTA|Grand Theft Auto|Rockstar Games|Rockstar North)\b/i.test(t),
+    finding: 'It mentions GTA or Rockstar, which this campaign must never reference.'
   }
 ];
 

@@ -2198,7 +2198,9 @@ function vOutreachCard(m){
 
     ${history.length ? `<p class="tiny" style="margin-bottom:8px;color:var(--info)">Contacted before: ${history.map(h => esc(h.venture) + ' &middot; ' + esc(h.status)).join(', ')}.</p>` : ''}
 
-    <div class="qnote" style="margin-bottom:10px;white-space:normal"><b>To</b> ${esc(m.to_addresses)}${m.cc_addresses ? `<br><b>Cc</b> ${esc(m.cc_addresses)}` : ''}<br><b>Subject</b> ${esc(m.subject)}</div>
+    ${m.delivery_type === 'form'
+      ? `<div class="qnote" style="margin-bottom:10px;white-space:normal"><b>Form</b> ${esc(m.form_url)}<br><b>Subject</b> ${esc(m.subject)}</div>`
+      : `<div class="qnote" style="margin-bottom:10px;white-space:normal"><b>To</b> ${esc(m.to_addresses)}${m.cc_addresses ? `<br><b>Cc</b> ${esc(m.cc_addresses)}` : ''}<br><b>Subject</b> ${esc(m.subject)}</div>`}
 
     ${findings.length ? `<div class="qerr">This breaks ${findings.length === 1 ? 'a standing rule' : findings.length + ' standing rules'}:<br>${findings.map(f => '&#8226; ' + esc(f.finding)).join('<br>')}</div>` : ''}
 
@@ -2214,7 +2216,9 @@ function vOutreachCard(m){
          <div class="btnrow" style="margin-bottom:10px"><button class="btn ghost wide" style="min-height:44px" onclick="OUT.open['${m.id}']=false;render()">Hide the letter</button></div>`
       : `<div class="btnrow" style="margin-bottom:10px"><button class="btn ghost wide" style="min-height:44px" onclick="OUT.open['${m.id}']=true;render()">Read the letter</button></div>`}
 
-    <div class="qnote" style="margin-bottom:10px;white-space:normal">The house does not send email. Nothing here goes out on its own: copy it, or open it in your own mail app, send it from your own address, then tell the house it went.</div>
+    <div class="qnote" style="margin-bottom:10px;white-space:normal">${m.delivery_type === 'form'
+      ? 'The house does not submit forms. Open it, paste the text in, send it yourself, then tell the house it went.'
+      : 'The house does not send email. Nothing here goes out on its own: copy it, or open it in your own mail app, send it from your own address, then tell the house it went.'}</div>
 
     <div class="btnrow" style="margin-top:8px">
       ${m.status === 'approved'
@@ -2222,8 +2226,11 @@ function vOutreachCard(m){
         : `<button class="btn gold wide" style="min-height:44px" onclick="approveOutreach('${m.id}')" ${busy ? 'disabled' : ''}>Approve</button>`}
     </div>
     <div class="qmore" style="margin-top:8px">
-      <button class="btn jade" onclick="copyOutreach('${m.id}')" ${busy ? 'disabled' : ''}>Copy the email</button>
-      <a class="btn ghost" style="display:inline-flex;align-items:center;text-decoration:none" href="${esc(outreachMailto(m))}">Open in mail</a>
+      ${m.delivery_type === 'form'
+        ? `<button class="btn jade" onclick="copyOutreach('${m.id}')" ${busy ? 'disabled' : ''}>Copy the text</button>
+           <a class="btn ghost" style="display:inline-flex;align-items:center;text-decoration:none" href="${esc(m.form_url)}" target="_blank" rel="noopener">Open the form</a>`
+        : `<button class="btn jade" onclick="copyOutreach('${m.id}')" ${busy ? 'disabled' : ''}>Copy the email</button>
+           <a class="btn ghost" style="display:inline-flex;align-items:center;text-decoration:none" href="${esc(outreachMailto(m))}">Open in mail</a>`}
       ${m.status !== 'approved' ? `<button class="btn danger" onclick="rejectOutreach('${m.id}')" ${busy ? 'disabled' : ''}>Reject</button>` : ''}
       <button class="btn ghost" onclick="markOutreachReplied('${m.id}')" ${busy ? 'disabled' : ''}>They replied</button>
     </div>

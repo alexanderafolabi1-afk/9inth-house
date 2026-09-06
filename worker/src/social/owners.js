@@ -59,11 +59,23 @@ const FORMAL_LOCALES = ['AE', 'SA', 'QA', 'KW', 'BH', 'OM', 'GB', 'UK'];
 // this file can actually fix without translating the whole template.
 const SPANISH_LOCALES = ['ES', 'MX', 'AR', 'CO', 'CL', 'PE', 'UY', 'PY', 'BO', 'EC', 'VE', 'CR', 'PA', 'GT', 'HN', 'SV', 'NI', 'DO', 'CU'];
 
+// Markets the register campaign added, each with its own native valediction
+// rather than an English one appended to a translated letter. Keyed by
+// country, the same as every other locale group here, so a future campaign
+// into any of these markets inherits the right closing without having to
+// know this list exists.
+const NATIVE_SIGN_OFFS = {
+  GR: 'Με εκτίμηση', HR: 'S poštovanjem',
+  NL: 'Met vriendelijke groet', AW: 'Met vriendelijke groet', CW: 'Met vriendelijke groet',
+  IS: 'Með kveðju', FR: 'Cordialement', JP: 'よろしくお願いいたします'
+};
+
 // The one rule the brief names as flatly wrong: "With respect" reads oddly
 // in English and has no place in a proper closing. Never produced here.
 export function signOffFor({ locale, named = false, thanksOwed = false, warm = false } = {}) {
   const loc = String(locale || '').trim().toUpperCase();
   if (SPANISH_LOCALES.includes(loc)) return warm ? 'Un cordial saludo' : 'Atentamente';
+  if (NATIVE_SIGN_OFFS[loc]) return NATIVE_SIGN_OFFS[loc];
   if (thanksOwed) return 'With thanks';
   if (FORMAL_LOCALES.includes(loc)) return named ? 'Yours sincerely' : 'Yours faithfully';
   return 'Kind regards';

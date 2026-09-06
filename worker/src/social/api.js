@@ -43,6 +43,13 @@ import {
   CITY_PIN_ON_REPLY, CITY_PIN_PRODUCT, CITY_PIN_LINES, CITY_PIN_VOICE
 } from './outreach.js';
 import { listOutreachOwners, getOutreachOwner, setOutreachOwner, describeOutreachOwner } from './owners.js';
+import {
+  importRegisterCsv, listRegisterRows, getRegisterRow, upsertRegisterRow, routeSplitReport,
+  currentWave, waveComplete, WAVES,
+  isRivalLocked, releaseRivalLock, relockRival,
+  recordLiveSlot, listLiveSlots, expiringLiveSlots, markSlotNotified, sweepExpiredSlots,
+  composeRegisterMessage
+} from './register.js';
 import { factsFor, recentChanges, putFact, runFactsSweep, DEFAULT_STALE_HOURS } from './facts.js';
 import { SENDABLE as PENDING_STATUSES } from './config.js';
 import { credentialDeliveries, credentialStatusFor, writeCredentialsFor } from './senders/index.js';
@@ -523,6 +530,140 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
         if (!check.ok) return json(request, env, { ok: false, error: check.problems.join(' ') }, 400);
         const owner = await setOutreachOwner(db, { venture: body.venture, name: body.name, role: body.role, email: body.email });
         return json(request, env, { ok: true, owner, owners: await listOutreachOwners(db) });
+      }
+
+      /* ---------- the Glotemp wave campaign's city register ---------- */
+
+      // The register itself, plus enough about each wave's progress that the
+      // admin can show the four-wave order without a second round trip.
+      case 'GET /social/register': {
+        await ensureSchema(db);
+        const venture = url.searchParams.get('venture') || 'glotemp';
+        const wave = url.searchParams.get('wave');
+        const status = url.searchParams.get('status') || undefined;
+        const rows = await listRegisterRows(db, { venture, wave: wave != null ? Number(wave) : undefined, status });
+        const waves = {};
+        for (const w of WAVES) waves[w] = { complete: await waveComplete(db, w, { venture }) };
+        return json(request, env, {
+          ok: true,
+          rows,
+          waves,
+          currentWave: await currentWave(db, { venture }),
+          routeSplit: await routeSplitReport(db, { venture })
+        });
+      }
+
+      // Adding a city from the admin. The same upsert an import uses, so a
+      // row entered by hand is indistinguishable from one that arrived in a
+      // file, and adding a city is a data change, never a code change.
+      case 'POST /social/register/row': {
+        await ensureSchema(db);
+        if (!String(body.city || '').trim()) return json(request, env, { ok: false, error: 'A city is required.' }, 400);
+        if (!String(body.vertical || '').trim()) return json(request, env, { ok: false, error: 'A vertical is required.' }, 400);
+        const id = await upsertRegisterRow(db, body);
+        return json(request, env, { ok: true, row: await getRegisterRow(db, id) });
+      }
+
+      // The bulk import: parse, repair the known overflow fault, dedupe,
+      // check every link, decide a route, and report every fault found
+      // rather than only the ones the brief named by example.
+      case 'POST /social/register/import': {
+        await ensureSchema(db);
+        if (!String(body.csv || '').trim()) return json(request, env, { ok: false, error: 'No CSV text was given.' }, 400);
+        const result = await importRegisterCsv(db, body.csv, {
+          venture: body.venture || 'glotemp',
+          wave: Number(body.wave) || 0,
+          mergeColumnHint: body.mergeColumnHint || 'organisation'
+        });
+        return json(request, env, { ok: true, ...result });
+      }
+
+      case 'GET /social/register/report': {
+        await ensureSchema(db);
+        const venture = url.searchParams.get('venture') || 'glotemp';
+        return json(request, env, { ok: true, routeSplit: await routeSplitReport(db, { venture }) });
+      }
+
+      // The per-city rival lock. Release is owner-only by construction: it is
+      // a signed-in admin action, the same as everything else behind
+      // requireSession above, and there is deliberately no automatic path to
+      // it anywhere else in this file.
+      case 'POST /social/outreach/rival-lock/release': {
+        await ensureSchema(db);
+        if (!String(body.city || '').trim()) return json(request, env, { ok: false, error: 'A city is required.' }, 400);
+        await releaseRivalLock(db, body.city, body.note || '');
+        return json(request, env, { ok: true, locked: await isRivalLocked(db, body.city) });
+      }
+
+      case 'POST /social/outreach/rival-lock/relock': {
+        await ensureSchema(db);
+        if (!String(body.city || '').trim()) return json(request, env, { ok: false, error: 'A city is required.' }, 400);
+        await relockRival(db, body.city, body.note || '');
+        return json(request, env, { ok: true, locked: await isRivalLocked(db, body.city) });
+      }
+
+      // Section 6's one control. Recording a slot marks the city live,
+      // releases its rival lock, and starts the fourteen day window; nothing
+      // here sends anything on its own, the same as every other approval in
+      // this house.
+      case 'POST /social/outreach/live-slot': {
+        await ensureSchema(db);
+        for (const field of ['city', 'vertical', 'name', 'url']) {
+          if (!String(body[field] || '').trim()) return json(request, env, { ok: false, error: `"${field}" is required.` }, 400);
+        }
+        const slot = await recordLiveSlot(db, body);
+        return json(request, env, { ok: true, slot, slots: await listLiveSlots(db, {}) });
+      }
+
+      case 'GET /social/outreach/live-slots': {
+        await ensureSchema(db);
+        await sweepExpiredSlots(db);
+        const status = url.searchParams.get('status') || undefined;
+        return json(request, env, {
+          ok: true,
+          slots: await listLiveSlots(db, { status }),
+          expiringSoon: await expiringLiveSlots(db, 2)
+        });
+      }
+
+      case 'POST /social/outreach/live-slot/notified': {
+        await ensureSchema(db);
+        if (!body.id) return json(request, env, { ok: false, error: 'no slot id was given' }, 400);
+        await markSlotNotified(db, body.id);
+        return json(request, env, { ok: true });
+      }
+
+      // Composes a register-campaign draft against one row: the wave gate,
+      // the rival lock, the route, the owner, the copy in the right
+      // language and the standing rules, all checked before this ever
+      // reaches the queue. A row that fails is held on the register with
+      // the reason, exactly the way Section 1 holds a failed prospect.
+      case 'POST /social/outreach/register/draft': {
+        await ensureSchema(db);
+        if (!body.id) return json(request, env, { ok: false, error: 'no register row id was given' }, 400);
+        const row = await getRegisterRow(db, body.id);
+        if (!row) return json(request, env, { ok: false, error: 'that register row no longer exists' }, 404);
+        const owner = await getOutreachOwner(db, row.venture);
+        const composed = await composeRegisterMessage(db, row, { owner });
+        const ts = new Date().toISOString();
+        if (!composed.ok) {
+          await db.prepare('UPDATE city_register SET notes = ?, updated_at = ? WHERE id = ?')
+            .bind(composed.blockers.join(' '), ts, row.id).run();
+          return json(request, env, { ok: false, blockers: composed.blockers }, 422);
+        }
+        const msgId = `reg-${row.id}-${Date.now()}`;
+        await db.prepare(`
+          INSERT INTO outreach_messages (
+            id, prospect_id, venture, campaign_type, identity, to_addresses, cc_addresses,
+            subject, body, original_wording, locale_note, city, vertical, sku, price_usd,
+            rule_findings, status, send_after, sent_at, delivery_type, form_url, created_at, updated_at
+          ) VALUES (?, ?, ?, 'register_wave', '', ?, '', ?, ?, '', ?, ?, ?, '', 0, '[]', 'awaiting_approval', NULL, NULL, ?, ?, ?, ?)
+        `).bind(
+          msgId, row.id, row.venture, composed.draft.to || '', composed.draft.subject, composed.draft.body,
+          composed.warnings.join(' '), row.city, row.vertical, composed.draft.deliveryType, composed.draft.formUrl || '', ts, ts
+        ).run();
+        await db.prepare("UPDATE city_register SET status = 'queued', notes = '', updated_at = ? WHERE id = ?").bind(ts, row.id).run();
+        return json(request, env, { ok: true, messages: await listMessages(db, { limit: 50 }) });
       }
 
       // Approving a first message to a new organisation is the owner's, per
