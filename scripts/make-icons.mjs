@@ -1,15 +1,16 @@
-// Generates the Ninth House PWA icon set as PNG files, with no image library
-// and no network. Run it from the repo root:
-//
-//   node scripts/make-icons.mjs
-//
-// The mark is deliberately geometric so it can be drawn from primitives: an
-// ivory field, a hairline gold rule, and nine gold dots in a ring around a
-// tenth at the centre. Nine dots for Ninth House. It stays legible at 48px,
-// which is the size Android actually renders in the launcher.
-//
-// Every icon is drawn at four times the target size and averaged down, which
-// is what gives the curves clean edges without an anti-aliasing library.
+// SUPERSEDED. This drew an abstract nine-dot ring from primitives, with no
+// image library and no network. The house mark actually in use everywhere
+// else, the header glyph and favicon.svg, is the Jupiter glyph on an ivory
+// field, and the committed icons/*.png now match that instead: same field
+// and gold rule this script draws, but the real mark rendered from
+// favicon.svg through a browser rather than approximated from rectangles,
+// since a serif character cannot be drawn from primitives without risking a
+// mark that only resembles the one everyone already recognises. Running
+// this script would overwrite them with the old abstract ring; it is kept
+// only as a record of how that ring was drawn. To regenerate the real mark,
+// rasterise favicon.svg at each manifest size instead (any Chromium-based
+// browser will do; a real font that covers U+2643 is required, such as
+// Noto Sans Symbols).
 
 import { deflateSync } from 'node:zlib';
 import { writeFileSync, mkdirSync } from 'node:fs';
