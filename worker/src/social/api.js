@@ -51,6 +51,11 @@ import {
   composeRegisterMessage
 } from './register.js';
 import { factsFor, recentChanges, putFact, runFactsSweep, DEFAULT_STALE_HOURS } from './facts.js';
+import {
+  recordDeal, deleteDeal, attributionCandidates, monthSummary,
+  getTargets, setTarget, seedDefaultTargets, boardStats
+} from './deals.js';
+import { DEAL_TIERS, FX_TO_GBP } from './seeds/deal-tiers.js';
 import { SENDABLE as PENDING_STATUSES } from './config.js';
 import { credentialDeliveries, credentialStatusFor, writeCredentialsFor } from './senders/index.js';
 import { getWebhookUrl, setWebhookUrl, describeWebhookUrl } from '../n8n.js';
@@ -669,13 +674,85 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
             id, prospect_id, venture, campaign_type, identity, to_addresses, cc_addresses,
             subject, body, original_wording, locale_note, city, vertical, sku, price_usd,
             rule_findings, status, send_after, sent_at, delivery_type, form_url, created_at, updated_at
-          ) VALUES (?, ?, ?, 'register_wave', '', ?, '', ?, ?, '', ?, ?, ?, '', 0, '[]', 'awaiting_approval', NULL, NULL, ?, ?, ?, ?)
+          ) VALUES (?, ?, ?, 'register_wave', ?, ?, '', ?, ?, '', ?, ?, ?, '', 0, '[]', 'awaiting_approval', NULL, NULL, ?, ?, ?, ?)
         `).bind(
-          msgId, row.id, row.venture, composed.draft.to || '', composed.draft.subject, composed.draft.body,
+          msgId, row.id, row.venture, owner.name, composed.draft.to || '', composed.draft.subject, composed.draft.body,
           composed.warnings.join(' '), row.city, row.vertical, composed.draft.deliveryType, composed.draft.formUrl || '', ts, ts
         ).run();
         await db.prepare("UPDATE city_register SET status = 'queued', notes = '', updated_at = ? WHERE id = ?").bind(ts, row.id).run();
         return json(request, env, { ok: true, messages: await listMessages(db, { limit: 50 }) });
+      }
+
+      /* ---- the Backpack: deals, targets, the Board ---- */
+
+      // The published tiers a deal's value is meant to come from, per
+      // venture. Static, so this is a plain read with no schema dependency.
+      case 'GET /social/deals/tiers': {
+        return json(request, env, { ok: true, tiers: DEAL_TIERS, fx: FX_TO_GBP });
+      }
+
+      // The Backpack's own read: this month's total against the firm
+      // target, broken down by venture and by partner, plus every deal
+      // that makes it up, so the tap-to-open breakdown needs no second call.
+      case 'GET /social/deals': {
+        await ensureSchema(db);
+        const month = url.searchParams.get('month') || undefined;
+        const summary = await monthSummary(db, { month });
+        return json(request, env, { ok: true, ...summary });
+      }
+
+      // Recent sent mail for one venture, for the "which message closed
+      // this" picker. Attribution is read off whichever one the owner
+      // points at, never guessed from the organisation name alone.
+      case 'GET /social/deals/attribution-candidates': {
+        await ensureSchema(db);
+        const venture = url.searchParams.get('venture') || undefined;
+        return json(request, env, { ok: true, candidates: await attributionCandidates(db, { venture }) });
+      }
+
+      case 'POST /social/deals': {
+        await ensureSchema(db);
+        try {
+          const deal = await recordDeal(db, body);
+          return json(request, env, { ok: true, deal, ...(await monthSummary(db, {})) });
+        } catch (e) {
+          return json(request, env, { ok: false, error: e.message || String(e) }, 400);
+        }
+      }
+
+      // A correction, the same as delOutgoing and delDebt already let the
+      // owner make on the other real-numbers ledgers in this house: a deal
+      // logged in error is removed outright rather than left to skew every
+      // total under it.
+      case 'POST /social/deals/delete': {
+        await ensureSchema(db);
+        if (!body.id) return json(request, env, { ok: false, error: 'no deal id was given' }, 400);
+        await deleteDeal(db, body.id);
+        return json(request, env, { ok: true, ...(await monthSummary(db, {})) });
+      }
+
+      case 'GET /social/targets': {
+        await ensureSchema(db);
+        await seedDefaultTargets(db);
+        return json(request, env, { ok: true, targets: await getTargets(db) });
+      }
+
+      case 'POST /social/targets': {
+        await ensureSchema(db);
+        try {
+          const targets = await setTarget(db, body);
+          return json(request, env, { ok: true, targets });
+        } catch (e) {
+          return json(request, env, { ok: false, error: e.message || String(e) }, 400);
+        }
+      }
+
+      // The Board: closed value ranked first, effort carried alongside it,
+      // for whichever partners the ledger actually names this month.
+      case 'GET /social/board': {
+        await ensureSchema(db);
+        const month = url.searchParams.get('month') || undefined;
+        return json(request, env, { ok: true, partners: await boardStats(db, { month }) });
       }
 
       // Approving a first message to a new organisation is the owner's, per
@@ -815,7 +892,7 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
             (id, prospect_id, venture, campaign_type, identity, to_addresses, cc_addresses, subject, body, original_wording, locale_note, city, vertical, sku, price_usd, rule_findings, status, send_after, created_at, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).bind(
-          messageId, prospectId, 'setpostgo', 'setpostgo', String(body.agentName || ''),
+          messageId, prospectId, 'setpostgo', 'setpostgo', String(body.agentName || (owner && owner.name) || ''),
           composed.draft.to, '', composed.draft.subject, composed.draft.body, '',
           (composed.warnings || []).join(' '),
           composed.draft.town, composed.draft.trade, composed.draft.template, 0,
@@ -889,7 +966,7 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
             (id, prospect_id, venture, campaign_type, identity, to_addresses, cc_addresses, subject, body, original_wording, locale_note, city, vertical, sku, price_usd, rule_findings, status, send_after, created_at, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).bind(
-          messageId, prospectId, 'glotemp', 'city_pin', String(body.agentName || ''),
+          messageId, prospectId, 'glotemp', 'city_pin', String(body.agentName || (owner && owner.name) || ''),
           composed.draft.to, '', composed.draft.subject, composed.draft.body, '',
           (composed.warnings || []).join(' '),
           composed.draft.city, composed.draft.vertical, composed.draft.sku, composed.draft.priceUsd,
