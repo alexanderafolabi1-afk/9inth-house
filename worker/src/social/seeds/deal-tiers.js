@@ -64,18 +64,30 @@ export const DEAL_TIERS = {
 // admin tracking its own pace against a monthly target needs a stable
 // number more than it needs a live rate feed. Reviewed by hand rather than
 // fetched, so a conversion never changes mid-month under the owner's feet
-// while he is watching the bag fill. GBP is the base; 1 unit of the row's
-// currency is worth this many GBP.
+// while he is watching the bag fill. GBP is the pivot only because it was
+// the first currency this table held; every conversion below goes through
+// it as an intermediate step regardless of which two currencies are asked
+// for, so it is never treated as more authoritative than USD or EUR.
 export const FX_TO_GBP = {
   GBP: 1,
   USD: 0.79,
   EUR: 0.86
 };
 
-export function toGbp(amount, currency) {
-  const rate = FX_TO_GBP[String(currency || 'GBP').toUpperCase()];
+export const REPORTING_CURRENCIES = Object.keys(FX_TO_GBP);
+export const DEFAULT_REPORTING_CURRENCY = 'USD';
+
+// A deal is never re-priced: it keeps the currency it actually sold in.
+// This is only ever used to fold a mixed-currency ledger into one number
+// for the Backpack and the Board, computed fresh on every read against
+// whichever currency is currently set as the firm's reporting currency, so
+// changing that setting never requires rewriting history.
+export function convertCurrency(amount, fromCurrency, toCurrency) {
+  const from = FX_TO_GBP[String(fromCurrency || 'GBP').toUpperCase()];
+  const to = FX_TO_GBP[String(toCurrency || 'GBP').toUpperCase()];
   const n = Number(amount) || 0;
-  return Math.round(n * (rate == null ? 1 : rate) * 100) / 100;
+  if (!from || !to) return Math.round(n * 100) / 100; // an unlisted currency passes through rather than being zeroed
+  return Math.round((n * from / to) * 100) / 100;
 }
 
 export const DEAL_VENTURES = Object.keys(DEAL_TIERS);

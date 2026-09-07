@@ -291,7 +291,6 @@ CREATE TABLE IF NOT EXISTS deals (
   tier_label TEXT NOT NULL DEFAULT '',
   amount REAL NOT NULL,
   currency TEXT NOT NULL DEFAULT 'GBP',
-  amount_gbp REAL NOT NULL,
   partner_id TEXT NOT NULL DEFAULT '',
   attribution TEXT NOT NULL DEFAULT 'unattributed',
   source_message_id TEXT NOT NULL DEFAULT '',
@@ -309,6 +308,12 @@ CREATE TABLE IF NOT EXISTS targets (
   scope_key TEXT PRIMARY KEY,
   scope_type TEXT NOT NULL,
   ref TEXT NOT NULL DEFAULT '',
-  amount_gbp REAL NOT NULL,
+  amount REAL NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS firm_settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );

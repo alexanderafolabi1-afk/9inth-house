@@ -53,9 +53,10 @@ import {
 import { factsFor, recentChanges, putFact, runFactsSweep, DEFAULT_STALE_HOURS } from './facts.js';
 import {
   recordDeal, deleteDeal, attributionCandidates, monthSummary,
-  getTargets, setTarget, seedDefaultTargets, boardStats
+  getTargets, setTarget, seedDefaultTargets, boardStats,
+  getReportingCurrency, setReportingCurrency, seedDefaultCurrency
 } from './deals.js';
-import { DEAL_TIERS, FX_TO_GBP } from './seeds/deal-tiers.js';
+import { DEAL_TIERS, FX_TO_GBP, REPORTING_CURRENCIES } from './seeds/deal-tiers.js';
 import { SENDABLE as PENDING_STATUSES } from './config.js';
 import { credentialDeliveries, credentialStatusFor, writeCredentialsFor } from './senders/index.js';
 import { getWebhookUrl, setWebhookUrl, describeWebhookUrl } from '../n8n.js';
@@ -688,7 +689,28 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
       // The published tiers a deal's value is meant to come from, per
       // venture. Static, so this is a plain read with no schema dependency.
       case 'GET /social/deals/tiers': {
-        return json(request, env, { ok: true, tiers: DEAL_TIERS, fx: FX_TO_GBP });
+        return json(request, env, { ok: true, tiers: DEAL_TIERS, fx: FX_TO_GBP, currencies: REPORTING_CURRENCIES });
+      }
+
+      // The firm's reporting currency: an explicit setting, defaulted to
+      // USD, never assumed from whichever currency a deal happened to be
+      // recorded in. Every deal keeps its own currency regardless of this;
+      // this only decides what the Backpack and the Board convert their
+      // totals into.
+      case 'GET /social/currency': {
+        await ensureSchema(db);
+        await seedDefaultCurrency(db);
+        return json(request, env, { ok: true, currency: await getReportingCurrency(db), currencies: REPORTING_CURRENCIES });
+      }
+
+      case 'POST /social/currency': {
+        await ensureSchema(db);
+        try {
+          const currency = await setReportingCurrency(db, body.currency);
+          return json(request, env, { ok: true, currency });
+        } catch (e) {
+          return json(request, env, { ok: false, error: e.message || String(e) }, 400);
+        }
       }
 
       // The Backpack's own read: this month's total against the firm

@@ -440,10 +440,14 @@ const defaultState = () => ({
   // unrelated weeklyTarget (posts per week, a completely different count
   // that happens to share the old name).
   weeklyFocus: '',       // plain text, CEO-edited, no API call
+  // Revenue no longer lives here: the Backpack (worker/src/social/deals.js)
+  // is the one source of it now, attributed and in the reporting currency
+  // rather than hand-typed and un-sourced. These per-venture KPIs stay for
+  // everything else worth a weekly glance that is not revenue.
   kpis: {
-    setpostgo: { 'Active subscribers': 0, 'Trials started (wk)': 0, 'MRR £': 0 },
-    renviait:  { 'Units acquired (wk)': 0, 'Units sold (wk)': 0, 'Revenue £ (mo)': 0 },
-    nagori:    { 'Letters sealed': 0, 'Visitors (wk)': 0, 'Revenue £ (mo)': 0 }
+    setpostgo: { 'Active subscribers': 0, 'Trials started (wk)': 0 },
+    renviait:  { 'Units acquired (wk)': 0, 'Units sold (wk)': 0 },
+    nagori:    { 'Letters sealed': 0, 'Visitors (wk)': 0 }
   },
   kpiDay: {}
 });
@@ -458,6 +462,15 @@ function load(){
   if(!saved.kpis || typeof saved.kpis !== 'object') saved.kpis = {};
   for(const key of Object.keys(kpiDefaults)){
     saved.kpis[key] = Object.assign({}, kpiDefaults[key], saved.kpis[key] || {});
+  }
+  // Retired: a device that saved one of these before the Backpack existed
+  // still has it in localStorage, and a plain merge above would bring it
+  // straight back since it is a key the defaults no longer list but the
+  // save still has. Deleted explicitly rather than left to linger as a
+  // second, un-sourced revenue number.
+  for(const key of Object.keys(saved.kpis)){
+    delete saved.kpis[key]['MRR £'];
+    delete saved.kpis[key]['Revenue £ (mo)'];
   }
   if(!Array.isArray(saved.pendingActions)) saved.pendingActions = [];
   return saved;
@@ -1182,6 +1195,11 @@ function vRooms(){
     <div class="card">
       <h3 class="serif" style="color:${b.color}">${b.name}</h3>
       <p class="tiny" style="margin-bottom:12px">${b.tag}</p>
+      <div class="kpirow" style="opacity:.85">
+        <span>&#127761; This month (Backpack)</span>
+        <b class="mono" style="color:var(--gold)">${BP.loaded ? bp(BP.byVenture[k] || 0) : '…'}</b>
+      </div>
+      <p class="tiny" style="margin-bottom:10px;color:var(--faint)">Read only. Revenue is recorded once, as a deal, from the Backpack.</p>
       ${Object.entries(S.kpis[k] || {}).map(([m,v])=>`
         <div class="kpirow">
           <span>${m}</span>
@@ -1246,7 +1264,7 @@ function vPartnerBoard(){
           <span class="board-name">${esc(partnerLabel(p.id))}</span>
           <span class="board-stats">${p.sent} sent &middot; ${p.replies} replied (${p.replyRate}%) &middot; ${p.dealsClosed} closed &middot; &#128293; ${p.streak}</span>
         </span>
-        <span class="board-value">${gbp(p.dealsValueGbp)}</span>
+        <span class="board-value">${bp(p.dealsValueReporting)}</span>
       </div>`).join('') : '<p class="tiny" style="color:var(--faint)">Nobody has sent, replied to, or closed anything yet this month.</p>'}
   </div>
   `;
@@ -1757,13 +1775,19 @@ function openSettings(){
     <div class="eyebrow">&#127919; Targets</div>
     <p class="tiny" style="margin-top:2px">What the Backpack fills against. The firm-wide figure rolls up from nowhere, it is simply set; venture targets are what each business is asked to carry toward it, and a partner target is optional, never imposed.</p>
     ${TARGETS_MSG ? `<p class="tiny" style="margin-top:8px;color:${TARGETS_OK ? 'var(--gold)' : 'var(--rust)'}">${esc(TARGETS_MSG)}</p>` : ''}
-    <label style="margin-top:10px">Firm wide, monthly (&pound;)</label>
+    <label style="margin-top:10px">Reporting currency</label>
+    <p class="tiny" style="margin-top:2px">What every target below is in, and what the Backpack converts a mixed-currency month into. A deal itself always keeps whatever it actually sold in; this only decides the rolled-up figure.</p>
+    <div class="btnrow" style="margin-top:6px">
+      <select id="target-currency" style="flex:1">${BP.currencies.map(c=>`<option value="${c}" ${BP.reportingCurrency===c?'selected':''}>${c}</option>`).join('')}</select>
+      <button class="btn sm" style="min-height:44px" onclick="saveReportingCurrency()">Save</button>
+    </div>
+    <label style="margin-top:12px">Firm wide, monthly (${esc(BP.reportingCurrency)})</label>
     <div class="btnrow" style="margin-top:0">
-      <input type="number" id="target-firm" min="0" step="100" value="${BP.targets.firmGbp || 0}" style="flex:1">
+      <input type="number" id="target-firm" min="0" step="100" value="${BP.targets.firmAmount || 0}" style="flex:1">
       <button class="btn gold sm" style="min-height:44px" onclick="saveTarget('firm','','target-firm')">Save</button>
     </div>
     ${DEAL_VENTURE_LIST.map(v => `
-      <label style="margin-top:10px">${esc(v.label)}, monthly (&pound;)</label>
+      <label style="margin-top:10px">${esc(v.label)}, monthly (${esc(BP.reportingCurrency)})</label>
       <div class="btnrow" style="margin-top:0">
         <input type="number" id="target-venture-${v.slug}" min="0" step="100" value="${BP.targets.ventures[v.slug] || 0}" style="flex:1">
         <button class="btn sm" style="min-height:44px" onclick="saveTarget('venture','${v.slug}','target-venture-${v.slug}')">Save</button>
@@ -1776,7 +1800,7 @@ function openSettings(){
     </div>
     ${Object.keys(BP.targets.partners || {}).length ? `
       <div style="margin-top:8px">
-        ${Object.entries(BP.targets.partners).map(([id,amt])=>`<p class="tiny">${esc(partnerLabel(id))}: ${gbp(amt)}</p>`).join('')}
+        ${Object.entries(BP.targets.partners).map(([id,amt])=>`<p class="tiny">${esc(partnerLabel(id))}: ${bp(amt)}</p>`).join('')}
       </div>` : ''}
 
     <div class="hr"></div>
@@ -2327,30 +2351,35 @@ function bizLabel(slug){
   if(slug === 'ninthhouse') return 'Ninth House';
   return (BIZ[slug] && BIZ[slug].name) || slug;
 }
-function gbp(n){
+const CURRENCY_SYMBOLS = { GBP:'£', USD:'$', EUR:'€' };
+function money(n, currency){
   const v = Number(n) || 0;
-  return '£' + v.toLocaleString('en-GB', { minimumFractionDigits: (v % 1 === 0) ? 0 : 2, maximumFractionDigits: 2 });
+  const sym = CURRENCY_SYMBOLS[String(currency||'GBP').toUpperCase()] || (String(currency||'').toUpperCase()+' ');
+  return sym + v.toLocaleString('en-GB', { minimumFractionDigits: (v % 1 === 0) ? 0 : 2, maximumFractionDigits: 2 });
 }
+// The Backpack's own figures, always in whatever BP.reportingCurrency is
+// set to.
+function bp(n){ return money(n, BP.reportingCurrency); }
 function bpMonthLabel(m){
   if(!/^\d{4}-\d{2}$/.test(m || '')) return '';
   const d = new Date(Date.UTC(Number(m.slice(0,4)), Number(m.slice(5,7)) - 1, 1));
   return d.toLocaleDateString('en-GB', { month:'long', year:'numeric', timeZone:'UTC' });
 }
 function bpPace(){
-  const target = BP.targets.firmGbp || 0;
+  const target = BP.targets.firmAmount || 0;
   if(!target || !BP.daysElapsed) return { label:'', cls:'' };
-  if(BP.totalGbp >= target) return { label: `Target met, ${BP.daysRemaining} day${BP.daysRemaining===1?'':'s'} still to run`, cls:'over' };
-  const projected = (BP.totalGbp / BP.daysElapsed) * BP.daysInMonth;
+  if(BP.totalReporting >= target) return { label: `Target met, ${BP.daysRemaining} day${BP.daysRemaining===1?'':'s'} still to run`, cls:'over' };
+  const projected = (BP.totalReporting / BP.daysElapsed) * BP.daysInMonth;
   if(projected >= target * 0.97) return { label:'On pace to land the month on target', cls:'on' };
-  return { label:`At this rate the month lands short, ${gbp(target - projected)} off pace`, cls:'short' };
+  return { label:`At this rate the month lands short, ${bp(target - projected)} off pace`, cls:'short' };
 }
 
 const BP = {
   loaded:false, loading:false, error:'',
-  month:'', totalGbp:0, byVenture:{}, byPartner:{}, deals:[],
+  month:'', reportingCurrency:'USD', totalReporting:0, byVenture:{}, byPartner:{}, deals:[],
   daysInMonth:0, daysElapsed:0, daysRemaining:0,
-  targets:{ firmGbp:50000, ventures:{}, partners:{} },
-  tiers:{}, tiersLoaded:false, fx:{},
+  targets:{ firmAmount:50000, ventures:{}, partners:{} },
+  tiers:{}, tiersLoaded:false, fx:{}, currencies:['GBP','USD','EUR'],
   board:[],
   pulse:false
 };
@@ -2363,7 +2392,8 @@ async function loadBackpack(quiet){
       engine('/social/targets', null, 'GET', { retries:1, timeoutMs:15000 }),
       engine('/social/board', null, 'GET', { retries:1, timeoutMs:15000 })
     ]);
-    BP.month = deals.month; BP.totalGbp = deals.totalGbp; BP.byVenture = deals.byVenture || {};
+    BP.month = deals.month; BP.reportingCurrency = deals.reportingCurrency || BP.reportingCurrency;
+    BP.totalReporting = deals.totalReporting; BP.byVenture = deals.byVenture || {};
     BP.byPartner = deals.byPartner || {}; BP.deals = deals.deals || [];
     BP.daysInMonth = deals.daysInMonth; BP.daysElapsed = deals.daysElapsed; BP.daysRemaining = deals.daysRemaining;
     BP.targets = targets.targets || BP.targets;
@@ -2379,15 +2409,17 @@ async function loadBackpack(quiet){
     bpWriteJson('ninthhouse_board_order_v1', BP.board.map(p => p.id));
 
     // A pulse only when this device has actually seen the total go up since
-    // it last looked, this month, not on every ordinary reload.
+    // it last looked, this month in this currency, not on every ordinary
+    // reload and not the moment the reporting currency itself is changed
+    // (which moves the number without a deal ever closing).
     const seen = bpReadJson('ninthhouse_backpack_seen_v1', {});
-    if(seen.month === BP.month && BP.totalGbp > seen.totalGbp) BP.pulse = true;
-    bpWriteJson('ninthhouse_backpack_seen_v1', { month: BP.month, totalGbp: BP.totalGbp });
+    if(seen.month === BP.month && seen.currency === BP.reportingCurrency && BP.totalReporting > seen.totalReporting) BP.pulse = true;
+    bpWriteJson('ninthhouse_backpack_seen_v1', { month: BP.month, currency: BP.reportingCurrency, totalReporting: BP.totalReporting });
 
     // Marked once, the first time the total is seen to clear the target,
     // per calendar month, so opening the desk a second time that month
     // does not replay the moment.
-    if(BP.targets.firmGbp && BP.totalGbp >= BP.targets.firmGbp && bpReadJson('ninthhouse_backpack_hit_v1', '') !== BP.month){
+    if(BP.targets.firmAmount && BP.totalReporting >= BP.targets.firmAmount && bpReadJson('ninthhouse_backpack_hit_v1', '') !== BP.month){
       bpWriteJson('ninthhouse_backpack_hit_v1', BP.month);
       setTimeout(()=>{ modal(vTargetHitCelebration()); }, 300);
     }
@@ -2404,17 +2436,17 @@ async function loadDealTiers(){
   if(BP.tiersLoaded) return;
   try{
     const d = await engine('/social/deals/tiers', null, 'GET', { retries:1, timeoutMs:15000 });
-    BP.tiers = d.tiers || {}; BP.fx = d.fx || {}; BP.tiersLoaded = true;
+    BP.tiers = d.tiers || {}; BP.fx = d.fx || {}; BP.currencies = d.currencies || BP.currencies; BP.tiersLoaded = true;
   }catch(e){ BP.tiers = {}; }
 }
 
 function vBackpack(){
   if(BP.error) return `<div class="eyebrow">&#127761; The Backpack</div><div class="card"><div class="qerr">${esc(BP.error)}</div></div>`;
   if(!BP.loaded) return `<div class="eyebrow">&#127761; The Backpack</div><div class="card"><p class="sub"><span class="spin"></span> Reading this month's numbers.</p></div>`;
-  const target = BP.targets.firmGbp || 0;
-  const pct = target ? (BP.totalGbp / target) * 100 : 0;
+  const target = BP.targets.firmAmount || 0;
+  const pct = target ? (BP.totalReporting / target) * 100 : 0;
   const over = pct > 100;
-  const overAmt = over ? BP.totalGbp - target : 0;
+  const overAmt = over ? BP.totalReporting - target : 0;
   const pace = bpPace();
   return `
   <div class="eyebrow">&#127761; The Backpack, ${esc(bpMonthLabel(BP.month))}</div>
@@ -2425,12 +2457,12 @@ function vBackpack(){
         <div class="bp-strap r"></div>
         <div class="bp-flap"></div>
         <div class="bp-body"><div class="bp-fill"></div><div class="bp-pocket"></div></div>
-        ${over ? `<div class="bp-burst">&#10024;</div><div class="bp-burst b2">&#10024;</div><div class="bp-overtag">+${gbp(overAmt)} over</div>` : ''}
+        ${over ? `<div class="bp-burst">&#10024;</div><div class="bp-burst b2">&#10024;</div><div class="bp-overtag">+${bp(overAmt)} over</div>` : ''}
       </div>
     </div>
     <div class="bp-figs">
-      <div class="bp-amt">${gbp(BP.totalGbp)}</div>
-      <div class="bp-sub">of ${gbp(target)} this month &middot; ${BP.daysRemaining} day${BP.daysRemaining===1?'':'s'} left</div>
+      <div class="bp-amt">${bp(BP.totalReporting)}</div>
+      <div class="bp-sub">of ${bp(target)} this month &middot; ${BP.daysRemaining} day${BP.daysRemaining===1?'':'s'} left</div>
       ${pace.label ? `<div class="bp-pace ${pace.cls}">${esc(pace.label)}</div>` : ''}
     </div>
     <div class="btnrow" style="justify-content:center;margin-top:14px">
@@ -2445,18 +2477,25 @@ function vTargetHitCelebration(){
   <div style="text-align:center;padding:8px 4px 4px">
     <div style="font-size:44px;line-height:1">&#127942;</div>
     <h2 style="margin-top:10px">Target hit</h2>
-    <p class="sub" style="margin-top:6px">${esc(bpMonthLabel(BP.month))}: ${gbp(BP.totalGbp)} against a ${gbp(BP.targets.firmGbp)} target, and the month is not even over.</p>
+    <p class="sub" style="margin-top:6px">${esc(bpMonthLabel(BP.month))}: ${bp(BP.totalReporting)} against a ${bp(BP.targets.firmAmount)} target, and the month is not even over.</p>
     <div class="btnrow" style="justify-content:center;margin-top:14px">
       <button class="btn gold" style="min-height:44px" onclick="closeModal()">Back to the desk</button>
     </div>
   </div>`;
 }
 
+// True the moment any deal this month was sold in something other than
+// the reporting currency, which is exactly when the disclosure about the
+// static rate table actually matters.
+function bpHasConverted(){
+  return BP.deals.some(d => String(d.currency||'').toUpperCase() !== BP.reportingCurrency);
+}
+
 function openBackpackBreakdown(){ modal(vBackpackBreakdown()); }
 function vBackpackBreakdown(){
   const ventureRows = Object.entries(BP.byVenture).sort((a,b)=>b[1]-a[1]).map(([v,amt])=>`
     <div class="qnote" style="white-space:normal;display:flex;justify-content:space-between;align-items:center;gap:8px">
-      <span class="qtag venture ${ventureColor(v)}">${esc(bizLabel(v))}</span><b class="mono" style="color:var(--gold)">${gbp(amt)}</b>
+      <span class="qtag venture ${ventureColor(v)}">${esc(bizLabel(v))}</span><b class="mono" style="color:var(--gold)">${bp(amt)}</b>
     </div>`).join('');
   const partnerRows = Object.entries(BP.byPartner).sort((a,b)=>b[1]-a[1]).map(([id,amt])=>`
     <div class="qnote" style="white-space:normal;display:flex;justify-content:space-between;align-items:center;gap:8px">
@@ -2465,19 +2504,28 @@ function vBackpackBreakdown(){
           ? '<span class="tiny">Unattributed</span>'
           : `<span class="board-chip" style="width:22px;height:22px;font-size:9px;background:${partnerColor(id)}">${esc(partnerIni(id))}</span><span class="tiny" style="color:var(--paper)">${esc(partnerLabel(id))}</span>`}
       </span>
-      <b class="mono" style="color:var(--gold);flex:none">${gbp(amt)}</b>
+      <b class="mono" style="color:var(--gold);flex:none">${bp(amt)}</b>
     </div>`).join('');
-  const dealRows = BP.deals.map(d => `
+  const dealRows = BP.deals.map(d => {
+    const original = String(d.currency||'').toUpperCase() !== BP.reportingCurrency;
+    return `
     <div class="qnote" style="white-space:normal;margin-bottom:8px">
       <div style="display:flex;justify-content:space-between;gap:8px">
-        <b>${esc(d.organisation || bizLabel(d.venture))}</b><span class="mono" style="color:var(--gold);flex:none">${gbp(d.amount_gbp)}</span>
+        <b>${esc(d.organisation || bizLabel(d.venture))}</b>
+        <span style="flex:none;text-align:right">
+          <span class="mono" style="color:var(--gold)">${bp(d.amountReporting)}</span>
+          ${original ? `<span class="tiny" style="display:block">${money(d.amount, d.currency)} sold</span>` : ''}
+        </span>
       </div>
       <div class="tiny">${esc(bizLabel(d.venture))}${d.city ? ' &middot; ' + esc(d.city) : ''}${d.tier_label ? ' &middot; ' + esc(d.tier_label) : ''} &middot; ${esc(d.closed_date)}</div>
       <div class="tiny">${d.partner_id ? esc(partnerLabel(d.partner_id)) + (d.attribution === 'manual' ? ' (set by hand)' : '') : 'Unattributed'}</div>
       <div class="btnrow" style="margin-top:6px"><button class="btn sm ghost" style="color:var(--rust)" onclick="deleteDealRow('${d.id}')">Remove</button></div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
   return `
   <h2>&#127761; The Backpack, ${esc(bpMonthLabel(BP.month))}</h2>
+  <p class="tiny" style="margin-bottom:10px">Figures are in ${esc(BP.reportingCurrency)}, the firm's reporting currency. A deal always keeps the currency it actually sold in, shown alongside its converted figure where the two differ.</p>
+  ${bpHasConverted() ? `<p class="tiny" style="margin-bottom:10px;color:var(--faint)">Converted using a fixed, hand-set exchange rate table (not a live feed), reviewed periodically. Change the reporting currency in Settings.</p>` : ''}
   <div class="eyebrow">By venture</div>
   ${ventureRows || '<p class="tiny">Nothing closed yet this month.</p>'}
   <div class="eyebrow">By partner</div>
@@ -2608,6 +2656,19 @@ async function saveDeal(){
 }
 
 /* ---------- targets, set from the admin ---------- */
+async function saveReportingCurrency(){
+  const el = document.getElementById('target-currency');
+  if(!el) return;
+  try{
+    const data = await engine('/social/currency', { currency: el.value }, 'POST', { timeoutMs:15000 });
+    BP.reportingCurrency = data.currency || BP.reportingCurrency;
+    await loadBackpack(true);
+    TARGETS_MSG = 'Saved. Figures now report in ' + BP.reportingCurrency + '.'; TARGETS_OK = true;
+  }catch(e){
+    TARGETS_MSG = e.message || 'Could not change the reporting currency.'; TARGETS_OK = false;
+  }
+  openSettings();
+}
 async function savePartnerTarget(){
   const idEl = document.getElementById('target-partner-id');
   if(idEl) await saveTarget('partner', idEl.value, 'target-partner-amount');

@@ -10,10 +10,17 @@
 // same roster desk.html shows. Only when nothing on record names a partner
 // does the owner set one by hand, and only when neither happens is a deal
 // left, honestly, unattributed.
+//
+// Currency: a deal is recorded and kept in whatever it was actually sold
+// in. The firm's reporting currency is a setting, not an assumption
+// (defaulted to USD, changeable from Settings), and every total the
+// Backpack or the Board shows is that setting's currency, converted fresh
+// off the static rate table on every read rather than stored once, so
+// changing the setting never leaves old totals stranded in the wrong unit.
 
 import { nowIso } from './db.js';
 import { partnerIdForName } from './partners.js';
-import { toGbp, DEAL_TIERS } from './seeds/deal-tiers.js';
+import { convertCurrency, DEFAULT_REPORTING_CURRENCY, REPORTING_CURRENCIES } from './seeds/deal-tiers.js';
 import { streakFrom } from './metrics.js';
 
 function monthBounds(month) {
@@ -52,11 +59,11 @@ export async function recordDeal(db, input) {
   const ts = nowIso();
   const id = 'deal-' + crypto.randomUUID();
   await db.prepare(`
-    INSERT INTO deals (id, venture, city, organisation, tier_label, amount, currency, amount_gbp, partner_id, attribution, source_message_id, closed_date, notes, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO deals (id, venture, city, organisation, tier_label, amount, currency, partner_id, attribution, source_message_id, closed_date, notes, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).bind(
     id, venture, String(input.city || '').trim(), String(input.organisation || '').trim(),
-    String(input.tierLabel || '').trim(), amount, currency, toGbp(amount, currency),
+    String(input.tierLabel || '').trim(), amount, currency,
     partnerId, attribution, sourceMessageId, closedDate, String(input.notes || '').trim(), ts, ts
   ).run();
 
@@ -106,18 +113,49 @@ export async function attributionCandidates(db, { venture, limit = 20 } = {}) {
   }));
 }
 
+/* ---------- the firm's reporting currency ---------- */
+
+const CURRENCY_KEY = 'reporting_currency';
+
+export async function getReportingCurrency(db) {
+  const row = await db.prepare('SELECT value FROM firm_settings WHERE key = ?').bind(CURRENCY_KEY).first();
+  return row ? row.value : DEFAULT_REPORTING_CURRENCY;
+}
+
+export async function setReportingCurrency(db, currency) {
+  const c = String(currency || '').trim().toUpperCase();
+  if (!REPORTING_CURRENCIES.includes(c)) throw new Error(`"${currency}" is not a currency this house prices in. It is one of: ${REPORTING_CURRENCIES.join(', ')}.`);
+  await db.prepare(`
+    INSERT INTO firm_settings (key, value, updated_at) VALUES (?, ?, ?)
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+  `).bind(CURRENCY_KEY, c, nowIso()).run();
+  return c;
+}
+
+export async function seedDefaultCurrency(db) {
+  const existing = await db.prepare('SELECT key FROM firm_settings WHERE key = ?').bind(CURRENCY_KEY).first();
+  if (existing) return;
+  await setReportingCurrency(db, DEFAULT_REPORTING_CURRENCY);
+}
+
 /* ---------- the Backpack: this month's total against the target ---------- */
 
 export async function monthSummary(db, { month } = {}) {
   const bounds = monthBounds(month);
-  const deals = await listDeals(db, { month });
-  const totalGbp = deals.reduce((s, d) => s + Number(d.amount_gbp || 0), 0);
+  const reportingCurrency = await getReportingCurrency(db);
+  const rows = await listDeals(db, { month });
+  // Every deal keeps the currency it was actually sold in (d.amount /
+  // d.currency, untouched); amountReporting is only ever a read-time
+  // conversion for rolling several currencies into one figure, computed
+  // fresh so it can never carry a stale rate.
+  const deals = rows.map((d) => ({ ...d, amountReporting: convertCurrency(d.amount, d.currency, reportingCurrency) }));
+  const totalReporting = deals.reduce((s, d) => s + d.amountReporting, 0);
   const byVenture = {};
   const byPartner = {};
   for (const d of deals) {
-    byVenture[d.venture] = (byVenture[d.venture] || 0) + Number(d.amount_gbp || 0);
+    byVenture[d.venture] = (byVenture[d.venture] || 0) + d.amountReporting;
     const key = d.partner_id || 'unattributed';
-    byPartner[key] = (byPartner[key] || 0) + Number(d.amount_gbp || 0);
+    byPartner[key] = (byPartner[key] || 0) + d.amountReporting;
   }
   // Pace needs to be computed somewhere every viewer agrees on, rather than
   // separately in however many browsers have the desk open, so it is done
@@ -130,7 +168,8 @@ export async function monthSummary(db, { month } = {}) {
   const daysRemaining = Math.max(0, daysInMonth - daysElapsed);
 
   return {
-    month: bounds.month, totalGbp: Math.round(totalGbp * 100) / 100, byVenture, byPartner, deals,
+    month: bounds.month, reportingCurrency,
+    totalReporting: Math.round(totalReporting * 100) / 100, byVenture, byPartner, deals,
     daysInMonth, daysElapsed, daysRemaining
   };
 }
@@ -138,12 +177,15 @@ export async function monthSummary(db, { month } = {}) {
 /* ---------- targets ---------- */
 
 const FIRM_KEY = 'firm';
-const DEFAULT_FIRM_TARGET_GBP = 50000;
+// The number is the owner's own; it is understood to be in whatever the
+// reporting currency is set to (USD by default), never re-interpreted or
+// converted when that setting changes, the same as any other target here.
+const DEFAULT_FIRM_TARGET = 50000;
 
 export async function seedDefaultTargets(db) {
   const existing = await db.prepare('SELECT scope_key FROM targets WHERE scope_key = ?').bind(FIRM_KEY).first();
   if (existing) return;
-  await setTarget(db, { scopeType: 'firm', ref: '', amountGbp: DEFAULT_FIRM_TARGET_GBP });
+  await setTarget(db, { scopeType: 'firm', ref: '', amountGbp: DEFAULT_FIRM_TARGET });
 }
 
 function scopeKeyFor(scopeType, ref) {
@@ -153,14 +195,17 @@ function scopeKeyFor(scopeType, ref) {
   throw new Error(`"${scopeType}" is not a target scope. It is one of: firm, venture, partner.`);
 }
 
+// The amount parameter is still named amountGbp on the wire for backward
+// compatibility with the first cut of this feature; what it holds is a
+// plain number in the reporting currency, not GBP specifically.
 export async function setTarget(db, { scopeType, ref, amountGbp }) {
   const amount = Number(amountGbp);
   if (!Number.isFinite(amount) || amount < 0) throw new Error('A target needs a whole, non negative amount.');
   const key = scopeKeyFor(scopeType, ref);
   if (scopeType !== 'firm' && !String(ref || '').trim()) throw new Error(`A ${scopeType} target needs a ${scopeType} to set it against.`);
   await db.prepare(`
-    INSERT INTO targets (scope_key, scope_type, ref, amount_gbp, updated_at) VALUES (?, ?, ?, ?, ?)
-    ON CONFLICT(scope_key) DO UPDATE SET amount_gbp = excluded.amount_gbp, updated_at = excluded.updated_at
+    INSERT INTO targets (scope_key, scope_type, ref, amount, updated_at) VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(scope_key) DO UPDATE SET amount = excluded.amount, updated_at = excluded.updated_at
   `).bind(key, scopeType, String(ref || '').trim().toLowerCase(), amount, nowIso()).run();
   return await getTargets(db);
 }
@@ -172,13 +217,14 @@ export async function getTargets(db) {
   const ventures = {};
   const partners = {};
   for (const r of rows) {
-    if (r.scope_type === 'venture') ventures[r.ref] = r.amount_gbp;
-    if (r.scope_type === 'partner') partners[r.ref] = r.amount_gbp;
+    if (r.scope_type === 'venture') ventures[r.ref] = r.amount;
+    if (r.scope_type === 'partner') partners[r.ref] = r.amount;
   }
   return {
-    firmGbp: firmRow ? firmRow.amount_gbp : DEFAULT_FIRM_TARGET_GBP,
+    firmAmount: firmRow ? firmRow.amount : DEFAULT_FIRM_TARGET,
     ventures,
-    partners
+    partners,
+    reportingCurrency: await getReportingCurrency(db)
   };
 }
 
@@ -191,6 +237,7 @@ export async function getTargets(db) {
 // is listed at all.
 export async function boardStats(db, { month } = {}) {
   const { start, end } = monthBounds(month);
+  const reportingCurrency = await getReportingCurrency(db);
 
   const { results: sentRows } = await db.prepare(
     `SELECT identity, substr(sent_at, 1, 10) AS day, replied_at
@@ -199,7 +246,7 @@ export async function boardStats(db, { month } = {}) {
   ).bind(start, end).all();
 
   const { results: dealRows } = await db.prepare(
-    `SELECT partner_id, amount_gbp, closed_date FROM deals
+    `SELECT partner_id, amount, currency, closed_date FROM deals
       WHERE partner_id != '' AND closed_date >= ? AND closed_date < ?`
   ).bind(start, end).all();
 
@@ -228,12 +275,12 @@ export async function boardStats(db, { month } = {}) {
   for (const [identity, s] of byName) {
     const id = partnerIdForName(identity);
     if (!id) continue;
-    byPartnerId.set(id, { ...s, dealsClosed: 0, dealsValueGbp: 0 });
+    byPartnerId.set(id, { ...s, dealsClosed: 0, dealsValueReporting: 0 });
   }
   for (const d of dealRows || []) {
-    const cur = byPartnerId.get(d.partner_id) || { sent: 0, replies: 0, dealsClosed: 0, dealsValueGbp: 0 };
+    const cur = byPartnerId.get(d.partner_id) || { sent: 0, replies: 0, dealsClosed: 0, dealsValueReporting: 0 };
     cur.dealsClosed += 1;
-    cur.dealsValueGbp += Number(d.amount_gbp || 0);
+    cur.dealsValueReporting += convertCurrency(d.amount, d.currency, reportingCurrency);
     byPartnerId.set(d.partner_id, cur);
   }
 
@@ -256,10 +303,10 @@ export async function boardStats(db, { month } = {}) {
     replies: s.replies,
     replyRate: s.sent ? Math.round((s.replies / s.sent) * 1000) / 10 : 0,
     dealsClosed: s.dealsClosed,
-    dealsValueGbp: Math.round(s.dealsValueGbp * 100) / 100,
+    dealsValueReporting: Math.round(s.dealsValueReporting * 100) / 100,
     streak: streakFrom([...(daysById.get(id) || [])], now)
   }));
 
-  rows.sort((a, b) => b.dealsValueGbp - a.dealsValueGbp || b.sent - a.sent);
+  rows.sort((a, b) => b.dealsValueReporting - a.dealsValueReporting || b.sent - a.sent);
   return rows;
 }
