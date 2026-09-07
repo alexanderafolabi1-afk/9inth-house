@@ -3254,9 +3254,8 @@ async function engine(path, body, method, opts){
     }catch(e){
       clearTimeout(timer);
       // A timeout, or the browser's own network-level fetch failure (Chrome
-      // says "Failed to fetch", Safari/iOS says "Load failed") are the only
-      // cases with no real response to read a reason from, so they are the
-      // only ones rewritten into a plain-English message here. Anything else
+      // says "Failed to fetch", Safari/iOS says "Load failed"), are the only
+      // cases with no real response to read a reason from. Anything else
       // caught in this block is already one of the specific errors thrown
       // above, from a real HTTP answer, and is never retried.
       const isTimeout = e && e.name === 'AbortError';
@@ -3277,15 +3276,47 @@ async function engine(path, body, method, opts){
         return await engine(path, body, method, opts);
       }
 
+      // fetch() deliberately cannot tell a CORS refusal apart from a
+      // genuine network failure by its own error alone: Chrome says
+      // "Failed to fetch" and Safari says "Load failed" for both, by
+      // design, so a page can never probe private network topology
+      // through the error message. probeReachable tells them apart the
+      // one way that is actually possible from here: a no-cors request
+      // never throws for a CORS refusal (only reading the response is
+      // blocked, not sending it), so a probe that succeeds while the real
+      // call failed means the house was reached and refused this origin;
+      // a probe that also fails means it was never reached at all. This
+      // is what turned "Could not reach the house" into one message for a
+      // dead network and a CORS misconfiguration alike.
       lastErr = isTimeout
         ? new Error('The house did not answer in time. It searches the web before answering, so give it a full minute before deciding it is stuck.')
         : isNetworkLevel
-          ? new Error('Could not reach the house. Check your connection and try again.')
+          ? (await probeReachable(ENGINE_BASE)
+              ? new Error('The house answered but refused this address (' + location.origin + '). This is a CORS setting on the Worker, not your connection: tell whoever maintains it that DESK_ORIGIN needs to include ' + location.origin + '.')
+              : new Error('Could not reach the house at all. Check your connection and try again.'))
           : (e instanceof Error ? e : new Error(String(e)));
       if(!isNetworkLevel || attempt >= attempts) throw lastErr;
     }
   }
   throw lastErr;
+}
+
+// A no-cors probe to the Worker's own root path: cheap, needs no auth, and
+// exists on every path this Worker answers (see index.js's fallback
+// response). Distinguishes "reachable but refused" from "not reachable at
+// all" the way engine()'s catch block above needs to, without ever risking
+// hanging as long as a dead network's own connection timeout would.
+async function probeReachable(base){
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 5000);
+  try{
+    await fetch(base + '/', { method: 'GET', mode: 'no-cors', cache: 'no-store', signal: ctrl.signal });
+    clearTimeout(timer);
+    return true;
+  }catch(e){
+    clearTimeout(timer);
+    return false;
+  }
 }
 
 /* ---------- offline queue ---------- */
