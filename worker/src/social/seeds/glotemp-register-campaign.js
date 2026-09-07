@@ -158,3 +158,68 @@ export function registerCampaignCopy({ vertical, language, city, foodUrl, pulseU
 
 export const REGISTER_CAMPAIGN_VERTICALS = Object.keys(EN);
 export const REGISTER_CAMPAIGN_LANGUAGES = Object.keys(TRANSLATIONS);
+
+// Draft 1, locked: the rival follow-up. Restaurant and hotel only (club
+// sends on the restaurant shape, same as the first touch; a board has no
+// neighbouring venue to reference). The subject was changed from the
+// approved draft before locking: naming the competitor in the subject line
+// read as pressure rather than an offer, so it names the city instead. The
+// rival is still named in the body, exactly as drafted, once the lock on
+// that city is released and a live name is on record.
+const RIVAL = {
+  restaurant: { phrase: 'On the table' },
+  hotel: { phrase: 'Staying here' }
+};
+
+export function rivalFollowUpCopy({ vertical, city, rivalName, foodUrl, pulseUrl }) {
+  const v = RIVAL[vertical];
+  if (!v) throw new Error(`"${vertical}" has no rival follow-up template. It is one of: ${Object.keys(RIVAL).join(', ')}.`);
+  const url = vertical === 'restaurant' ? foodUrl : pulseUrl;
+  const subject = `On the register in ${city}`;
+  const body = [
+    `${rivalName} is now live on Glotemp's ${city} register.`,
+    '',
+    `Yours is on the register too: ${String(url || '').trim()}`,
+    '',
+    `We can put your room on the same quiet 14-day line: ${v.phrase}. No banner. After 14 days it comes off unless you continue as a partner.`,
+    '',
+    PARTNER_LINK,
+    '',
+    'Reply yes.'
+  ].join('\n');
+  return { subject, body, translated: false, languageNote: '' };
+}
+
+// Draft 3, locked as written: the Florida November window second touch, for
+// the four cities contacted twice (Tampa, Jacksonville, Key West, Naples).
+// References the first message rather than reading as a cold approach, on
+// the same offer shape as the first touch: the shared opening and phrase
+// substitution for restaurant/hotel, the city-pack wording for board,
+// exactly as the locked first-touch template already branches.
+const FLORIDA_WINDOW = {
+  restaurant: { phrase: 'On the table' },
+  hotel: { phrase: 'Staying here' },
+  board: {}
+};
+
+export function floridaWindowFollowUpCopy({ vertical, city }) {
+  const v = FLORIDA_WINDOW[vertical];
+  if (!v) throw new Error(`"${vertical}" has no Florida window follow-up template. It is one of: ${Object.keys(FLORIDA_WINDOW).join(', ')}.`);
+  const subject = `Following up before 19 November, ${city}`;
+  const offer = vertical === 'board'
+    ? `We can still put ${city}'s pack on the quiet 14-day line: badge, pulse line, one voucher. No banner. After 14 days it comes off unless you continue as a partner.`
+    : `We can still put your room on the quiet 14-day line: ${v.phrase}. No banner. After 14 days it comes off unless you continue as a partner.`;
+  const body = [
+    `We wrote to you about ${city}'s place on the Glotemp register. The window for Florida cities closes 19 November, and yours is still open on it.`,
+    '',
+    offer,
+    '',
+    PARTNER_LINK,
+    '',
+    'Reply yes.'
+  ].join('\n');
+  return { subject, body, translated: false, languageNote: '' };
+}
+
+export const RIVAL_FOLLOW_UP_VERTICALS = Object.keys(RIVAL);
+export const FLORIDA_WINDOW_VERTICALS = Object.keys(FLORIDA_WINDOW);
