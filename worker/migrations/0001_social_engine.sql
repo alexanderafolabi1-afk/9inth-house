@@ -282,3 +282,38 @@ CREATE TABLE IF NOT EXISTS live_slots (
 );
 
 CREATE INDEX IF NOT EXISTS idx_live_slots_status ON live_slots (status, window_end);
+
+CREATE TABLE IF NOT EXISTS deals (
+  id TEXT PRIMARY KEY,
+  venture TEXT NOT NULL,
+  city TEXT NOT NULL DEFAULT '',
+  organisation TEXT NOT NULL DEFAULT '',
+  tier_label TEXT NOT NULL DEFAULT '',
+  amount REAL NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'GBP',
+  partner_id TEXT NOT NULL DEFAULT '',
+  attribution TEXT NOT NULL DEFAULT 'unattributed',
+  source_message_id TEXT NOT NULL DEFAULT '',
+  closed_date TEXT NOT NULL,
+  notes TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_deals_closed ON deals (closed_date);
+CREATE INDEX IF NOT EXISTS idx_deals_venture ON deals (venture);
+CREATE INDEX IF NOT EXISTS idx_deals_partner ON deals (partner_id);
+
+CREATE TABLE IF NOT EXISTS targets (
+  scope_key TEXT PRIMARY KEY,
+  scope_type TEXT NOT NULL,
+  ref TEXT NOT NULL DEFAULT '',
+  amount REAL NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS firm_settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);

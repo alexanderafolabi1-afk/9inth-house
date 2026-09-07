@@ -293,6 +293,56 @@ pre,code,.mono{overflow-wrap:anywhere;word-break:break-word}
 .qtag.venture.v5{color:var(--v5);border-color:var(--v5)}
 .qtag.venture.v6{color:var(--v6);border-color:var(--v6)}
 
+/* The Backpack. A shape rather than a bar, so a full month reads as a
+   different picture from a short one at a glance, not just a different
+   number. The fill height is driven by one custom property so recording a
+   deal only ever changes --fill, and the transition on .bp-fill is what
+   makes that read as something happening rather than a table updating. */
+.bp-card{cursor:pointer}
+.bp-visual{display:flex;justify-content:center;padding:4px 0 14px;position:relative}
+.bp-bag{position:relative;width:118px;height:136px;flex:none}
+.bp-strap{position:absolute;top:-8px;width:15px;height:40px;border:2px solid var(--gold-deep);border-bottom:none;border-radius:11px 11px 0 0;background:var(--panel2)}
+.bp-strap.l{left:23px}
+.bp-strap.r{right:23px}
+.bp-flap{position:absolute;top:16px;left:6px;right:6px;height:36px;background:var(--panel2);border:2px solid var(--line);border-radius:18px 18px 7px 7px;z-index:2}
+.bp-body{position:absolute;top:42px;left:0;right:0;bottom:0;background:var(--panel2);border:2px solid var(--line);border-radius:16px;overflow:hidden}
+.bp-fill{position:absolute;left:0;right:0;bottom:0;height:calc(min(var(--fill),100) * 1%);
+  background:linear-gradient(180deg,#E9CE8B,var(--gold) 45%,var(--gold-deep));
+  transition:height .9s cubic-bezier(.34,1.56,.64,1);}
+.bp-pocket{position:absolute;left:16px;right:16px;bottom:12px;height:26%;border:2px solid var(--line);border-radius:11px;z-index:2;pointer-events:none}
+.bp-bag.over .bp-body{box-shadow:0 0 0 2px var(--gold), 0 0 24px rgba(212,175,99,.55)}
+.bp-overtag{position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);background:var(--gold);color:#171309;
+  font-family:'Spline Sans Mono',monospace;font-size:10.5px;font-weight:700;padding:4px 10px;border-radius:20px;white-space:nowrap;z-index:3}
+.bp-burst{position:absolute;top:-12px;right:2px;font-size:20px;animation:bp-sparkle 1.6s ease-in-out infinite;z-index:3}
+.bp-burst.b2{top:6px;left:-6px;right:auto;font-size:15px;animation-delay:.4s}
+@keyframes bp-sparkle{0%,100%{opacity:.35;transform:scale(.85) rotate(0deg)}50%{opacity:1;transform:scale(1.2) rotate(14deg)}}
+.bp-figs{text-align:center}
+.bp-amt{font-family:'Spline Sans Mono',monospace;font-size:36px;font-weight:600;color:var(--paper);line-height:1.1}
+.bp-sub{font-size:12px;color:var(--muted);margin-top:4px}
+.bp-pace{font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;margin-top:10px;font-weight:600}
+.bp-pace.short{color:var(--rust)}
+.bp-pace.on{color:var(--amber)}
+.bp-pace.over{color:var(--jade)}
+.bp-card.bp-pulse .bp-bag{animation:bp-pulse .7s ease}
+@keyframes bp-pulse{0%{transform:scale(1)}32%{transform:scale(1.09)}62%{transform:scale(.97)}100%{transform:scale(1)}}
+@media (prefers-reduced-motion: reduce){.bp-fill{transition:none}.bp-burst,.bp-card.bp-pulse .bp-bag{animation:none}}
+
+/* The Board. Rank first (closed value), then who they are, then effort
+   alongside outcome so a partner working hard in a hard segment is not
+   invisible next to one who got lucky, per the brief. */
+.board-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.board-row:first-child{border-top:none}
+.board-rank{font-family:'Spline Sans Mono',monospace;font-size:12.5px;color:var(--faint);width:16px;flex:none;text-align:center}
+.board-chip{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-family:'Marcellus',serif;font-size:12px;flex:none;color:#171309;font-weight:600}
+.board-move{font-size:12px;flex:none;width:16px;text-align:center}
+.board-move.up{color:var(--jade)}
+.board-move.down{color:var(--rust)}
+.board-body{flex:1;min-width:0}
+.board-name{font-size:14px;color:var(--paper);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.board-stats{font-size:11px;color:var(--muted);margin-top:2px}
+.board-value{font-family:'Spline Sans Mono',monospace;font-size:14px;color:var(--gold);flex:none;text-align:right;white-space:nowrap}
+
 .qtext{font-size:15px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere;margin-bottom:10px}
 .qcard textarea{min-height:150px;line-height:1.5}
 .qnote{background:var(--panel2);border-left:2px solid var(--gold-deep);padding:8px 10px;border-radius:0 8px 8px 0;font-size:12.5px;color:var(--muted);white-space:pre-wrap;margin-bottom:10px}
@@ -383,11 +433,21 @@ const defaultState = () => ({
   execDone: {},          // id -> true when executed IRL
   shipped: {},           // id -> true when a Morning Tray item was actually published or sent
   backers: [],           // {id, name, amount, tier, date, code, quarterlyUpdateSent} the CEO's fundraiser
-  weeklyTarget: '',      // plain text, CEO-edited, no API call
+  // A qualitative note, not a number: the Backpack (server-side, in £) is
+  // now where the money target lives. This is deliberately not called
+  // weeklyTarget any more, the way it used to be, so it can never be
+  // confused with either the Backpack's monthly figure or metrics.js's own
+  // unrelated weeklyTarget (posts per week, a completely different count
+  // that happens to share the old name).
+  weeklyFocus: '',       // plain text, CEO-edited, no API call
+  // Revenue no longer lives here: the Backpack (worker/src/social/deals.js)
+  // is the one source of it now, attributed and in the reporting currency
+  // rather than hand-typed and un-sourced. These per-venture KPIs stay for
+  // everything else worth a weekly glance that is not revenue.
   kpis: {
-    setpostgo: { 'Active subscribers': 0, 'Trials started (wk)': 0, 'MRR £': 0 },
-    renviait:  { 'Units acquired (wk)': 0, 'Units sold (wk)': 0, 'Revenue £ (mo)': 0 },
-    nagori:    { 'Letters sealed': 0, 'Visitors (wk)': 0, 'Revenue £ (mo)': 0 }
+    setpostgo: { 'Active subscribers': 0, 'Trials started (wk)': 0 },
+    renviait:  { 'Units acquired (wk)': 0, 'Units sold (wk)': 0 },
+    nagori:    { 'Letters sealed': 0, 'Visitors (wk)': 0 }
   },
   kpiDay: {}
 });
@@ -402,6 +462,15 @@ function load(){
   if(!saved.kpis || typeof saved.kpis !== 'object') saved.kpis = {};
   for(const key of Object.keys(kpiDefaults)){
     saved.kpis[key] = Object.assign({}, kpiDefaults[key], saved.kpis[key] || {});
+  }
+  // Retired: a device that saved one of these before the Backpack existed
+  // still has it in localStorage, and a plain merge above would bring it
+  // straight back since it is a key the defaults no longer list but the
+  // save still has. Deleted explicitly rather than left to linger as a
+  // second, un-sourced revenue number.
+  for(const key of Object.keys(saved.kpis)){
+    delete saved.kpis[key]['MRR £'];
+    delete saved.kpis[key]['Revenue £ (mo)'];
   }
   if(!Array.isArray(saved.pendingActions)) saved.pendingActions = [];
   return saved;
@@ -418,6 +487,31 @@ function ventureColor(venture){
   let h = 0;
   for(let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
   return 'v' + (h % 6 + 1);
+}
+
+// The same idea as ventureColor, but for the nineteen partners rather than
+// four ventures: a stable hue per person, hashed from their id rather than
+// picked by hand, so it is never reassigned by adding or removing someone
+// else. A wider palette than the six venture accents, since twenty people
+// need more room to stay tellable apart than four businesses do.
+const PARTNER_PALETTE = [
+  '#D4AF63','#6BBA9A','#6FA3D8','#C6644B','#9C8FD1','#D9A441',
+  '#7FB0C2','#B5895F','#8FBF6B','#CC7FA8','#5FA8A0','#C9975A',
+  '#7C9BD9','#A7C25A','#D18BA0','#5FB8D8'
+];
+function partnerColor(id){
+  const s = String(id || '');
+  let h = 0;
+  for(let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return PARTNER_PALETTE[h % PARTNER_PALETTE.length];
+}
+function partnerLabel(id){
+  const c = charById(id);
+  return c ? c.name : (id ? id : 'Unattributed');
+}
+function partnerIni(id){
+  const c = charById(id);
+  return c ? c.ini : '?';
 }
 
 /* ============ THE BACKERS LEDGER. Bea Whitmore ============ */
@@ -845,6 +939,9 @@ function afterLogin(){
   // because the whole point of a message with an hour on it is that it is
   // already on screen when he opens the desk that morning.
   loadOutreach(true);
+  // The Backpack is the first thing he is meant to see, so it loads with
+  // everything else rather than waiting for him to open the Desk tab.
+  loadBackpack(true);
 }
 
 /* ============ VIEWS ============ */
@@ -888,6 +985,7 @@ function vDesk(){
   const postsShipped = S.docket.filter(d=>d.brief==="Morning Tray: today's posts, ready to publish" && d.day>=weekStart && S.shipped[d.id]).length;
   const outreachSent = S.docket.filter(d=>d.brief==='Morning Tray: three doors to knock today' && d.day>=weekStart && S.shipped[d.id]).length;
   return `
+  ${vBackpack()}
   <div class="eyebrow">War Room: Standing</div>
   <div class="card" style="border-color:var(--gold)">
     <div class="stats">
@@ -896,9 +994,9 @@ function vDesk(){
       <div class="stat"><b>${outreachSent}</b><span>Outreach sent</span></div>
     </div>
     <div class="hr"></div>
-    <label>This week's target</label>
-    <input type="text" id="war-target" value="${esc(S.weeklyTarget||'')}" placeholder="e.g. 3 SetPostGo trials, 1 RenviaIT contract signed">
-    <div class="btnrow"><button class="btn sm gold" onclick="saveWeeklyTarget()">Save target</button></div>
+    <label>This week's focus</label>
+    <input type="text" id="war-focus" value="${esc(S.weeklyFocus||'')}" placeholder="e.g. 3 SetPostGo trials, 1 RenviaIT contract signed">
+    <div class="btnrow"><button class="btn sm gold" onclick="saveWeeklyFocus()">Save focus</button></div>
   </div>
 
   <div class="eyebrow">Chief Executive's Desk</div>
@@ -1097,6 +1195,11 @@ function vRooms(){
     <div class="card">
       <h3 class="serif" style="color:${b.color}">${b.name}</h3>
       <p class="tiny" style="margin-bottom:12px">${b.tag}</p>
+      <div class="kpirow" style="opacity:.85">
+        <span>&#127761; This month (Backpack)</span>
+        <b class="mono" style="color:var(--gold)">${BP.loaded ? bp(BP.byVenture[k] || 0) : '…'}</b>
+      </div>
+      <p class="tiny" style="margin-bottom:10px;color:var(--faint)">Read only. Revenue is recorded once, as a deal, from the Backpack.</p>
       ${Object.entries(S.kpis[k] || {}).map(([m,v])=>`
         <div class="kpirow">
           <span>${m}</span>
@@ -1145,9 +1248,31 @@ function vRooms(){
   `;
 }
 
+function vPartnerBoard(){
+  if(BP.error) return `<div class="eyebrow">&#127942; The Board</div><div class="card"><div class="qerr">${esc(BP.error)}</div></div>`;
+  if(!BP.loaded) return `<div class="eyebrow">&#127942; The Board</div><div class="card"><p class="sub"><span class="spin"></span> Reading the standing.</p></div>`;
+  return `
+  <div class="eyebrow">&#127942; The Board, ${esc(bpMonthLabel(BP.month))}</div>
+  <div class="card">
+    <p class="sub" style="margin-bottom:6px">Closed value ranks the standing. Sent, replies and streak show the work behind it, so working hard in a difficult segment is not invisible next to a lucky close.</p>
+    ${BP.board.length ? BP.board.map((p,i)=>`
+      <div class="board-row">
+        <span class="board-rank">${i+1}</span>
+        <span class="board-move ${p.move>0?'up':p.move<0?'down':''}">${p.move>0?'&#9650;':p.move<0?'&#9660;':'&#8211;'}</span>
+        <span class="board-chip" style="background:${partnerColor(p.id)}">${esc(partnerIni(p.id))}</span>
+        <span class="board-body">
+          <span class="board-name">${esc(partnerLabel(p.id))}</span>
+          <span class="board-stats">${p.sent} sent &middot; ${p.replies} replied (${p.replyRate}%) &middot; ${p.dealsClosed} closed &middot; &#128293; ${p.streak}</span>
+        </span>
+        <span class="board-value">${bp(p.dealsValueReporting)}</span>
+      </div>`).join('') : '<p class="tiny" style="color:var(--faint)">Nobody has sent, replied to, or closed anything yet this month.</p>'}
+  </div>
+  `;
+}
 function vBoard(){
   const last = S.minutes.slice(-1)[0];
   return `
+  ${vPartnerBoard()}
   <div class="eyebrow">The Boardroom</div>
   <div class="card">
     <h3>Convene the board</h3>
@@ -1165,7 +1290,7 @@ function vBoard(){
 /* ============ ACTIONS ============ */
 function toggleExec(id){ S.execDone[id] = !S.execDone[id]; save(); render(); }
 function toggleShipped(id){ S.shipped[id] = !S.shipped[id]; save(); render(); }
-function saveWeeklyTarget(){ S.weeklyTarget = document.getElementById('war-target').value.trim(); save(); render(); }
+function saveWeeklyFocus(){ S.weeklyFocus = document.getElementById('war-focus').value.trim(); save(); render(); }
 function setKpi(biz, m, v){ S.kpis[biz][m] = Number(v)||0; S.kpiDay[biz] = S.day; save(); }
 function setStatus(id, st){ const d = S.docket.find(x=>x.id===id); if(d){ d.status=st; save(); render(); } }
 // Named sealDocket rather than approve, which is what it used to be called.
@@ -1647,6 +1772,38 @@ function openSettings(){
     </div>
 
     <div class="hr"></div>
+    <div class="eyebrow">&#127919; Targets</div>
+    <p class="tiny" style="margin-top:2px">What the Backpack fills against. The firm-wide figure rolls up from nowhere, it is simply set; venture targets are what each business is asked to carry toward it, and a partner target is optional, never imposed.</p>
+    ${TARGETS_MSG ? `<p class="tiny" style="margin-top:8px;color:${TARGETS_OK ? 'var(--gold)' : 'var(--rust)'}">${esc(TARGETS_MSG)}</p>` : ''}
+    <label style="margin-top:10px">Reporting currency</label>
+    <p class="tiny" style="margin-top:2px">What every target below is in, and what the Backpack converts a mixed-currency month into. A deal itself always keeps whatever it actually sold in; this only decides the rolled-up figure.</p>
+    <div class="btnrow" style="margin-top:6px">
+      <select id="target-currency" style="flex:1">${BP.currencies.map(c=>`<option value="${c}" ${BP.reportingCurrency===c?'selected':''}>${c}</option>`).join('')}</select>
+      <button class="btn sm" style="min-height:44px" onclick="saveReportingCurrency()">Save</button>
+    </div>
+    <label style="margin-top:12px">Firm wide, monthly (${esc(BP.reportingCurrency)})</label>
+    <div class="btnrow" style="margin-top:0">
+      <input type="number" id="target-firm" min="0" step="100" value="${BP.targets.firmAmount || 0}" style="flex:1">
+      <button class="btn gold sm" style="min-height:44px" onclick="saveTarget('firm','','target-firm')">Save</button>
+    </div>
+    ${DEAL_VENTURE_LIST.map(v => `
+      <label style="margin-top:10px">${esc(v.label)}, monthly (${esc(BP.reportingCurrency)})</label>
+      <div class="btnrow" style="margin-top:0">
+        <input type="number" id="target-venture-${v.slug}" min="0" step="100" value="${BP.targets.ventures[v.slug] || 0}" style="flex:1">
+        <button class="btn sm" style="min-height:44px" onclick="saveTarget('venture','${v.slug}','target-venture-${v.slug}')">Save</button>
+      </div>`).join('')}
+    <label style="margin-top:12px">Partner target <span class="tiny">(optional)</span></label>
+    <select id="target-partner-id">${CHARS.filter(c=>c.id!=='bea').map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select>
+    <div class="btnrow" style="margin-top:8px">
+      <input type="number" id="target-partner-amount" min="0" step="100" placeholder="e.g. 5000" style="flex:1">
+      <button class="btn sm" style="min-height:44px" onclick="savePartnerTarget()">Save</button>
+    </div>
+    ${Object.keys(BP.targets.partners || {}).length ? `
+      <div style="margin-top:8px">
+        ${Object.entries(BP.targets.partners).map(([id,amt])=>`<p class="tiny">${esc(partnerLabel(id))}: ${bp(amt)}</p>`).join('')}
+      </div>` : ''}
+
+    <div class="hr"></div>
     <div class="eyebrow">&#127758; Glotemp city register</div>
     <p class="tiny" style="margin-top:2px">The wave campaign's target list. Paste the register CSV to import it; adding a city this way needs no code change. The main register carries waves one, two and four by city name; the Florida window is a separate list that becomes wave three.</p>
     ${REGISTER_STATUS ? `
@@ -1960,6 +2117,8 @@ async function savePostal(){
 
 let OWNER_MSG = '';
 let OWNER_OK = false;
+let TARGETS_MSG = '';
+let TARGETS_OK = false;
 
 async function loadOutreachOwners(){
   try{
@@ -2170,6 +2329,364 @@ async function syncAutopilot(){
    desk holds one credential, the session token minted at login and attached as
    an Authorization header on every call (see engine() above), and it cannot
    reach Anthropic, GitHub or the distribution rail directly. */
+
+/* ============ THE BACKPACK ============ */
+// The firm's one revenue-target visual: how full this month is, read from
+// the deals ledger and the targets the owner set from the admin, never
+// hardcoded here. localStorage only ever remembers what this device saw
+// last, so it can tell a genuine increase (worth a pulse) from a plain
+// re-render, and whether the target-hit moment has already been marked
+// this month; the real numbers always come from the Worker.
+function bpReadJson(key, fallback){ try{ const r = localStorage.getItem(key); return r ? JSON.parse(r) : fallback; }catch(e){ return fallback; } }
+function bpWriteJson(key, value){ try{ localStorage.setItem(key, JSON.stringify(value)); }catch(e){} }
+
+const DEAL_VENTURE_LIST = [
+  { slug:'glotemp', label:'Glotemp' },
+  { slug:'setpostgo', label:'SetPostGo' },
+  { slug:'nagori', label:'NAGORI' },
+  { slug:'renviait', label:'RenviaIT' },
+  { slug:'ninthhouse', label:'Ninth House' }
+];
+function bizLabel(slug){
+  if(slug === 'ninthhouse') return 'Ninth House';
+  return (BIZ[slug] && BIZ[slug].name) || slug;
+}
+const CURRENCY_SYMBOLS = { GBP:'£', USD:'$', EUR:'€' };
+function money(n, currency){
+  const v = Number(n) || 0;
+  const sym = CURRENCY_SYMBOLS[String(currency||'GBP').toUpperCase()] || (String(currency||'').toUpperCase()+' ');
+  return sym + v.toLocaleString('en-GB', { minimumFractionDigits: (v % 1 === 0) ? 0 : 2, maximumFractionDigits: 2 });
+}
+// The Backpack's own figures, always in whatever BP.reportingCurrency is
+// set to.
+function bp(n){ return money(n, BP.reportingCurrency); }
+function bpMonthLabel(m){
+  if(!/^\d{4}-\d{2}$/.test(m || '')) return '';
+  const d = new Date(Date.UTC(Number(m.slice(0,4)), Number(m.slice(5,7)) - 1, 1));
+  return d.toLocaleDateString('en-GB', { month:'long', year:'numeric', timeZone:'UTC' });
+}
+function bpPace(){
+  const target = BP.targets.firmAmount || 0;
+  if(!target || !BP.daysElapsed) return { label:'', cls:'' };
+  if(BP.totalReporting >= target) return { label: `Target met, ${BP.daysRemaining} day${BP.daysRemaining===1?'':'s'} still to run`, cls:'over' };
+  const projected = (BP.totalReporting / BP.daysElapsed) * BP.daysInMonth;
+  if(projected >= target * 0.97) return { label:'On pace to land the month on target', cls:'on' };
+  return { label:`At this rate the month lands short, ${bp(target - projected)} off pace`, cls:'short' };
+}
+
+const BP = {
+  loaded:false, loading:false, error:'',
+  month:'', reportingCurrency:'USD', totalReporting:0, byVenture:{}, byPartner:{}, deals:[],
+  daysInMonth:0, daysElapsed:0, daysRemaining:0,
+  targets:{ firmAmount:50000, ventures:{}, partners:{} },
+  tiers:{}, tiersLoaded:false, fx:{}, currencies:['GBP','USD','EUR'],
+  board:[],
+  pulse:false
+};
+
+async function loadBackpack(quiet){
+  BP.loading = true; if(!quiet) render();
+  try{
+    const [deals, targets, board] = await Promise.all([
+      engine('/social/deals', null, 'GET', { retries:1, timeoutMs:15000 }),
+      engine('/social/targets', null, 'GET', { retries:1, timeoutMs:15000 }),
+      engine('/social/board', null, 'GET', { retries:1, timeoutMs:15000 })
+    ]);
+    BP.month = deals.month; BP.reportingCurrency = deals.reportingCurrency || BP.reportingCurrency;
+    BP.totalReporting = deals.totalReporting; BP.byVenture = deals.byVenture || {};
+    BP.byPartner = deals.byPartner || {}; BP.deals = deals.deals || [];
+    BP.daysInMonth = deals.daysInMonth; BP.daysElapsed = deals.daysElapsed; BP.daysRemaining = deals.daysRemaining;
+    BP.targets = targets.targets || BP.targets;
+
+    // Rank movement: compared against the order this device saw last time,
+    // so a partner climbing or falling reads at a glance rather than only
+    // from re-reading the numbers beside them.
+    const prevOrder = bpReadJson('ninthhouse_board_order_v1', []);
+    BP.board = (board.partners || []).map((p, i) => {
+      const prevIdx = prevOrder.indexOf(p.id);
+      return { ...p, move: prevIdx === -1 ? 0 : (prevIdx - i) };
+    });
+    bpWriteJson('ninthhouse_board_order_v1', BP.board.map(p => p.id));
+
+    // A pulse only when this device has actually seen the total go up since
+    // it last looked, this month in this currency, not on every ordinary
+    // reload and not the moment the reporting currency itself is changed
+    // (which moves the number without a deal ever closing).
+    const seen = bpReadJson('ninthhouse_backpack_seen_v1', {});
+    if(seen.month === BP.month && seen.currency === BP.reportingCurrency && BP.totalReporting > seen.totalReporting) BP.pulse = true;
+    bpWriteJson('ninthhouse_backpack_seen_v1', { month: BP.month, currency: BP.reportingCurrency, totalReporting: BP.totalReporting });
+
+    // Marked once, the first time the total is seen to clear the target,
+    // per calendar month, so opening the desk a second time that month
+    // does not replay the moment.
+    if(BP.targets.firmAmount && BP.totalReporting >= BP.targets.firmAmount && bpReadJson('ninthhouse_backpack_hit_v1', '') !== BP.month){
+      bpWriteJson('ninthhouse_backpack_hit_v1', BP.month);
+      setTimeout(()=>{ modal(vTargetHitCelebration()); }, 300);
+    }
+    BP.error = '';
+  }catch(e){
+    BP.error = 'Loading the Backpack failed: ' + (e.message || String(e));
+  }
+  BP.loading = false; BP.loaded = true;
+  render();
+  if(BP.pulse) setTimeout(()=>{ BP.pulse = false; render(); }, 900);
+}
+
+async function loadDealTiers(){
+  if(BP.tiersLoaded) return;
+  try{
+    const d = await engine('/social/deals/tiers', null, 'GET', { retries:1, timeoutMs:15000 });
+    BP.tiers = d.tiers || {}; BP.fx = d.fx || {}; BP.currencies = d.currencies || BP.currencies; BP.tiersLoaded = true;
+  }catch(e){ BP.tiers = {}; }
+}
+
+function vBackpack(){
+  if(BP.error) return `<div class="eyebrow">&#127761; The Backpack</div><div class="card"><div class="qerr">${esc(BP.error)}</div></div>`;
+  if(!BP.loaded) return `<div class="eyebrow">&#127761; The Backpack</div><div class="card"><p class="sub"><span class="spin"></span> Reading this month's numbers.</p></div>`;
+  const target = BP.targets.firmAmount || 0;
+  const pct = target ? (BP.totalReporting / target) * 100 : 0;
+  const over = pct > 100;
+  const overAmt = over ? BP.totalReporting - target : 0;
+  const pace = bpPace();
+  return `
+  <div class="eyebrow">&#127761; The Backpack, ${esc(bpMonthLabel(BP.month))}</div>
+  <div class="card bp-card ${BP.pulse ? 'bp-pulse' : ''}" onclick="openBackpackBreakdown()">
+    <div class="bp-visual">
+      <div class="bp-bag ${over ? 'over' : ''}" style="--fill:${Math.max(0, pct)}">
+        <div class="bp-strap l"></div>
+        <div class="bp-strap r"></div>
+        <div class="bp-flap"></div>
+        <div class="bp-body"><div class="bp-fill"></div><div class="bp-pocket"></div></div>
+        ${over ? `<div class="bp-burst">&#10024;</div><div class="bp-burst b2">&#10024;</div><div class="bp-overtag">+${bp(overAmt)} over</div>` : ''}
+      </div>
+    </div>
+    <div class="bp-figs">
+      <div class="bp-amt">${bp(BP.totalReporting)}</div>
+      <div class="bp-sub">of ${bp(target)} this month &middot; ${BP.daysRemaining} day${BP.daysRemaining===1?'':'s'} left</div>
+      ${pace.label ? `<div class="bp-pace ${pace.cls}">${esc(pace.label)}</div>` : ''}
+    </div>
+    <div class="btnrow" style="justify-content:center;margin-top:14px">
+      <button class="btn sm ghost" style="min-height:44px" onclick="event.stopPropagation();openBackpackBreakdown()">See the breakdown</button>
+      <button class="btn sm gold" style="min-height:44px" onclick="event.stopPropagation();openRecordDeal()">+ Record a deal</button>
+    </div>
+  </div>`;
+}
+
+function vTargetHitCelebration(){
+  return `
+  <div style="text-align:center;padding:8px 4px 4px">
+    <div style="font-size:44px;line-height:1">&#127942;</div>
+    <h2 style="margin-top:10px">Target hit</h2>
+    <p class="sub" style="margin-top:6px">${esc(bpMonthLabel(BP.month))}: ${bp(BP.totalReporting)} against a ${bp(BP.targets.firmAmount)} target, and the month is not even over.</p>
+    <div class="btnrow" style="justify-content:center;margin-top:14px">
+      <button class="btn gold" style="min-height:44px" onclick="closeModal()">Back to the desk</button>
+    </div>
+  </div>`;
+}
+
+// True the moment any deal this month was sold in something other than
+// the reporting currency, which is exactly when the disclosure about the
+// static rate table actually matters.
+function bpHasConverted(){
+  return BP.deals.some(d => String(d.currency||'').toUpperCase() !== BP.reportingCurrency);
+}
+
+function openBackpackBreakdown(){ modal(vBackpackBreakdown()); }
+function vBackpackBreakdown(){
+  const ventureRows = Object.entries(BP.byVenture).sort((a,b)=>b[1]-a[1]).map(([v,amt])=>`
+    <div class="qnote" style="white-space:normal;display:flex;justify-content:space-between;align-items:center;gap:8px">
+      <span class="qtag venture ${ventureColor(v)}">${esc(bizLabel(v))}</span><b class="mono" style="color:var(--gold)">${bp(amt)}</b>
+    </div>`).join('');
+  const partnerRows = Object.entries(BP.byPartner).sort((a,b)=>b[1]-a[1]).map(([id,amt])=>`
+    <div class="qnote" style="white-space:normal;display:flex;justify-content:space-between;align-items:center;gap:8px">
+      <span style="display:flex;align-items:center;gap:8px;min-width:0">
+        ${id === 'unattributed'
+          ? '<span class="tiny">Unattributed</span>'
+          : `<span class="board-chip" style="width:22px;height:22px;font-size:9px;background:${partnerColor(id)}">${esc(partnerIni(id))}</span><span class="tiny" style="color:var(--paper)">${esc(partnerLabel(id))}</span>`}
+      </span>
+      <b class="mono" style="color:var(--gold);flex:none">${bp(amt)}</b>
+    </div>`).join('');
+  const dealRows = BP.deals.map(d => {
+    const original = String(d.currency||'').toUpperCase() !== BP.reportingCurrency;
+    return `
+    <div class="qnote" style="white-space:normal;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;gap:8px">
+        <b>${esc(d.organisation || bizLabel(d.venture))}</b>
+        <span style="flex:none;text-align:right">
+          <span class="mono" style="color:var(--gold)">${bp(d.amountReporting)}</span>
+          ${original ? `<span class="tiny" style="display:block">${money(d.amount, d.currency)} sold</span>` : ''}
+        </span>
+      </div>
+      <div class="tiny">${esc(bizLabel(d.venture))}${d.city ? ' &middot; ' + esc(d.city) : ''}${d.tier_label ? ' &middot; ' + esc(d.tier_label) : ''} &middot; ${esc(d.closed_date)}</div>
+      <div class="tiny">${d.partner_id ? esc(partnerLabel(d.partner_id)) + (d.attribution === 'manual' ? ' (set by hand)' : '') : 'Unattributed'}</div>
+      <div class="btnrow" style="margin-top:6px"><button class="btn sm ghost" style="color:var(--rust)" onclick="deleteDealRow('${d.id}')">Remove</button></div>
+    </div>`;
+  }).join('');
+  return `
+  <h2>&#127761; The Backpack, ${esc(bpMonthLabel(BP.month))}</h2>
+  <p class="tiny" style="margin-bottom:10px">Figures are in ${esc(BP.reportingCurrency)}, the firm's reporting currency. A deal always keeps the currency it actually sold in, shown alongside its converted figure where the two differ.</p>
+  ${bpHasConverted() ? `<p class="tiny" style="margin-bottom:10px;color:var(--faint)">Converted using a fixed, hand-set exchange rate table (not a live feed), reviewed periodically. Change the reporting currency in Settings.</p>` : ''}
+  <div class="eyebrow">By venture</div>
+  ${ventureRows || '<p class="tiny">Nothing closed yet this month.</p>'}
+  <div class="eyebrow">By partner</div>
+  ${partnerRows || '<p class="tiny">Nothing closed yet this month.</p>'}
+  <div class="eyebrow">Every deal</div>
+  ${dealRows || '<p class="tiny">Nothing closed yet this month.</p>'}
+  <div class="btnrow" style="margin-top:6px"><button class="btn gold wide" style="min-height:44px" onclick="openRecordDeal()">+ Record a deal</button></div>
+  `;
+}
+async function deleteDealRow(id){
+  try{
+    await engine('/social/deals/delete', { id }, 'POST', { timeoutMs:15000 });
+    await loadBackpack(true);
+    modal(vBackpackBreakdown());
+  }catch(e){ /* the row stays on screen; the owner can try again */ }
+}
+
+/* ---------- recording a deal ---------- */
+let DEAL_FORM = null;
+
+function dealSourceOptions(candidates){
+  return `<option value="">Unattributed</option>`
+    + (candidates.length ? `<optgroup label="From a sent message">${candidates.map(c=>`<option value="msg:${esc(c.id)}">${esc(c.label)}${c.identity?' · '+esc(c.identity):''}</option>`).join('')}</optgroup>` : '')
+    + `<optgroup label="Choose the partner">${CHARS.map(c=>`<option value="partner:${c.id}">${esc(c.name)}</option>`).join('')}</optgroup>`;
+}
+function dealTierOptions(venture){
+  return `<option value="">Custom amount</option>` + (BP.tiers[venture] || []).map(t=>`<option value="${esc(t.key)}">${esc(t.label)} (${t.currency} ${t.amount})</option>`).join('');
+}
+function openRecordDeal(prefillVenture){
+  DEAL_FORM = { venture: prefillVenture || 'glotemp' };
+  loadDealTiers().then(()=>{
+    modal(vRecordDealForm());
+    loadDealCandidatesInto(DEAL_FORM.venture);
+  });
+}
+function vRecordDealForm(){
+  const v = DEAL_FORM.venture;
+  return `
+  <h2>&#127761; Record a deal</h2>
+  <p class="sub" style="margin-bottom:10px">Attribution is read off the chain, not guessed: pick the message that closed it where one exists, name the partner by hand where it does not, or leave it honestly unattributed.</p>
+  <p class="tiny" id="deal-error" style="color:var(--rust);margin-bottom:4px"></p>
+  <label>Venture</label>
+  <select id="deal-venture" onchange="dealVentureChanged(this.value)">
+    ${DEAL_VENTURE_LIST.map(x=>`<option value="${x.slug}" ${v===x.slug?'selected':''}>${esc(x.label)}</option>`).join('')}
+  </select>
+  <label style="margin-top:10px">What was sold</label>
+  <select id="deal-tier" onchange="dealTierChanged(this.value)">${dealTierOptions(v)}</select>
+  <label style="margin-top:10px">Amount</label>
+  <div style="display:flex;gap:8px">
+    <input type="number" id="deal-amount" step="0.01" min="0" style="flex:2">
+    <select id="deal-currency" style="flex:1">
+      ${['GBP','USD','EUR'].map(c=>`<option value="${c}" ${(v==='glotemp'&&c==='USD')?'selected':(v!=='glotemp'&&c==='GBP')?'selected':''}>${c}</option>`).join('')}
+    </select>
+  </div>
+  <label style="margin-top:10px">Organisation</label>
+  <input type="text" id="deal-organisation" placeholder="Who bought it">
+  <label>City <span class="tiny">(optional)</span></label>
+  <input type="text" id="deal-city">
+  <label>Closed date</label>
+  <input type="date" id="deal-date" value="${new Date().toISOString().slice(0,10)}">
+  <label style="margin-top:10px">Who gets credit</label>
+  <select id="deal-source" disabled><option>Reading recent sends…</option></select>
+  <label style="margin-top:10px">Notes <span class="tiny">(optional)</span></label>
+  <textarea id="deal-notes" rows="2"></textarea>
+  <div class="btnrow" style="margin-top:12px">
+    <button class="btn gold wide" id="deal-save" style="min-height:44px" onclick="saveDeal()">Record the deal</button>
+  </div>
+  `;
+}
+function dealVentureChanged(v){
+  DEAL_FORM.venture = v;
+  const tierSel = document.getElementById('deal-tier');
+  if(tierSel) tierSel.innerHTML = dealTierOptions(v);
+  const currSel = document.getElementById('deal-currency');
+  if(currSel) currSel.value = (v === 'glotemp') ? 'USD' : 'GBP';
+  const amtInput = document.getElementById('deal-amount');
+  if(amtInput) amtInput.value = '';
+  loadDealCandidatesInto(v);
+}
+function dealTierChanged(key){
+  const t = (BP.tiers[DEAL_FORM.venture] || []).find(x=>x.key===key);
+  if(!t) return;
+  const amtInput = document.getElementById('deal-amount');
+  const currSel = document.getElementById('deal-currency');
+  if(amtInput) amtInput.value = t.amount;
+  if(currSel) currSel.value = t.currency;
+}
+async function loadDealCandidatesInto(venture){
+  const sel = document.getElementById('deal-source');
+  if(sel){ sel.disabled = true; sel.innerHTML = '<option>Reading recent sends…</option>'; }
+  let candidates = [];
+  try{
+    const data = await engine('/social/deals/attribution-candidates?venture=' + encodeURIComponent(venture), null, 'GET', { retries:1, timeoutMs:15000 });
+    candidates = data.candidates || [];
+  }catch(e){ candidates = []; }
+  const sel2 = document.getElementById('deal-source');
+  if(!sel2) return; // the modal moved on while this was in flight
+  sel2.innerHTML = dealSourceOptions(candidates);
+  sel2.disabled = false;
+}
+async function saveDeal(){
+  const btn = document.getElementById('deal-save');
+  if(!btn || btn.disabled) return;
+  const venture = (document.getElementById('deal-venture') || {}).value || '';
+  const tierKey = (document.getElementById('deal-tier') || {}).value || '';
+  const tier = (BP.tiers[venture] || []).find(x=>x.key===tierKey);
+  const amount = (document.getElementById('deal-amount') || {}).value || '';
+  const currency = (document.getElementById('deal-currency') || {}).value || 'GBP';
+  const organisation = (document.getElementById('deal-organisation') || {}).value || '';
+  const city = (document.getElementById('deal-city') || {}).value || '';
+  const closedDate = (document.getElementById('deal-date') || {}).value || '';
+  const notes = (document.getElementById('deal-notes') || {}).value || '';
+  const source = (document.getElementById('deal-source') || {}).value || '';
+  const payload = { venture, organisation, city, closedDate, notes, amount: Number(amount), currency, tierLabel: tier ? tier.label : '' };
+  if(source.indexOf('msg:') === 0) payload.sourceMessageId = source.slice(4);
+  else if(source.indexOf('partner:') === 0) payload.partnerId = source.slice(8);
+
+  btn.innerHTML = '<i class="spin"></i> Recording…'; btn.disabled = true;
+  try{
+    await engine('/social/deals', payload, 'POST', { timeoutMs:15000 });
+    closeModal();
+    await loadBackpack(true);
+  }catch(e){
+    const errBox = document.getElementById('deal-error');
+    if(errBox) errBox.textContent = e.message || 'Could not record that deal.';
+    btn.innerHTML = 'Record the deal'; btn.disabled = false;
+  }
+}
+
+/* ---------- targets, set from the admin ---------- */
+async function saveReportingCurrency(){
+  const el = document.getElementById('target-currency');
+  if(!el) return;
+  try{
+    const data = await engine('/social/currency', { currency: el.value }, 'POST', { timeoutMs:15000 });
+    BP.reportingCurrency = data.currency || BP.reportingCurrency;
+    await loadBackpack(true);
+    TARGETS_MSG = 'Saved. Figures now report in ' + BP.reportingCurrency + '.'; TARGETS_OK = true;
+  }catch(e){
+    TARGETS_MSG = e.message || 'Could not change the reporting currency.'; TARGETS_OK = false;
+  }
+  openSettings();
+}
+async function savePartnerTarget(){
+  const idEl = document.getElementById('target-partner-id');
+  if(idEl) await saveTarget('partner', idEl.value, 'target-partner-amount');
+}
+async function saveTarget(scopeType, ref, inputId){
+  const el = document.getElementById(inputId);
+  if(!el) return;
+  const amountGbp = Number(el.value);
+  if(!Number.isFinite(amountGbp) || amountGbp < 0) return;
+  try{
+    const data = await engine('/social/targets', { scopeType, ref, amountGbp }, 'POST', { timeoutMs:15000 });
+    BP.targets = data.targets || BP.targets;
+    TARGETS_MSG = 'Saved.'; TARGETS_OK = true;
+  }catch(e){
+    TARGETS_MSG = e.message || 'Could not save that target.'; TARGETS_OK = false;
+  }
+  openSettings();
+}
 
 const Q = {
   posts: [], ventures: [], summary: [], platforms: {}, categories: {},

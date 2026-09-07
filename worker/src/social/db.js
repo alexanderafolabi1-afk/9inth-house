@@ -322,6 +322,63 @@ CREATE TABLE IF NOT EXISTS push_subs (
   last_ok TEXT,
   fail_count INTEGER NOT NULL DEFAULT 0
 );
+
+-- The Backpack's ledger: one row per closed deal, held in the currency it
+-- was actually sold in. Nothing here is pre-converted: the reporting
+-- currency is a setting (firm_settings below) that can change, and
+-- converting on every read off the same static rate table means a deal
+-- never silently carries a stale conversion from before the setting or the
+-- table last changed. attribution is 'auto' when source_message_id
+-- resolved to a partner from the message's own sending identity, 'manual'
+-- when the owner named the partner directly, and 'unattributed' when
+-- neither happened, shown honestly rather than guessed.
+CREATE TABLE IF NOT EXISTS deals (
+  id TEXT PRIMARY KEY,
+  venture TEXT NOT NULL,
+  city TEXT NOT NULL DEFAULT '',
+  organisation TEXT NOT NULL DEFAULT '',
+  tier_label TEXT NOT NULL DEFAULT '',
+  amount REAL NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'GBP',
+  partner_id TEXT NOT NULL DEFAULT '',
+  attribution TEXT NOT NULL DEFAULT 'unattributed',
+  source_message_id TEXT NOT NULL DEFAULT '',
+  closed_date TEXT NOT NULL,
+  notes TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_deals_closed ON deals (closed_date);
+CREATE INDEX IF NOT EXISTS idx_deals_venture ON deals (venture);
+CREATE INDEX IF NOT EXISTS idx_deals_partner ON deals (partner_id);
+
+-- Targets, set from the admin and never hardcoded, each a plain number
+-- understood to be in the firm's reporting currency (firm_settings below),
+-- not independently currency-tagged the way a deal is: a target is a goal
+-- the owner set, not something sold. scope_key is 'firm' for the one
+-- firm-wide monthly figure, 'venture:<slug>' for a venture's own roll-up,
+-- and 'partner:<id>' for the optional per-partner figure. Reading what is
+-- not yet set is the caller's job (seedDefaultTargets seeds the firm
+-- figure once, the same way seedDefaultOwners seeds Glotemp's owner), so a
+-- missing row here means genuinely never set, not zero.
+CREATE TABLE IF NOT EXISTS targets (
+  scope_key TEXT PRIMARY KEY,
+  scope_type TEXT NOT NULL,
+  ref TEXT NOT NULL DEFAULT '',
+  amount REAL NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+-- Small, generic key/value settings, so a single explicit choice like the
+-- firm's reporting currency does not need its own table. Read with a
+-- default rather than assumed present, the same as every other seeded
+-- setting in this house.
+CREATE TABLE IF NOT EXISTS firm_settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
 `;
 
 export function hasStore(env) {
