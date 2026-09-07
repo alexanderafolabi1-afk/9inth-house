@@ -10,28 +10,26 @@ main = "src/index.js"
 compatibility_date = "2026-07-28"
 compatibility_flags = ["nodejs_compat"]
 
-# Kept on alongside the Route below, on purpose: the .workers.dev address stays
-# reachable for curl (the Author Desk trigger, manual /social calls with a
-# bearer token) even once the admin itself moves to the Route.
-workers_dev = true
-
-# ============================================================================
-# SAME-SITE ROUTE FOR THE SESSION COOKIE
-# ============================================================================
-# desk.html lives on 9thpoint.com. For its login to set an HttpOnly,
-# SameSite=Strict cookie that the browser will actually send back, the Worker
-# has to answer on a hostname the browser considers the same site as
-# 9thpoint.com; a SameSite=Strict cookie is never sent on a cross-site fetch,
-# so leaving the Worker on only the .workers.dev domain would make the whole
-# login silently useless. Commented out, like the D1 block below, because an
-# uncommitted zone_name (wrong account, zone not actually on Cloudflare) fails
-# the deploy outright and would take the cron down with it.
+# The .workers.dev address is the only one this Worker answers on. desk.html
+# calls it directly, cross-origin, and CORS (allowedOrigins/corsHeaders in
+# worker/src/social/api.js, DESK_ORIGIN below) is what authorizes that call,
+# not same-origin cookies: login hands back a signed bearer token in the
+# response body (see mintSession/requireSession), so there is nothing for a
+# same-site cookie policy to need answering on 9thpoint.com's own zone for.
 #
-# Connected: 9thpoint.com's DNS is confirmed on the same Cloudflare account
-# used for `wrangler login`.
-[[routes]]
-pattern = "9thpoint.com/api/*"
-zone_name = "9thpoint.com"
+# A `[[routes]] pattern = "9thpoint.com/api/*"` binding used to live here,
+# left over from an earlier, abandoned same-site-cookie design. It was never
+# used by desk.html (see worker/README.md's Authentication section) and it
+# actively broke this Worker's CORS: with that Route bound, a request whose
+# Origin header is exactly "https://9thpoint.com" (the apex, no www, the
+# canonical origin the CNAME file and the installed PWA actually use) got
+# Access-Control-Allow-Origin echoing this Worker's own serving address
+# instead of the real Origin, which every browser's CORS check then rejects,
+# surfacing as a fetch() that throws rather than a login that merely fails.
+# It reproduced identically under `wrangler dev` against this exact
+# wrangler.toml, and it went away the moment the Route did. Do not add a
+# Route back here without re-running scripts/check-cors.mjs against it first.
+workers_dev = true
 
 # ============================================================================
 # LOGIN RATE LIMITING
