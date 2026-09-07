@@ -20,6 +20,27 @@ export async function getOutreachOwner(db, venture) {
   return row || null;
 }
 
+// Glotemp's owner, read from the partner roster this house already has
+// rather than invented for this: Sipho Dlamini, Head of Partnerships & PR,
+// is the one partner whose own defined remit names Glotemp outreach
+// directly (worker/src/index.js's persona roster: "Glotemp is your most
+// open door: city partnerships, sponsors, and the campus and student
+// contributor layer"), and the city mandate itself names him as owning the
+// approach. No other partner's remit mentions Glotemp outreach at all.
+// Seeded once, only when nothing is assigned yet, so it never overwrites a
+// change made from Settings; the admin remains the one place this is
+// actually changed afterwards.
+export async function seedDefaultOwners(db) {
+  const existing = await getOutreachOwner(db, 'glotemp');
+  if (existing) return;
+  await setOutreachOwner(db, {
+    venture: 'glotemp',
+    name: 'Sipho Dlamini',
+    role: 'Head of Partnerships & PR',
+    email: 'marketing@glo-temp.com'
+  });
+}
+
 export function describeOutreachOwner(input) {
   const name = String((input && input.name) || '').trim();
   const role = String((input && input.role) || '').trim();

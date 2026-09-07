@@ -42,7 +42,7 @@ import {
   CITY_PIN_RESEARCH_SOFT, CITY_PIN_EMAIL_SOURCES, CITY_PIN_CADENCE, CITY_PIN_QUOTA,
   CITY_PIN_ON_REPLY, CITY_PIN_PRODUCT, CITY_PIN_LINES, CITY_PIN_VOICE
 } from './outreach.js';
-import { listOutreachOwners, getOutreachOwner, setOutreachOwner, describeOutreachOwner } from './owners.js';
+import { listOutreachOwners, getOutreachOwner, setOutreachOwner, describeOutreachOwner, seedDefaultOwners } from './owners.js';
 import {
   importRegisterCsv, importFloridaWindowCsv, listRegisterRows, getRegisterRow, upsertRegisterRow, routeSplitReport,
   currentWave, waveComplete, WAVES,
@@ -502,6 +502,7 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
         // the same call the shift makes.
         await ensureSchema(db);
         await seedOutreach(db);
+        await seedDefaultOwners(db);
         const messages = await listMessages(db, { limit: 50 });
         return json(request, env, {
           ok: true,
@@ -538,6 +539,7 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
       // admin can show the four-wave order without a second round trip.
       case 'GET /social/register': {
         await ensureSchema(db);
+        await seedDefaultOwners(db);
         const venture = url.searchParams.get('venture') || 'glotemp';
         const wave = url.searchParams.get('wave');
         const status = url.searchParams.get('status') || undefined;

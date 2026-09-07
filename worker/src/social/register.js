@@ -234,7 +234,11 @@ export function rowsFromParsedCsv(rows, { venture = 'glotemp', wave = 0 } = {}) 
 export const WAVE_CITY_LISTS = {
   1: ['Ibiza', 'Santorini', 'Mykonos', 'Palma de Mallorca', 'Malta', 'Key West', 'Naples', 'Dubrovnik', 'Aruba', 'Curaçao', 'Curacao'],
   2: ['Savannah', 'Charleston', 'Asheville', 'Scottsdale', 'Tampa', 'Jacksonville'],
-  4: ['London', 'New York', 'Paris', 'Tokyo', 'Dubai']
+  4: ['London', 'New York', 'Paris', 'Tokyo', 'Dubai'],
+  // Owner's decision: the cities the register carried but the brief's four
+  // waves never named. Sent after wave four, same gating as every other
+  // wave, rather than left out of the sequence indefinitely.
+  5: ['Austin', 'Bora Bora', 'Boston', 'Denver', 'Nashville', 'New Orleans', 'Portland', 'Reykjavik', 'San Diego', 'Seattle']
 };
 
 export function waveForCity(city) {
@@ -276,6 +280,41 @@ const KNOWN_BAD_URL_HOSTS = [
   { pattern: /foursasons\.com/i, note: 'Misspelled domain (foursasons.com). The field is dropped rather than sent broken.' },
   { pattern: /hoteldulal\.com/i, note: 'Wrong domain for Hotel Duval. The field is dropped; route through the Visit Tallahassee form instead.' }
 ];
+
+// Section 5.1's research pass, run against the register as actually
+// supplied and recorded here, keyed by city and vertical the same way the
+// register itself is, so re-importing the same file does not lose it. A
+// city this table has no entry for is simply left wherever decideRoute put
+// it; nothing here is guessed, every address was found published on the
+// organisation's own site, a named PR agency of record, or an official
+// board contact page, and is applied only where the register did not
+// already carry a better one.
+//
+// Nineteen of the thirty five resolved to a real address this way; the
+// other sixteen kept their form route, several against a more specific
+// page than the register's own organisation_url named (recorded in note
+// rather than as an email, since a page is not an address).
+const KNOWN_RESEARCH = {
+  'curaçao|hotel': { email: 'reservations@baoase.com', source: 'Baoase Luxury Resort\'s own site, general reservations address; no dedicated press contact found.' },
+  'ibiza|club': { email: 'collaborations@pacha.com', source: 'Pacha Ibiza\'s own site, partnerships and collaborations address.' },
+  'key west|hotel': { email: 'PIERHOUSERESORT@MAYFIELDPR.COM', source: 'Mayfield Group, Pier House Resort\'s PR agency of record.' },
+  'mykonos|club': { email: 'press@scorpios.com', source: 'Scorpios Mykonos\'s own site, press contact.' },
+  'palma de mallorca|board': { email: 'palmainfo@palma.es', source: 'Fundació Turisme Palma\'s published general tourism contact.' },
+  'charleston|restaurant': { email: 'ndg@sprouthouseagency.com', source: 'Sprout House Agency, Husk\'s PR agency of record.' },
+  'jacksonville|board': { email: 'amestdagh@visitjacksonville.com', source: 'Visit Jacksonville\'s own site: Andrea Mestdagh, media and content creator contact, named and published.' },
+  'scottsdale|hotel': { email: 'PHXLCInfo@marriott.com', source: 'The Phoenician\'s published general resort contact. A named marketing director, Georgina Lucas, is on the press page with no address published.' },
+  'orlando|hotel': { email: 'grandelakesleads@marriott.com', source: 'Grande Lakes\'s published sales contact. Media inquiries are handled by The Brandman Agency; the agency\'s named contact has no published address.' },
+  'tallahassee|board': { email: 'Kerri.Post@VisitTallahassee.com', source: 'Visit Tallahassee\'s own site: Kerri Post, Executive Director of Tourism Development, named and published as the partnerships contact.' },
+  'new york|board': { email: 'jngo@nyctourism.com', source: 'NYC Tourism + Conventions\'s own site: Julia Ngo, Director of Media, named and published.' },
+  'paris|board': { email: 'f.guitard@parisinfo.com', source: 'Office du Tourisme et des Congrès de Paris\'s own press site: Fiona Guitard, named press contact, published alongside a second named contact, Maryline Piel.' },
+  'tokyo|board': { email: 'mediasupport@tcvb.or.jp', source: 'Tokyo Convention & Visitors Bureau\'s own site, overseas media support address.' },
+  'austin|restaurant': { email: 'franklinbbq@gmail.com', source: 'Franklin Barbecue\'s own published general address; no dedicated press contact found.' },
+  'bora bora|hotel': { email: 'borabora.liaison@stregis.com', source: 'The St. Regis Bora Bora Resort\'s own published property contact address.' },
+  'denver|restaurant': { email: 'jen@riojadenver.com', source: 'Rioja\'s own site: Jennifer Jasinski, Executive Chef and Owner, named and published.' },
+  'new orleans|restaurant': { email: 'commanderspalace@beccapr.com', source: 'Becca PR, Commander\'s Palace\'s PR agency of record.' },
+  'portland|restaurant': { email: 'info@lepigeon.com', source: 'Le Pigeon\'s own published general address; no dedicated press contact found.' },
+  'reykjavik|board': { email: 'hulda.gunnarsdottir@reykjavik.is', source: 'Visit Reykjavík\'s own site: Hulda Gunnarsdóttir, Media Representative of Reykjavík City, named and published.' }
+};
 
 // Syntax first, then the brief's two named faults by exact match, then a
 // live reachability check where a fetch implementation is available (the
@@ -407,7 +446,16 @@ export async function importRegisterCsv(db, text, { venture = 'glotemp', wave = 
     if (!foodCheck.ok) { urlIssues.push({ city: r.city, field: 'food_url', note: foodCheck.note }); r.food_url = ''; }
     if (!pulseCheck.ok) { urlIssues.push({ city: r.city, field: 'pulse_url', note: pulseCheck.note }); r.pulse_url = ''; }
 
-    const routed = decideRoute(r);
+    let routed = decideRoute(r);
+    // The research pass wins over a bare form route: a real address found
+    // and recorded is always better than the fallback of opening a page and
+    // hoping. It never overrides a route the register itself already gave
+    // as an email; a public address the organisation published to the
+    // register is at least as good as one found by searching for it.
+    const known = KNOWN_RESEARCH[`${String(r.city || '').trim().toLowerCase()}|${String(r.vertical || '').trim().toLowerCase()}`];
+    if (known && routed.route_type !== 'email') {
+      routed = { route_type: 'email', resolved_contact_email: known.email, contact_source: known.source };
+    }
     const urlsOk = foodCheck.ok && pulseCheck.ok;
     await upsertRegisterRow(db, {
       ...r,
@@ -438,15 +486,23 @@ export async function importRegisterCsv(db, text, { venture = 'glotemp', wave = 
 // The remaining four (Miami, Orlando, Fort Lauderdale, Tallahassee) are
 // genuinely new to the ordered campaign and are assigned wave three,
 // against the row the main register import already created for them.
+// The owner's decision on the four cities the window shares with wave one
+// or two: contacted twice, not skipped. Kept in their original wave for
+// the first touch, and a second row created here for the window itself,
+// linked back to the first by follow_up_of. composeRegisterMessage refuses
+// the second touch until MIN_SECOND_TOUCH_DAYS have passed since the first
+// was actually sent, and it composes as a follow-up that references the
+// first message rather than the flat first-touch copy, once that copy is
+// approved (see registerFollowUpCopy).
 export async function importFloridaWindowCsv(db, text, { venture = 'glotemp' } = {}) {
   const raw = parseCsv(text);
-  if (!raw.length) return { assigned: [], conflicts: [], notFound: [], errors: ['The file is empty.'] };
+  if (!raw.length) return { assigned: [], secondTouch: [], notFound: [], errors: ['The file is empty.'] };
   const header = raw[0].map((h) => String(h).trim().toLowerCase());
   const idx = (name) => header.indexOf(name);
   const at = (row, name) => { const i = idx(name); return i === -1 ? '' : String(row[i] || '').trim(); };
 
   const assigned = [];
-  const conflicts = [];
+  const secondTouch = [];
   const notFound = [];
   const ts = nowIso();
 
@@ -457,21 +513,49 @@ export async function importFloridaWindowCsv(db, text, { venture = 'glotemp' } =
     const id = `${city.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${vertical}`;
     const existing = await getRegisterRow(db, id);
     if (!existing) { notFound.push(`${city} (${vertical})`); continue; }
-    if (existing.wave === 1 || existing.wave === 2) {
-      conflicts.push(`${city} is already in wave ${existing.wave} and was not also booked into the Florida window.`);
-      continue;
-    }
+
     const note = [
       at(row, 'window_product') && `Florida window product: ${at(row, 'window_product')}.`,
       at(row, 'suggested_band') && `Suggested band: ${at(row, 'suggested_band')}.`,
       at(row, 'window_end') && `Send by ${at(row, 'window_end')}.`,
       at(row, 'why_this_city')
     ].filter(Boolean).join(' ');
+
+    if (existing.wave === 1 || existing.wave === 2) {
+      const touchId = `${id}-nov-touch`;
+      await upsertRegisterRow(db, {
+        id: touchId,
+        venture: existing.venture,
+        city: existing.city,
+        country: existing.country,
+        organisation: existing.organisation,
+        organisation_url: existing.organisation_url,
+        vertical: existing.vertical,
+        language: existing.language,
+        wave: 3,
+        food_url: existing.food_url,
+        pulse_url: existing.pulse_url,
+        dmo_contact: existing.dmo_contact,
+        operator_email_if_public: existing.operator_email_if_public,
+        resolved_contact_email: existing.resolved_contact_email,
+        contact_source: existing.contact_source,
+        route_type: existing.route_type,
+        form_url: existing.form_url,
+        url_check_ok: existing.url_check_ok,
+        status: existing.route_type === 'none' ? 'no_route' : 'pending',
+        notes: note,
+        created_at: ts
+      });
+      await db.prepare('UPDATE city_register SET follow_up_of = ? WHERE id = ?').bind(existing.id, touchId).run();
+      secondTouch.push(`${city} (second touch, follows the wave ${existing.wave} message, minimum ${MIN_SECOND_TOUCH_DAYS} days after it is sent)`);
+      continue;
+    }
+
     await db.prepare('UPDATE city_register SET wave = 3, notes = ?, updated_at = ? WHERE id = ?').bind(note, ts, id).run();
     assigned.push(city);
   }
 
-  return { assigned, conflicts, notFound, errors: [] };
+  return { assigned, secondTouch, notFound, errors: [] };
 }
 
 export async function listRegisterRows(db, { wave, status, venture, vertical, limit = 500 } = {}) {
@@ -505,7 +589,7 @@ export async function routeSplitReport(db, { venture = 'glotemp' } = {}) {
 
 /* ---------- the four-wave gate ---------- */
 
-export const WAVES = [1, 2, 3, 4];
+export const WAVES = [1, 2, 3, 4, 5];
 // A row is done with, one way or another, once it is in one of these. A row
 // still "pending" or "no_route" is unfinished business and holds its wave
 // open.
@@ -633,11 +717,37 @@ export async function sweepExpiredSlots(db) {
 // against with no address or form), the owner fourth, then the copy itself
 // and the standing rules, checked last on the complete body exactly as
 // every other campaign in this house does it.
+// The owner's rule on the four cities contacted twice: minimum three weeks
+// between the two touches.
+export const MIN_SECOND_TOUCH_DAYS = 21;
+
+// How long since the row this one follows up on was actually sent, in
+// whole days, or null if it has not been sent yet at all. Read from
+// outreach_messages directly rather than trusted from the register, since
+// the register only knows what it was told and a message can be approved
+// without yet being sent.
+export async function daysSinceSent(db, registerRowId) {
+  const row = await db.prepare(
+    `SELECT sent_at FROM outreach_messages WHERE prospect_id = ? AND status = 'sent' ORDER BY sent_at DESC LIMIT 1`
+  ).bind(registerRowId).first();
+  if (!row || !row.sent_at) return null;
+  return (Date.now() - new Date(row.sent_at).getTime()) / 86400000;
+}
+
 export async function composeRegisterMessage(db, row, { owner } = {}) {
   const blockers = [];
 
   const wave = await waveAllowsRow(db, row);
   if (!wave.ok) blockers.push(wave.reason);
+
+  if (row.follow_up_of) {
+    const days = await daysSinceSent(db, row.follow_up_of);
+    if (days === null) {
+      blockers.push('This is a second touch, and the first message to this organisation has not been recorded as sent yet.');
+    } else if (days < MIN_SECOND_TOUCH_DAYS) {
+      blockers.push(`Only ${Math.floor(days)} day${Math.floor(days) === 1 ? '' : 's'} since the first message. A second touch needs at least ${MIN_SECOND_TOUCH_DAYS} days.`);
+    }
+  }
 
   if (await isRivalLocked(db, row.city)) {
     blockers.push(`${row.city} is rival-locked. No message referencing a neighbouring venue may be generated until the owner confirms a first name is live there and releases the lock.`);
@@ -660,6 +770,14 @@ export async function composeRegisterMessage(db, row, { owner } = {}) {
   const templateVertical = templateVerticalFor(row.vertical);
   if (!REGISTER_CAMPAIGN_VERTICALS.includes(templateVertical)) {
     blockers.push(`"${row.vertical}" has no register campaign template. Templates exist for: ${REGISTER_CAMPAIGN_VERTICALS.join(', ')} (club uses the restaurant template).`);
+  }
+
+  // A second touch is never sent on the first-touch copy: it would read as
+  // a cold approach, which is exactly what the owner said not to do. It
+  // waits for its own approved copy, the same as it waited for its own
+  // sign-off before being written at all.
+  if (row.follow_up_of && !blockers.length) {
+    blockers.push('This is a second touch. It has no approved follow-up copy yet, and is not sent on the first-touch template.');
   }
 
   if (blockers.length) return { ok: false, blockers };

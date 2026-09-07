@@ -252,6 +252,7 @@ CREATE TABLE IF NOT EXISTS city_register (
   url_check_note TEXT NOT NULL DEFAULT '',
   status TEXT NOT NULL DEFAULT 'pending',
   notes TEXT NOT NULL DEFAULT '',
+  follow_up_of TEXT NOT NULL DEFAULT '',
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );

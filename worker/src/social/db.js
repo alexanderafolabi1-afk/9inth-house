@@ -270,6 +270,12 @@ CREATE TABLE IF NOT EXISTS city_register (
   url_check_note TEXT NOT NULL DEFAULT '',
   status TEXT NOT NULL DEFAULT 'pending',
   notes TEXT NOT NULL DEFAULT '',
+  -- Set when this row is a second touch on an organisation already
+  -- contacted in an earlier wave, holding that row's own id. Composing
+  -- against this row is refused until the referenced row's message has
+  -- actually been sent and enough time has passed, so a second touch can
+  -- never go out before or instead of the first.
+  follow_up_of TEXT NOT NULL DEFAULT '',
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
