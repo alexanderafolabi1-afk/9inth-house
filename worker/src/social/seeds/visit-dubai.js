@@ -46,17 +46,7 @@ We are not asking DET to fund an experiment. We are asking Visit Dubai to put it
 
 I can have a two-minute walkthrough and a still of the Dubai homepage on your desk this week. Reply with a time, or send us to the correct market lead and we will follow their process without noise.
 
-The city already knows how it wants to be chosen. We built the instrument. The homepage is open once.
-
-With respect,
-
-[Full name]
-[Title]
-Glotemp
-glo-temp.com
-[direct phone]
-[email]
-Advertising and partnerships`;
+The city already knows how it wants to be chosen. We built the instrument. The homepage is open once.`;
 
 // The subject as supplied carried an em dash, which the house rule forbids in
 // any outbound message. Corrected rather than silently sent, and the original is

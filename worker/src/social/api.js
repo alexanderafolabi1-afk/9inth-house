@@ -30,7 +30,7 @@ import {
   seedOutreach, listReferences, listProspects, listMessages, addReference,
   checkOutreachRules, setMessageStatus, recentlyApproached, recentlyDrafted, isSuppressed,
   composeCityPin, claimExclusive, releaseExclusive, openSlots,
-  composeSetPostGo, setPostGoTemplates, closeTheFile,
+  composeSetPostGo, setPostGoTemplates, closeTheFile, scheduleFollowUps, upsertProspect,
   SETPOSTGO_PRODUCT, SETPOSTGO_FACTS, SETPOSTGO_VOICE, SETPOSTGO_NEVER, SETPOSTGO_ASK,
   SETPOSTGO_PLANS, SETPOSTGO_CURRENCY, SETPOSTGO_FLOOR_GBP, SETPOSTGO_TIERS, SETPOSTGO_SKIP,
   SETPOSTGO_GEOGRAPHY, SETPOSTGO_DAILY_MIX, SETPOSTGO_PSYCHOLOGY, SETPOSTGO_RESEARCH_HARD,
@@ -42,6 +42,14 @@ import {
   CITY_PIN_RESEARCH_SOFT, CITY_PIN_EMAIL_SOURCES, CITY_PIN_CADENCE, CITY_PIN_QUOTA,
   CITY_PIN_ON_REPLY, CITY_PIN_PRODUCT, CITY_PIN_LINES, CITY_PIN_VOICE
 } from './outreach.js';
+import { listOutreachOwners, getOutreachOwner, setOutreachOwner, describeOutreachOwner, seedDefaultOwners } from './owners.js';
+import {
+  importRegisterCsv, importFloridaWindowCsv, listRegisterRows, getRegisterRow, upsertRegisterRow, routeSplitReport,
+  currentWave, waveComplete, WAVES,
+  isRivalLocked, releaseRivalLock, relockRival,
+  recordLiveSlot, listLiveSlots, expiringLiveSlots, markSlotNotified, sweepExpiredSlots,
+  composeRegisterMessage
+} from './register.js';
 import { factsFor, recentChanges, putFact, runFactsSweep, DEFAULT_STALE_HOURS } from './facts.js';
 import { SENDABLE as PENDING_STATUSES } from './config.js';
 import { credentialDeliveries, credentialStatusFor, writeCredentialsFor } from './senders/index.js';
@@ -494,15 +502,180 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
         // the same call the shift makes.
         await ensureSchema(db);
         await seedOutreach(db);
+        await seedDefaultOwners(db);
         const messages = await listMessages(db, { limit: 50 });
         return json(request, env, {
           ok: true,
           messages,
-          prospects: await listProspects(db, { limit: 50 }),
+          prospects: await listProspects(db, { limit: 100 }),
           references: await listReferences(db),
           campaignTypes: CAMPAIGN_TYPES,
-          guardrails: VISIT_DUBAI_GUARDRAILS
+          guardrails: VISIT_DUBAI_GUARDRAILS,
+          owners: await listOutreachOwners(db)
         });
+      }
+
+      // Who signs a venture's outreach. Assigned here rather than hardcoded
+      // anywhere in a template, so composing a draft for a venture with
+      // nobody assigned is refused with the reason rather than sent signed
+      // by nobody.
+      case 'GET /social/outreach/owners': {
+        await ensureSchema(db);
+        return json(request, env, { ok: true, owners: await listOutreachOwners(db) });
+      }
+
+      case 'POST /social/outreach/owners': {
+        await ensureSchema(db);
+        if (!String(body.venture || '').trim()) return json(request, env, { ok: false, error: 'A venture is required.' }, 400);
+        const check = describeOutreachOwner(body);
+        if (!check.ok) return json(request, env, { ok: false, error: check.problems.join(' ') }, 400);
+        const owner = await setOutreachOwner(db, { venture: body.venture, name: body.name, role: body.role, email: body.email });
+        return json(request, env, { ok: true, owner, owners: await listOutreachOwners(db) });
+      }
+
+      /* ---------- the Glotemp wave campaign's city register ---------- */
+
+      // The register itself, plus enough about each wave's progress that the
+      // admin can show the four-wave order without a second round trip.
+      case 'GET /social/register': {
+        await ensureSchema(db);
+        await seedDefaultOwners(db);
+        const venture = url.searchParams.get('venture') || 'glotemp';
+        const wave = url.searchParams.get('wave');
+        const status = url.searchParams.get('status') || undefined;
+        const rows = await listRegisterRows(db, { venture, wave: wave != null ? Number(wave) : undefined, status });
+        const waves = {};
+        for (const w of WAVES) waves[w] = { complete: await waveComplete(db, w, { venture }) };
+        return json(request, env, {
+          ok: true,
+          rows,
+          waves,
+          currentWave: await currentWave(db, { venture }),
+          routeSplit: await routeSplitReport(db, { venture })
+        });
+      }
+
+      // Adding a city from the admin. The same upsert an import uses, so a
+      // row entered by hand is indistinguishable from one that arrived in a
+      // file, and adding a city is a data change, never a code change.
+      case 'POST /social/register/row': {
+        await ensureSchema(db);
+        if (!String(body.city || '').trim()) return json(request, env, { ok: false, error: 'A city is required.' }, 400);
+        if (!String(body.vertical || '').trim()) return json(request, env, { ok: false, error: 'A vertical is required.' }, 400);
+        const id = await upsertRegisterRow(db, body);
+        return json(request, env, { ok: true, row: await getRegisterRow(db, id) });
+      }
+
+      // The bulk import: parse, repair the known overflow fault, dedupe,
+      // check every link, decide a route, and report every fault found
+      // rather than only the ones the brief named by example.
+      case 'POST /social/register/import': {
+        await ensureSchema(db);
+        if (!String(body.csv || '').trim()) return json(request, env, { ok: false, error: 'No CSV text was given.' }, 400);
+        const result = await importRegisterCsv(db, body.csv, {
+          venture: body.venture || 'glotemp',
+          wave: Number(body.wave) || 0,
+          mergeColumnHint: body.mergeColumnHint || 'organisation'
+        });
+        return json(request, env, { ok: true, ...result });
+      }
+
+      // Wave three: a separate list, section 3, merged against rows the
+      // main import already created rather than inserted fresh, and never
+      // double-booking a city already sitting in wave one or two.
+      case 'POST /social/register/import-florida-window': {
+        await ensureSchema(db);
+        if (!String(body.csv || '').trim()) return json(request, env, { ok: false, error: 'No CSV text was given.' }, 400);
+        const result = await importFloridaWindowCsv(db, body.csv, { venture: body.venture || 'glotemp' });
+        return json(request, env, { ok: true, ...result });
+      }
+
+      case 'GET /social/register/report': {
+        await ensureSchema(db);
+        const venture = url.searchParams.get('venture') || 'glotemp';
+        return json(request, env, { ok: true, routeSplit: await routeSplitReport(db, { venture }) });
+      }
+
+      // The per-city rival lock. Release is owner-only by construction: it is
+      // a signed-in admin action, the same as everything else behind
+      // requireSession above, and there is deliberately no automatic path to
+      // it anywhere else in this file.
+      case 'POST /social/outreach/rival-lock/release': {
+        await ensureSchema(db);
+        if (!String(body.city || '').trim()) return json(request, env, { ok: false, error: 'A city is required.' }, 400);
+        await releaseRivalLock(db, body.city, body.note || '');
+        return json(request, env, { ok: true, locked: await isRivalLocked(db, body.city) });
+      }
+
+      case 'POST /social/outreach/rival-lock/relock': {
+        await ensureSchema(db);
+        if (!String(body.city || '').trim()) return json(request, env, { ok: false, error: 'A city is required.' }, 400);
+        await relockRival(db, body.city, body.note || '');
+        return json(request, env, { ok: true, locked: await isRivalLocked(db, body.city) });
+      }
+
+      // Section 6's one control. Recording a slot marks the city live,
+      // releases its rival lock, and starts the fourteen day window; nothing
+      // here sends anything on its own, the same as every other approval in
+      // this house.
+      case 'POST /social/outreach/live-slot': {
+        await ensureSchema(db);
+        for (const field of ['city', 'vertical', 'name', 'url']) {
+          if (!String(body[field] || '').trim()) return json(request, env, { ok: false, error: `"${field}" is required.` }, 400);
+        }
+        const slot = await recordLiveSlot(db, body);
+        return json(request, env, { ok: true, slot, slots: await listLiveSlots(db, {}) });
+      }
+
+      case 'GET /social/outreach/live-slots': {
+        await ensureSchema(db);
+        await sweepExpiredSlots(db);
+        const status = url.searchParams.get('status') || undefined;
+        return json(request, env, {
+          ok: true,
+          slots: await listLiveSlots(db, { status }),
+          expiringSoon: await expiringLiveSlots(db, 2)
+        });
+      }
+
+      case 'POST /social/outreach/live-slot/notified': {
+        await ensureSchema(db);
+        if (!body.id) return json(request, env, { ok: false, error: 'no slot id was given' }, 400);
+        await markSlotNotified(db, body.id);
+        return json(request, env, { ok: true });
+      }
+
+      // Composes a register-campaign draft against one row: the wave gate,
+      // the rival lock, the route, the owner, the copy in the right
+      // language and the standing rules, all checked before this ever
+      // reaches the queue. A row that fails is held on the register with
+      // the reason, exactly the way Section 1 holds a failed prospect.
+      case 'POST /social/outreach/register/draft': {
+        await ensureSchema(db);
+        if (!body.id) return json(request, env, { ok: false, error: 'no register row id was given' }, 400);
+        const row = await getRegisterRow(db, body.id);
+        if (!row) return json(request, env, { ok: false, error: 'that register row no longer exists' }, 404);
+        const owner = await getOutreachOwner(db, row.venture);
+        const composed = await composeRegisterMessage(db, row, { owner });
+        const ts = new Date().toISOString();
+        if (!composed.ok) {
+          await db.prepare('UPDATE city_register SET notes = ?, updated_at = ? WHERE id = ?')
+            .bind(composed.blockers.join(' '), ts, row.id).run();
+          return json(request, env, { ok: false, blockers: composed.blockers }, 422);
+        }
+        const msgId = `reg-${row.id}-${Date.now()}`;
+        await db.prepare(`
+          INSERT INTO outreach_messages (
+            id, prospect_id, venture, campaign_type, identity, to_addresses, cc_addresses,
+            subject, body, original_wording, locale_note, city, vertical, sku, price_usd,
+            rule_findings, status, send_after, sent_at, delivery_type, form_url, created_at, updated_at
+          ) VALUES (?, ?, ?, 'register_wave', '', ?, '', ?, ?, '', ?, ?, ?, '', 0, '[]', 'awaiting_approval', NULL, NULL, ?, ?, ?, ?)
+        `).bind(
+          msgId, row.id, row.venture, composed.draft.to || '', composed.draft.subject, composed.draft.body,
+          composed.warnings.join(' '), row.city, row.vertical, composed.draft.deliveryType, composed.draft.formUrl || '', ts, ts
+        ).run();
+        await db.prepare("UPDATE city_register SET status = 'queued', notes = '', updated_at = ? WHERE id = ?").bind(ts, row.id).run();
+        return json(request, env, { ok: true, messages: await listMessages(db, { limit: 50 }) });
       }
 
       // Approving a first message to a new organisation is the owner's, per
@@ -606,12 +779,20 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
         if (!organisation) return json(request, env, { ok: false, error: 'A lead needs a business name.' }, 400);
 
         const postalAddress = String(body.postalAddress || '').trim() || (await readPostalAddress(env));
+        const owner = await getOutreachOwner(db, 'setpostgo');
         const composed = composeSetPostGo({ organisation, research }, {
           template: body.template || 'trade',
           postalAddress,
-          agentName: body.agentName
+          agentName: body.agentName,
+          owner
         });
         if (!composed.ok) {
+          // A draft that fails any check never enters the owner's queue. The
+          // lead is held as needing research instead, with the reason
+          // recorded, rather than returned and forgotten: researching the
+          // gap and drafting again finds the same prospect here, not a new
+          // one, since organisation and venture are what identify it.
+          await upsertProspect(db, { venture: 'setpostgo', campaignType: 'setpostgo', organisation, research, status: 'needs_research', blocker: composed.blockers.join(' ') });
           return json(request, env, { ok: false, blockers: composed.blockers, warnings: composed.warnings, error: composed.blockers[0] }, 422);
         }
         if (await isSuppressed(db, composed.draft.to)) {
@@ -622,18 +803,11 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
           return json(request, env, { ok: false, error: `${organisation} already has a message from the last 30 days, ${String(seen[0].status).replace(/_/g, ' ')}.` }, 409);
         }
 
-        const prospectId = 'sp-' + crypto.randomUUID();
+        const { id: prospectId } = await upsertProspect(db, {
+          venture: 'setpostgo', campaignType: 'setpostgo', organisation, research,
+          status: 'ready', evidence: composed.warnings, notes: body.notes
+        });
         const now = new Date().toISOString();
-        await db.prepare(
-          `INSERT INTO prospects (id, venture, campaign_type, organisation, contacts, locale, research, evidence, score, status, notes, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-        ).bind(
-          prospectId, 'setpostgo', 'setpostgo', organisation,
-          JSON.stringify([{ email: composed.draft.to, published: composed.draft.emailPublishedAt }]),
-          String(research.town || ''), JSON.stringify(research),
-          JSON.stringify(composed.warnings || []), 0, 'ready',
-          String(body.notes || ''), now, now
-        ).run();
 
         const messageId = 'sp-msg-' + crypto.randomUUID();
         await db.prepare(
@@ -672,15 +846,23 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
         const organisation = String(body.organisation || research.business_name || '').trim();
         if (!organisation) return json(request, env, { ok: false, error: 'A lead needs a business name.' }, 400);
 
+        const owner = await getOutreachOwner(db, 'glotemp');
         const prospect = { organisation, research };
         const composed = composeCityPin(prospect, {
           sku: body.sku || 'pin_90',
           priceUsd: body.priceUsd,
           agentName: body.agentName,
           neighbourhood: body.neighbourhood,
-          street: body.street
+          street: body.street,
+          owner
         });
         if (!composed.ok) {
+          // A draft that fails any check never enters the owner's queue. The
+          // lead is held as needing research instead, with the reason
+          // recorded, rather than returned and forgotten: researching the
+          // gap and drafting again finds the same prospect here, not a new
+          // one, since organisation and venture are what identify it.
+          await upsertProspect(db, { venture: 'glotemp', campaignType: 'city_pin', organisation, research, status: 'needs_research', blocker: composed.blockers.join(' ') });
           return json(request, env, { ok: false, blockers: composed.blockers, warnings: composed.warnings, error: composed.blockers[0] }, 422);
         }
 
@@ -695,18 +877,11 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
           return json(request, env, { ok: false, error: `${organisation} already has a message from the last 30 days, ${state}, from ${already[0].venture}. Two letters from the same house in one week reads worse than none.` }, 409);
         }
 
-        const prospectId = 'cp-' + crypto.randomUUID();
+        const { id: prospectId } = await upsertProspect(db, {
+          venture: 'glotemp', campaignType: 'city_pin', organisation, research,
+          status: 'ready', evidence: composed.warnings, notes: body.notes
+        });
         const now = new Date().toISOString();
-        await db.prepare(
-          `INSERT INTO prospects (id, venture, campaign_type, organisation, contacts, locale, research, evidence, score, status, notes, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-        ).bind(
-          prospectId, 'glotemp', 'city_pin', organisation,
-          JSON.stringify([{ email: composed.draft.to, published: composed.draft.emailPublishedAt }]),
-          String(research.city || ''), JSON.stringify(research),
-          JSON.stringify(composed.warnings || []), 0, 'ready',
-          String(body.notes || ''), now, now
-        ).run();
 
         const messageId = 'cp-msg-' + crypto.randomUUID();
         await db.prepare(
@@ -773,10 +948,62 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
       // Marked by hand, because sending is by hand. There is no email rail in
       // this house, so nothing can mark itself sent, and the duplicate window
       // is only honest if the owner tells it when a message actually went.
+      // The follow up for day 3 and day 7 is written and queued right here,
+      // the moment sending is confirmed, which is what "scheduled
+      // automatically" means when nothing in this house runs on a timer.
       case 'POST /social/outreach/sent': {
         if (!body.id) return json(request, env, { ok: false, error: 'no message id was given' }, 400);
         await setMessageStatus(db, body.id, 'sent');
-        return json(request, env, { ok: true, messages: await listMessages(db, { limit: 50 }) });
+        const sent = await db.prepare('SELECT * FROM outreach_messages WHERE id = ?').bind(body.id).first();
+        const followUps = sent ? await scheduleFollowUps(db, sent) : { scheduled: 0 };
+        return json(request, env, { ok: true, messages: await listMessages(db, { limit: 50 }), followUpsScheduled: followUps.scheduled });
+      }
+
+      // A reply arriving is recorded by hand, the same as sending: there is
+      // no inbound mail rail either. Recording one also stands down any
+      // other message still open to the same prospect, follow ups included,
+      // since a reply is the one signal that chasing has stopped being the
+      // right move.
+      case 'POST /social/outreach/replied': {
+        if (!body.id) return json(request, env, { ok: false, error: 'no message id was given' }, 400);
+        const msg = await db.prepare('SELECT * FROM outreach_messages WHERE id = ?').bind(body.id).first();
+        if (!msg) return json(request, env, { ok: false, error: 'that message no longer exists' }, 404);
+        await db.prepare('UPDATE outreach_messages SET replied_at = ?, updated_at = ? WHERE id = ?')
+          .bind(new Date().toISOString(), new Date().toISOString(), body.id).run();
+        const { results: open } = await db.prepare(
+          `SELECT id FROM outreach_messages WHERE prospect_id = ? AND id != ? AND status IN ('awaiting_approval','approved')`
+        ).bind(msg.prospect_id, body.id).all();
+        for (const row of open || []) await setMessageStatus(db, row.id, 'rejected');
+        return json(request, env, { ok: true, messages: await listMessages(db, { limit: 50 }), stoodDown: (open || []).length });
+      }
+
+      // A reviewed group cleared in one action, morning-queue style. Each id
+      // is checked exactly as the single-message route checks it; one that
+      // cannot go (a rule breach, a duplicate, a suppression hit) is skipped
+      // with its reason rather than stopping the rest of the batch.
+      case 'POST /social/outreach/approve-batch': {
+        const ids = Array.isArray(body.ids) ? body.ids.map(String) : [];
+        if (!ids.length) return json(request, env, { ok: false, error: 'No messages were given to approve.' }, 400);
+        const all = await listMessages(db, { limit: 300 });
+        const approved = [];
+        const skipped = [];
+        for (const id of ids) {
+          const msg = all.find((m) => m.id === id);
+          if (!msg) { skipped.push({ id, reason: 'no longer exists' }); continue; }
+          const findings = checkOutreachRules(msg.body);
+          if (findings.length && !body.override) { skipped.push({ id, reason: `breaks ${findings.length === 1 ? 'a standing rule' : findings.length + ' standing rules'}` }); continue; }
+          const already = (await recentlyApproached(db, msg.organisation)).filter((a) => a.id !== msg.id);
+          if (already.length) { skipped.push({ id, reason: `${msg.organisation} already approached in the last 30 days` }); continue; }
+          let suppressed = false;
+          for (const addr of String(msg.to_addresses + ',' + msg.cc_addresses).split(',').map((a) => a.trim()).filter(Boolean)) {
+            if (await isSuppressed(db, addr)) { suppressed = true; break; }
+          }
+          if (suppressed) { skipped.push({ id, reason: 'on the suppression list' }); continue; }
+          await db.prepare('UPDATE outreach_messages SET status = ?, updated_at = ? WHERE id = ?')
+            .bind('approved', new Date().toISOString(), id).run();
+          approved.push(id);
+        }
+        return json(request, env, { ok: true, approved, skipped, messages: await listMessages(db, { limit: 50 }) });
       }
 
       // A reference example per campaign type, added from the admin, since the

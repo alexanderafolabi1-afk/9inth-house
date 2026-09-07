@@ -19,9 +19,18 @@
 <link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Albert+Sans:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
-  --ink:#12161C; --panel:#1B222B; --panel2:#161C23; --line:#2A333E;
-  --paper:#E9E2D0; --dim:#9C948074; --muted:#A79F8C; --faint:#6E7683;
-  --gold:#C9A557; --gold-deep:#8F7434; --jade:#5FA98B; --rust:#B5563F;
+  /* Lifted a shade from the original monochrome-on-black so the desk reads
+     in daylight on a phone, without losing the private-office register:
+     still dark, still restrained, just no longer flat black. */
+  --ink:#181D25; --panel:#232B36; --panel2:#1D242D; --line:#333E4B;
+  --paper:#EDE7D8; --dim:#9C948074; --muted:#B2AA96; --faint:#828B99;
+  --gold:#D4AF63; --gold-deep:#9C7F3E; --jade:#6BBA9A; --rust:#C6644B;
+  /* Functional colour beyond gold-on-black: one hue per state, used the same
+     way everywhere it appears rather than picked per screen. */
+  --info:#6FA3D8; --amber:#D9A441; --violet:#9C8FD1;
+  /* One accent per venture, cycled by ventureColor() so a card is
+     recognisable by its edge colour before the label is even read. */
+  --v1:#D4AF63; --v2:#6BBA9A; --v3:#6FA3D8; --v4:#C6644B; --v5:#9C8FD1; --v6:#D9A441;
   --r:14px;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -53,12 +62,16 @@ header{
 }
 .gear{background:none;border:none;color:var(--muted);font-size:19px;cursor:pointer;padding:6px;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;flex:none}
 
-main{padding:4px 18px 24px;max-width:680px;margin:0 auto}
+/* Right padding reserves a permanent gutter the width of the refresh FAB
+   plus its inset and a clear gap, so no card content or button can ever
+   scroll under it. Fixing the FAB's position alone does not fix this: any
+   card that scrolls to that band of the screen would still be covered. */
+main{padding:4px calc(18px + 58px) 24px 18px;max-width:680px;margin:0 auto}
 /* Wider working canvas on desktop: cards flow into a responsive grid,
    section furniture (eyebrows, stats, notices) spans the full row.
    Single column preserved on mobile; no behavioural changes. */
 @media(min-width:900px){
-  main{max-width:1180px;padding:6px 26px 30px}
+  main{max-width:1180px;padding:6px calc(26px + 58px) 30px 26px}
   #app{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
   #app > *{grid-column:1 / -1}
   #app > .card{grid-column:auto;margin:0}
@@ -263,8 +276,22 @@ pre,code,.mono{overflow-wrap:anywhere;word-break:break-word}
 }
 .qtag.venture{color:var(--gold);border-color:var(--gold-deep)}
 .qtag.count.over{color:var(--rust);border-color:var(--rust)}
-.qtag.state.failed{color:var(--rust);border-color:var(--rust)}
-.qtag.state.scheduled{color:var(--jade);border-color:var(--jade)}
+/* One colour per state, read instantly rather than parsed: waiting is gold,
+   sent is the info blue, replied and scheduled are jade, failures and things
+   needing him are rust, everything else parked is amber. */
+.qtag.state.failed,.qtag.state.error,.qtag.state.needs_research,.qtag.state.do_not_contact{color:var(--rust);border-color:var(--rust)}
+.qtag.state.scheduled,.qtag.state.replied,.qtag.state.published{color:var(--jade);border-color:var(--jade)}
+.qtag.state.sent{color:var(--info);border-color:var(--info)}
+.qtag.state.awaiting_approval,.qtag.state.approved{color:var(--gold);border-color:var(--gold-deep)}
+.qtag.state.no_reply,.qtag.state.follow_up_due{color:var(--amber);border-color:var(--amber)}
+/* Six accents cycled by ventureColor(), so a venture is recognisable by
+   colour before its label is read, consistent everywhere it appears. */
+.qtag.venture.v1{color:var(--v1);border-color:var(--v1)}
+.qtag.venture.v2{color:var(--v2);border-color:var(--v2)}
+.qtag.venture.v3{color:var(--v3);border-color:var(--v3)}
+.qtag.venture.v4{color:var(--v4);border-color:var(--v4)}
+.qtag.venture.v5{color:var(--v5);border-color:var(--v5)}
+.qtag.venture.v6{color:var(--v6);border-color:var(--v6)}
 
 .qtext{font-size:15px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere;margin-bottom:10px}
 .qcard textarea{min-height:150px;line-height:1.5}
@@ -382,6 +409,16 @@ function load(){
 function save(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }catch(e){} }
 const uid = () => Math.random().toString(36).slice(2,9);
 const esc = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+// A stable colour per venture rather than per position in a list, so the
+// same venture always reads the same hue everywhere it appears, session to
+// session, without a colour ever being assigned by hand.
+function ventureColor(venture){
+  const s = String(venture || '');
+  let h = 0;
+  for(let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return 'v' + (h % 6 + 1);
+}
 
 /* ============ THE BACKERS LEDGER. Bea Whitmore ============ */
 const BACKER_TIERS = [
@@ -614,11 +651,20 @@ let NEEDS_SETUP = false;
 let LOGIN_MSG = '';
 let CP_MSG = '';
 
+// What still needs him across the three groups the queue holds: outreach
+// awaiting a decision, social posts awaiting one, and anything operational.
+// A total, not a tally of everything ever queued, matching the brief's rule
+// that a count is things needing him, not a running total.
+function queueBadgeCount(){
+  return Q.posts.length + outreachLive().length + needsResearch().length
+    + (!Q.storage ? 1 : 0) + (!Q.makeReady && Q.storage && !Q.error ? 1 : 0) + (Q.error ? 1 : 0);
+}
 function renderNav(){
   const pend = S.docket.filter(d=>d.status==='pending').length;
+  const qn = queueBadgeCount();
   document.getElementById('nav').innerHTML = TABS.map(t=>`
     <button class="${TAB===t.id?'on':''}" onclick="go('${t.id}')">
-      ${t.id==='docket'&&pend?`<i class="badge">${pend}</i>`:''}${t.id==='queue'&&Q.posts.length?`<i class="badge">${Q.posts.length}</i>`:''}
+      ${t.id==='docket'&&pend?`<i class="badge">${pend}</i>`:''}${t.id==='queue'&&qn?`<i class="badge">${qn}</i>`:''}
       <i class="ic">${t.ic}</i><span>${t.label}</span>
     </button>`).join('');
 }
@@ -1571,13 +1617,53 @@ function openSettings(){
   // Fetched once per session, the first time Settings is opened, then the panel
   // is redrawn with it. Doing it here rather than at sign in keeps one more
   // request off the critical path of getting into the desk.
-  if(!LI_TRIED){ LI_TRIED = true; Promise.all([loadLinkedIn(), loadN8nHook(), loadAnthropicKey(), loadFacts(), loadPostal()]).then(openSettings); }
+  if(!LI_TRIED){ LI_TRIED = true; Promise.all([loadLinkedIn(), loadN8nHook(), loadAnthropicKey(), loadFacts(), loadPostal(), loadOutreachOwners(), loadRegisterStatus()]).then(openSettings); }
   modal(`
     <h2>Firm Settings</h2>
     <div class="eyebrow">Account</div>
     <p class="sub">Signed in as the owner.</p>
     <div class="btnrow" style="margin-top:8px">
       <button class="btn ghost" style="min-height:44px" onclick="logout()">Sign out</button>
+    </div>
+
+    <div class="hr"></div>
+    <div class="eyebrow">&#9993; Outreach owners</div>
+    <p class="tiny" style="margin-top:2px">Who signs each venture's outreach. Not set here, a message cannot be composed under that venture's name: a message signed by nobody is not from a legacy business, it is from a machine.</p>
+    ${(OUT.owners || []).map(o => `
+      <div class="qnote" style="white-space:normal;margin-top:10px">
+        <b>${esc(o.venture)}</b> &middot; ${esc(o.name)}, ${esc(o.role)} &middot; ${esc(o.email)}
+      </div>`).join('') || '<p class="tiny" style="margin-top:8px">No venture has an assigned owner yet.</p>'}
+    ${OWNER_MSG ? `<p class="tiny" style="margin-top:8px;color:${OWNER_OK ? 'var(--gold)' : 'var(--rust)'}">${esc(OWNER_MSG)}</p>` : ''}
+    <label style="margin-top:12px">Venture slug</label>
+    <input type="text" id="owner-venture" placeholder="glotemp">
+    <label>Partner's name</label>
+    <input type="text" id="owner-name" placeholder="Aisha Rahman">
+    <label>Role</label>
+    <input type="text" id="owner-role" placeholder="Partnerships">
+    <label>Sending address</label>
+    <input type="text" id="owner-email" placeholder="marketing@glo-temp.com">
+    <div class="btnrow" style="margin-top:10px">
+      <button class="btn gold" id="owner-save" style="min-height:44px" onclick="saveOutreachOwner()">Assign or update</button>
+    </div>
+
+    <div class="hr"></div>
+    <div class="eyebrow">&#127758; Glotemp city register</div>
+    <p class="tiny" style="margin-top:2px">The wave campaign's target list. Paste the register CSV to import it; adding a city this way needs no code change. The main register carries waves one, two and four by city name; the Florida window is a separate list that becomes wave three.</p>
+    ${REGISTER_STATUS ? `
+      <div class="qnote" style="white-space:normal;margin-top:10px">
+        <b>${REGISTER_STATUS.routeSplit.total}</b> rows &middot; <b>${REGISTER_STATUS.routeSplit.email}</b> by email &middot; <b>${REGISTER_STATUS.routeSplit.form}</b> by form &middot; <b>${REGISTER_STATUS.routeSplit.none}</b> with no route yet
+        <br>Current wave: ${REGISTER_STATUS.currentWave || 'none open'}
+      </div>` : '<p class="tiny" style="margin-top:8px">Not loaded yet.</p>'}
+    ${REGISTER_MSG ? `<p class="tiny" style="margin-top:8px;color:${REGISTER_OK ? 'var(--gold)' : 'var(--rust)'}">${esc(REGISTER_MSG)}</p>` : ''}
+    <label style="margin-top:10px">Main register CSV</label>
+    <textarea id="register-csv" rows="4" placeholder="city_name,country,..."></textarea>
+    <div class="btnrow" style="margin-top:8px">
+      <button class="btn gold sm" id="register-import" style="min-height:44px" onclick="importRegisterCsv()">Import main register</button>
+    </div>
+    <label style="margin-top:12px">Florida window CSV (becomes wave three)</label>
+    <textarea id="register-florida-csv" rows="4" placeholder="city_name,glotemp_city_url,window_product,..."></textarea>
+    <div class="btnrow" style="margin-top:8px">
+      <button class="btn gold sm" id="register-florida-import" style="min-height:44px" onclick="importFloridaWindow()">Import Florida window</button>
     </div>
 
     <div class="hr"></div>
@@ -1872,6 +1958,95 @@ async function savePostal(){
   openSettings();
 }
 
+let OWNER_MSG = '';
+let OWNER_OK = false;
+
+async function loadOutreachOwners(){
+  try{
+    const data = await engine('/social/outreach/owners', null, 'GET');
+    OUT.owners = data.owners || [];
+  }catch(e){
+    OUT.owners = OUT.owners || [];
+  }
+}
+
+async function saveOutreachOwner(){
+  const btn = document.getElementById('owner-save');
+  if(!btn || btn.disabled) return;
+  const venture = (document.getElementById('owner-venture') || {}).value || '';
+  const name = (document.getElementById('owner-name') || {}).value || '';
+  const role = (document.getElementById('owner-role') || {}).value || '';
+  const email = (document.getElementById('owner-email') || {}).value || '';
+  btn.innerHTML = '<i class="spin"></i> Saving…'; btn.disabled = true;
+  try{
+    const data = await engine('/social/outreach/owners', { venture, name, role, email }, 'POST', { timeoutMs: 15000 });
+    OUT.owners = data.owners || OUT.owners;
+    OWNER_MSG = 'Saved. ' + name + ' now signs ' + venture + '.';
+    OWNER_OK = true;
+  }catch(e){
+    OWNER_MSG = e.message || 'Could not save that owner.';
+    OWNER_OK = false;
+  }
+  openSettings();
+}
+
+let REGISTER_STATUS = null;
+let REGISTER_MSG = '';
+let REGISTER_OK = false;
+
+async function loadRegisterStatus(){
+  try{
+    const data = await engine('/social/register', null, 'GET');
+    REGISTER_STATUS = { routeSplit: data.routeSplit, currentWave: data.currentWave };
+  }catch(e){
+    REGISTER_STATUS = null;
+  }
+}
+
+async function importRegisterCsv(){
+  const btn = document.getElementById('register-import');
+  if(!btn || btn.disabled) return;
+  const csv = (document.getElementById('register-csv') || {}).value || '';
+  if(!csv.trim()){ REGISTER_MSG = 'Paste the register CSV first.'; REGISTER_OK = false; openSettings(); return; }
+  btn.innerHTML = '<i class="spin"></i> Importing…'; btn.disabled = true;
+  try{
+    const data = await engine('/social/register/import', { csv }, 'POST', { timeoutMs: 30000 });
+    const bits = [`${data.imported} rows imported`];
+    if(data.duplicatesRemoved && data.duplicatesRemoved.length) bits.push(`${data.duplicatesRemoved.length} duplicate(s) removed: ${data.duplicatesRemoved.join(', ')}`);
+    if(data.rowsPadded) bits.push(`${data.rowsPadded} row(s) had a short trailing column padded`);
+    if(data.rowsStillMisaligned) bits.push(`${data.rowsStillMisaligned} row(s) still misaligned, not imported`);
+    if(data.urlIssues && data.urlIssues.length) bits.push(`${data.urlIssues.length} broken link(s) dropped: ${data.urlIssues.map(u => u.city + ' ' + u.field).join(', ')}`);
+    REGISTER_MSG = bits.join('. ') + '.';
+    REGISTER_OK = true;
+    await loadRegisterStatus();
+  }catch(e){
+    REGISTER_MSG = e.message || 'Could not import that register.';
+    REGISTER_OK = false;
+  }
+  openSettings();
+}
+
+async function importFloridaWindow(){
+  const btn = document.getElementById('register-florida-import');
+  if(!btn || btn.disabled) return;
+  const csv = (document.getElementById('register-florida-csv') || {}).value || '';
+  if(!csv.trim()){ REGISTER_MSG = 'Paste the Florida window CSV first.'; REGISTER_OK = false; openSettings(); return; }
+  btn.innerHTML = '<i class="spin"></i> Importing…'; btn.disabled = true;
+  try{
+    const data = await engine('/social/register/import-florida-window', { csv }, 'POST', { timeoutMs: 30000 });
+    const bits = [`${data.assigned.length} row(s) assigned to wave three: ${data.assigned.join(', ') || 'none'}`];
+    if(data.conflicts && data.conflicts.length) bits.push(...data.conflicts);
+    if(data.notFound && data.notFound.length) bits.push(`Not found in the main register yet: ${data.notFound.join(', ')}`);
+    REGISTER_MSG = bits.join('. ') + '.';
+    REGISTER_OK = true;
+    await loadRegisterStatus();
+  }catch(e){
+    REGISTER_MSG = e.message || 'Could not import the Florida window.';
+    REGISTER_OK = false;
+  }
+  openSettings();
+}
+
 let LI_STATUS = null;
 let LI_TRIED = false;
 let LI_MSG = '';
@@ -2013,10 +2188,11 @@ const Q = {
 // tells the house after he has sent it himself, and it is the only thing that
 // makes the cross-venture duplicate window mean anything.
 const OUT = {
-  messages: [], prospects: [], references: [], campaignTypes: {}, guardrails: [],
+  messages: [], prospects: [], references: [], campaignTypes: {}, guardrails: [], owners: [],
   loaded: false, loading: false, error: '',
   open: {},   // message id -> true while its full body is showing
-  busy: {}
+  busy: {},
+  selected: {}   // message id -> true while checked for a batch send
 };
 
 async function loadOutreach(quiet){
@@ -2029,6 +2205,7 @@ async function loadOutreach(quiet){
     OUT.references = data.references || [];
     OUT.campaignTypes = data.campaignTypes || {};
     OUT.guardrails = data.guardrails || [];
+    OUT.owners = data.owners || [];
   }catch(e){
     OUT.error = 'Loading outreach failed: ' + (e.message || String(e));
   }
@@ -2060,16 +2237,34 @@ function outreachMailto(m){
   return 'mailto:' + encodeURIComponent(m.to_addresses || '').replace(/%40/g, '@').replace(/%2C/gi, ',') + '?' + q;
 }
 
+// Contact history for this organisation, across every venture, so nobody in
+// the house knocks on the same door twice by accident. Read straight off the
+// messages already loaded, not a separate call, since the whole table is on
+// the device already.
+function contactHistory(m){
+  const org = String(m.organisation || '').trim().toLowerCase();
+  if(!org) return [];
+  return OUT.messages
+    .filter(x => x.id !== m.id && String(x.organisation || '').trim().toLowerCase() === org)
+    .sort((a, b) => new Date(b.updated_at || b.sent_at || 0) - new Date(a.updated_at || a.sent_at || 0));
+}
+
 function vOutreachCard(m){
   const open = !!OUT.open[m.id];
   const busy = !!OUT.busy[m.id];
   const findings = m.rule_findings || [];
   const research = m.research || {};
   const ct = OUT.campaignTypes[m.campaign_type];
+  const selectable = m.status === 'awaiting_approval';
+  const selected = !!OUT.selected[m.id];
+  const history = contactHistory(m);
 
   return `<div class="card" style="margin-bottom:12px${busy ? ';opacity:.5' : ''}">
     <div class="qmeta" style="margin-bottom:8px">
-      <span class="qtag venture">${esc(m.venture)}</span>
+      ${selectable ? `<label class="tapline" style="min-height:auto;gap:6px" onclick="event.stopPropagation()">
+        <input type="checkbox" ${selected ? 'checked' : ''} onchange="toggleOutreachSelect('${m.id}')">
+      </label>` : ''}
+      <span class="qtag venture ${ventureColor(m.venture)}">${esc(m.venture)}</span>
       <span class="qtag">${esc(ct ? ct.label : m.campaign_type)}</span>
       ${m.locale_note ? `<span class="qtag">Email</span>` : ''}
       <span class="qtag state ${esc(m.status)}">${m.status === 'approved' ? 'approved, not yet sent' : 'awaiting you'}</span>
@@ -2078,7 +2273,11 @@ function vOutreachCard(m){
     <h3 class="serif" style="font-size:17px;margin-bottom:4px">${esc(m.organisation || m.prospect_id)}</h3>
     <p class="tiny" style="margin-bottom:8px">${esc(outreachWhen(m.send_after))}</p>
 
-    <div class="qnote" style="margin-bottom:10px;white-space:normal"><b>To</b> ${esc(m.to_addresses)}${m.cc_addresses ? `<br><b>Cc</b> ${esc(m.cc_addresses)}` : ''}<br><b>Subject</b> ${esc(m.subject)}</div>
+    ${history.length ? `<p class="tiny" style="margin-bottom:8px;color:var(--info)">Contacted before: ${history.map(h => esc(h.venture) + ' &middot; ' + esc(h.status)).join(', ')}.</p>` : ''}
+
+    ${m.delivery_type === 'form'
+      ? `<div class="qnote" style="margin-bottom:10px;white-space:normal"><b>Form</b> ${esc(m.form_url)}<br><b>Subject</b> ${esc(m.subject)}</div>`
+      : `<div class="qnote" style="margin-bottom:10px;white-space:normal"><b>To</b> ${esc(m.to_addresses)}${m.cc_addresses ? `<br><b>Cc</b> ${esc(m.cc_addresses)}` : ''}<br><b>Subject</b> ${esc(m.subject)}</div>`}
 
     ${findings.length ? `<div class="qerr">This breaks ${findings.length === 1 ? 'a standing rule' : findings.length + ' standing rules'}:<br>${findings.map(f => '&#8226; ' + esc(f.finding)).join('<br>')}</div>` : ''}
 
@@ -2094,29 +2293,65 @@ function vOutreachCard(m){
          <div class="btnrow" style="margin-bottom:10px"><button class="btn ghost wide" style="min-height:44px" onclick="OUT.open['${m.id}']=false;render()">Hide the letter</button></div>`
       : `<div class="btnrow" style="margin-bottom:10px"><button class="btn ghost wide" style="min-height:44px" onclick="OUT.open['${m.id}']=true;render()">Read the letter</button></div>`}
 
-    <div class="qnote" style="margin-bottom:10px;white-space:normal">The house does not send email. Nothing here goes out on its own: copy it, or open it in your own mail app, send it from your own address, then tell the house it went.</div>
+    <div class="qnote" style="margin-bottom:10px;white-space:normal">${m.delivery_type === 'form'
+      ? 'The house does not submit forms. Open it, paste the text in, send it yourself, then tell the house it went.'
+      : 'The house does not send email. Nothing here goes out on its own: copy it, or open it in your own mail app, send it from your own address, then tell the house it went.'}</div>
 
-    <div class="btnrow">
-      <button class="btn jade" style="min-height:44px" onclick="copyOutreach('${m.id}')" ${busy ? 'disabled' : ''}>Copy the email</button>
-      <a class="btn ghost" style="min-height:44px;display:inline-flex;align-items:center;text-decoration:none" href="${esc(outreachMailto(m))}">Open in mail</a>
-    </div>
     <div class="btnrow" style="margin-top:8px">
       ${m.status === 'approved'
         ? `<button class="btn gold wide" style="min-height:44px" onclick="markOutreachSent('${m.id}')" ${busy ? 'disabled' : ''}>I have sent this</button>`
-        : `<button class="btn gold" style="min-height:44px" onclick="approveOutreach('${m.id}')" ${busy ? 'disabled' : ''}>Approve</button>
-           <button class="btn danger" style="min-height:44px" onclick="rejectOutreach('${m.id}')" ${busy ? 'disabled' : ''}>Reject</button>`}
+        : `<button class="btn gold wide" style="min-height:44px" onclick="approveOutreach('${m.id}')" ${busy ? 'disabled' : ''}>Approve</button>`}
     </div>
+    <div class="qmore" style="margin-top:8px">
+      ${m.delivery_type === 'form'
+        ? `<button class="btn jade" onclick="copyOutreach('${m.id}')" ${busy ? 'disabled' : ''}>Copy the text</button>
+           <a class="btn ghost" style="display:inline-flex;align-items:center;text-decoration:none" href="${esc(m.form_url)}" target="_blank" rel="noopener">Open the form</a>`
+        : `<button class="btn jade" onclick="copyOutreach('${m.id}')" ${busy ? 'disabled' : ''}>Copy the email</button>
+           <a class="btn ghost" style="display:inline-flex;align-items:center;text-decoration:none" href="${esc(outreachMailto(m))}">Open in mail</a>`}
+      ${m.status !== 'approved' ? `<button class="btn danger" onclick="rejectOutreach('${m.id}')" ${busy ? 'disabled' : ''}>Reject</button>` : ''}
+      <button class="btn ghost" onclick="markOutreachReplied('${m.id}')" ${busy ? 'disabled' : ''}>They replied</button>
+    </div>
+  </div>`;
+}
+
+// Section 1's separate list: a draft that failed research or a standing
+// rule never reaches the send queue. It lands here instead, with the exact
+// reason, so it is worked on rather than lost.
+function needsResearch(){
+  return OUT.prospects.filter(p => p.status === 'needs_research');
+}
+
+function vNeedsResearchCard(p){
+  return `<div class="card" style="margin-bottom:12px">
+    <div class="qmeta" style="margin-bottom:8px">
+      <span class="qtag venture ${ventureColor(p.venture)}">${esc(p.venture)}</span>
+      <span class="qtag state needs_research">needs research</span>
+    </div>
+    <h3 class="serif" style="font-size:16px;margin-bottom:6px">${esc(p.organisation || p.id)}</h3>
+    <div class="qerr">${esc(p.last_blocker || 'No reason was recorded.')}</div>
+  </div>`;
+}
+
+function vOutreachBatchBar(){
+  const n = Object.keys(OUT.selected).filter(id => OUT.selected[id]).length;
+  if(!n) return '';
+  return `<div class="qhead" style="margin-bottom:12px">
+    <button class="btn gold" style="min-height:44px" onclick="approveOutreachBatch()">Approve ${n} selected</button>
+    <button class="btn ghost" style="min-height:44px" onclick="OUT.selected={};render()">Clear selection</button>
   </div>`;
 }
 
 function vOutreach(){
   const live = outreachLive();
   const board = vCityPinBoard();
-  if(!live.length && !board && !OUT.error && OUT.loaded) return '';
+  const stuck = needsResearch();
+  if(!live.length && !board && !stuck.length && !OUT.error && OUT.loaded) return '';
   return `
-    ${live.length || OUT.error ? `<div class="eyebrow">Outreach waiting on you</div>` : ''}
+    ${live.length || OUT.error ? `<div class="eyebrow">&#9993; Outreach${live.length ? ', ' + live.length : ''}</div>` : ''}
     ${OUT.error ? `<div class="qerr">${esc(OUT.error)}</div>` : ''}
+    ${vOutreachBatchBar()}
     ${live.map(vOutreachCard).join('')}
+    ${stuck.length ? `<div class="eyebrow">&#128269; Needs more research, ${stuck.length}</div>${stuck.map(vNeedsResearchCard).join('')}` : ''}
     ${board}
     <div class="hr"></div>`;
 }
@@ -2297,11 +2532,71 @@ async function confirmOutreachSent(id){
   try{
     const data = await engine('/social/outreach/sent', { id }, 'POST', { timeoutMs: 15000 });
     OUT.messages = data.messages || OUT.messages;
-    toast('Filed. Nobody else in the house will knock on that door for a month.');
+    const fu = data.followUpsScheduled || 0;
+    toast('Filed. Nobody else in the house will knock on that door for a month.'
+      + (fu ? ' ' + fu + ' follow up' + (fu === 1 ? '' : 's') + ' queued on schedule.' : ''));
   }catch(e){
     toast(errMsg('Filing it', e));
   }
   delete OUT.busy[id];
+  render();
+}
+
+// The one signal that chasing has stopped being the right move. Recorded by
+// hand, the same as sent: there is no inbound mail rail here to read a reply
+// off of automatically.
+async function markOutreachReplied(id){
+  const m = OUT.messages.find(x => x.id === id);
+  if(!m) return;
+  OUT.busy[id] = true; render();
+  try{
+    const data = await engine('/social/outreach/replied', { id }, 'POST', { timeoutMs: 15000 });
+    OUT.messages = data.messages || OUT.messages;
+    const stood = data.stoodDown || 0;
+    toast('Marked replied.' + (stood ? ' ' + stood + ' other open message' + (stood === 1 ? '' : 's') + ' to ' + esc(m.organisation || 'them') + ' stood down.' : ''));
+  }catch(e){
+    toast(errMsg('Recording the reply', e));
+  }
+  delete OUT.busy[id];
+  render();
+}
+
+function toggleOutreachSelect(id){
+  if(OUT.selected[id]) delete OUT.selected[id];
+  else OUT.selected[id] = true;
+  render();
+}
+
+// A reviewed group, sent in one tap. Every message still goes through the
+// same rule checks and duplicate window the single approve route applies;
+// this only saves him tapping Approve once per card when he has already
+// read the batch.
+async function approveOutreachBatch(){
+  const ids = Object.keys(OUT.selected).filter(id => OUT.selected[id]);
+  if(!ids.length) return;
+  ids.forEach(id => OUT.busy[id] = true);
+  render();
+  try{
+    const data = await engine('/social/outreach/approve-batch', { ids }, 'POST', { timeoutMs: 25000 });
+    OUT.messages = data.messages || OUT.messages;
+    const approved = data.approved || [];
+    const skipped = data.skipped || [];
+    OUT.selected = {};
+    toast(approved.length + ' approved.' + (skipped.length ? ' ' + skipped.length + ' held back, read why below.' : ''));
+    if(skipped.length){
+      modal(`
+        <h2>Held back from the batch</h2>
+        ${skipped.map(s => {
+          const m = OUT.messages.find(x => x.id === s.id);
+          return `<p class="sub" style="margin-bottom:10px"><b>${esc(m ? m.organisation : s.id)}.</b> ${esc(s.reason)}</p>`;
+        }).join('')}
+        <div class="btnrow" style="margin-top:14px"><button class="btn ghost wide" style="min-height:44px" onclick="closeModal()">Understood</button></div>
+      `);
+    }
+  }catch(e){
+    toast(errMsg('Approving the batch', e));
+  }
+  ids.forEach(id => delete OUT.busy[id]);
   render();
 }
 
@@ -2556,15 +2851,21 @@ function vQueue(){
 
   const cards = Q.posts.map(qcard).join('');
 
+  // Operations: what needs him about the house itself rather than any one
+  // message. Grouped and counted the same way as the other two, so a real
+  // problem never hides among the day's ordinary approvals.
+  const opsNotices = [
+    offline ? { html: `<div class="offline">No signal. You can still approve and skip: everything is held on this device and sent the moment the connection returns.</div>` } : null,
+    !Q.storage ? { html: `<div class="offline">Storage is not connected on the Worker yet. Create the D1 database, add the binding, then use Prepare storage in Settings.</div>` } : null,
+    Q.error ? { html: `<div class="qerr">${esc(Q.error)}</div>` } : null,
+    (!Q.makeReady && Q.storage && !Q.error) ? { html: `<div class="notice">The distribution rail is not configured on the Worker, so nothing can publish yet. Set MAKE_WEBHOOK_URL.</div>` } : null,
+    pending ? { html: `<div class="notice">${pending} ${pending === 1 ? 'action is' : 'actions are'} waiting to reach the engine. <button class="btn sm ghost" style="min-height:44px" onclick="flushPending().then(()=>loadQueue())">Send now</button></div>` } : null
+  ].filter(Boolean);
+
   return `
     ${vOutreach()}
-    <div class="eyebrow">The morning queue</div>
-
-    ${offline ? `<div class="offline">No signal. You can still approve and skip: everything is held on this device and sent the moment the connection returns.</div>` : ''}
-    ${pending ? `<div class="notice">${pending} ${pending === 1 ? 'action is' : 'actions are'} waiting to reach the engine. <button class="btn sm ghost" style="min-height:44px" onclick="flushPending().then(()=>loadQueue())">Send now</button></div>` : ''}
-    ${!Q.storage ? `<div class="offline">Storage is not connected on the Worker yet. Create the D1 database, add the binding, then use Prepare storage in Settings.</div>` : ''}
-    ${Q.error ? `<div class="qerr">${esc(Q.error)}</div>` : ''}
-    ${!Q.makeReady && Q.storage && !Q.error ? `<div class="notice">The distribution rail is not configured on the Worker, so nothing can publish yet. Set MAKE_WEBHOOK_URL.</div>` : ''}
+    ${opsNotices.length ? `<div class="eyebrow">&#9881; Operations, ${opsNotices.length}</div>${opsNotices.map(n => n.html).join('')}<div class="hr"></div>` : ''}
+    <div class="eyebrow">&#128227; Social content${Q.posts.length ? ', ' + Q.posts.length : ''}</div>
 
     ${stats ? `<div class="qstat">${stats}</div>` : ''}
 
@@ -2609,7 +2910,7 @@ function qcard(p){
     <div class="qhint"><span class="yes">${manual ? 'Copy' : 'Approve'}</span><span class="no">Skip</span></div>
     <div class="qswipe">
       <div class="qmeta">
-        <span class="qtag venture">${esc(p.venture)}</span>
+        <span class="qtag venture ${ventureColor(p.venture)}">${esc(p.venture)}</span>
         <span class="qtag">${esc(platformLabel(p.platform))}</span>
         <span class="qtag">${esc(categoryLabel(p.category))}</span>
         <span class="qtag count ${over ? 'over' : ''}">${len}/${limit}</span>

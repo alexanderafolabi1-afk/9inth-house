@@ -97,6 +97,11 @@ CREATE TABLE IF NOT EXISTS prospects (
   score INTEGER NOT NULL DEFAULT 0,
   status TEXT NOT NULL DEFAULT 'researching',
   notes TEXT NOT NULL DEFAULT '',
+  -- Set the moment a draft attempt fails a hard gate or a standing rule, and
+  -- cleared the moment one succeeds. A prospect with this set is never a
+  -- message: it sits in the needs-research list until the gap it names is
+  -- closed, rather than reaching the owner looking finished.
+  last_blocker TEXT NOT NULL DEFAULT '',
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
@@ -130,11 +135,34 @@ CREATE TABLE IF NOT EXISTS outreach_messages (
   status TEXT NOT NULL DEFAULT 'awaiting_approval',
   send_after TEXT,
   sent_at TEXT,
+  -- Set by hand, the same as sent_at: there is no inbound mail rail here
+  -- either, so a reply is recorded when the owner says one arrived. Null
+  -- means either never sent or sent and not yet replied to.
+  replied_at TEXT,
+  -- Section 5's form route. Where only a web form exists, the message is
+  -- prepared the same as an email and presented the same way, but the
+  -- owner's one tap opens the form rather than a mail client, and the
+  -- second tap pastes rather than sends. 'email' is the default so every
+  -- message from before this column existed reads the way it always did.
+  delivery_type TEXT NOT NULL DEFAULT 'email',
+  form_url TEXT NOT NULL DEFAULT '',
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_messages_status ON outreach_messages (status, send_after);
+
+-- Who signs a venture's outreach, set from the desk rather than hardcoded
+-- anywhere in a template. A message with nobody named in it is not from a
+-- legacy business, it is from a machine, so composing a draft for a venture
+-- with no row here is refused rather than left to sign itself "the house".
+CREATE TABLE IF NOT EXISTS outreach_owners (
+  venture TEXT PRIMARY KEY,
+  name TEXT NOT NULL DEFAULT '',
+  role TEXT NOT NULL DEFAULT '',
+  email TEXT NOT NULL DEFAULT '',
+  updated_at TEXT NOT NULL
+);
 
 CREATE TABLE IF NOT EXISTS suppression (
   email TEXT PRIMARY KEY,
@@ -206,6 +234,86 @@ CREATE TABLE IF NOT EXISTS feedback (
 CREATE INDEX IF NOT EXISTS idx_feedback_persona ON feedback (persona, venture);
 CREATE INDEX IF NOT EXISTS idx_feedback_created ON feedback (created_at);
 
+-- The Glotemp city register: the target list a wave-based campaign sends
+-- against. One row per organisation per vertical (a city can carry a
+-- restaurant row, a hotel row and a board row at once), editable from the
+-- admin so adding a city is a data change, never a code change.
+CREATE TABLE IF NOT EXISTS city_register (
+  id TEXT PRIMARY KEY,
+  venture TEXT NOT NULL DEFAULT 'glotemp',
+  city TEXT NOT NULL,
+  country TEXT NOT NULL DEFAULT '',
+  organisation TEXT NOT NULL DEFAULT '',
+  vertical TEXT NOT NULL,
+  language TEXT NOT NULL DEFAULT 'en',
+  wave INTEGER NOT NULL DEFAULT 0,
+  food_url TEXT NOT NULL DEFAULT '',
+  pulse_url TEXT NOT NULL DEFAULT '',
+  -- Held as imported, verbatim, so a correction is traceable back to what the
+  -- register actually said rather than to what somebody assumed it meant.
+  dmo_contact TEXT NOT NULL DEFAULT '',
+  operator_email_if_public TEXT NOT NULL DEFAULT '',
+  -- The organisation's own site (the board's for a board row, the
+  -- operator's for everything else), never Glotemp's own city page about
+  -- them. This is what "use form on board URL" in dmo_contact actually
+  -- points at, and a form route with no other target opens this rather
+  -- than a page on glo-temp.com.
+  organisation_url TEXT NOT NULL DEFAULT '',
+  resolved_contact_email TEXT NOT NULL DEFAULT '',
+  contact_source TEXT NOT NULL DEFAULT '',
+  route_type TEXT NOT NULL DEFAULT '',
+  form_url TEXT NOT NULL DEFAULT '',
+  -- Section 2's requirement, applied per link rather than per row: a link
+  -- that failed its check the last time this row was validated, so a row
+  -- with an unreachable link does not reach the queue.
+  url_check_ok INTEGER NOT NULL DEFAULT 0,
+  url_check_note TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'pending',
+  notes TEXT NOT NULL DEFAULT '',
+  -- Set when this row is a second touch on an organisation already
+  -- contacted in an earlier wave, holding that row's own id. Composing
+  -- against this row is refused until the referenced row's message has
+  -- actually been sent and enough time has passed, so a second touch can
+  -- never go out before or instead of the first.
+  follow_up_of TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_register_wave ON city_register (wave, status);
+CREATE INDEX IF NOT EXISTS idx_register_city ON city_register (city);
+
+-- Section 3's rival suspension: a city stays locked, by default, until the
+-- owner records a live name in it. Locked is the safe starting state for
+-- every city the register has ever held, so a city with no row here is
+-- treated as locked rather than open.
+CREATE TABLE IF NOT EXISTS rival_locks (
+  city TEXT PRIMARY KEY,
+  locked INTEGER NOT NULL DEFAULT 1,
+  released_at TEXT,
+  released_note TEXT NOT NULL DEFAULT '',
+  updated_at TEXT NOT NULL
+);
+
+-- Section 6's live slot: the one thing the owner records, and everything
+-- that follows from it. The window is stored as start and end rather than
+-- start and a duration, so the expiry a shift checks against is a plain
+-- comparison rather than arithmetic repeated on every read.
+CREATE TABLE IF NOT EXISTS live_slots (
+  id TEXT PRIMARY KEY,
+  city TEXT NOT NULL,
+  vertical TEXT NOT NULL,
+  name TEXT NOT NULL,
+  url TEXT NOT NULL,
+  window_start TEXT NOT NULL,
+  window_end TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active',
+  notified_expiring INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_live_slots_status ON live_slots (status, window_end);
+
 CREATE TABLE IF NOT EXISTS push_subs (
   endpoint TEXT PRIMARY KEY,
   p256dh TEXT NOT NULL,
@@ -220,6 +328,19 @@ export function hasStore(env) {
   return Boolean(env && env.DB && typeof env.DB.prepare === 'function');
 }
 
+// Columns added to tables that already shipped, so CREATE TABLE IF NOT
+// EXISTS above never sees them on a database that already has the table.
+// ALTER TABLE has no IF NOT EXISTS in SQLite, and D1 errors "duplicate
+// column name" on a second run, which is exactly the case every boot after
+// the first: caught and ignored below rather than avoided, since there is
+// no cheap way to ask D1 whether a column already exists first.
+const ADDITIVE_COLUMNS = [
+  "ALTER TABLE prospects ADD COLUMN last_blocker TEXT NOT NULL DEFAULT ''",
+  'ALTER TABLE outreach_messages ADD COLUMN replied_at TEXT',
+  "ALTER TABLE outreach_messages ADD COLUMN delivery_type TEXT NOT NULL DEFAULT 'email'",
+  "ALTER TABLE outreach_messages ADD COLUMN form_url TEXT NOT NULL DEFAULT ''"
+];
+
 export async function ensureSchema(db) {
   // D1 will not take several statements in one prepare, so they are split and run
   // in a batch. Every statement is IF NOT EXISTS, so this is safe to call on
@@ -230,6 +351,9 @@ export async function ensureSchema(db) {
     .filter(Boolean)
     .map((s) => db.prepare(s));
   await db.batch(statements);
+  for (const ddl of ADDITIVE_COLUMNS) {
+    try { await db.prepare(ddl).run(); } catch (e) { /* already there */ }
+  }
 }
 
 export const nowIso = () => new Date().toISOString();
