@@ -656,7 +656,7 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
         const row = await getRegisterRow(db, body.id);
         if (!row) return json(request, env, { ok: false, error: 'that register row no longer exists' }, 404);
         const owner = await getOutreachOwner(db, row.venture);
-        const composed = await composeRegisterMessage(db, row, { owner });
+        const composed = await composeRegisterMessage(db, row, { owner, rivalReference: Boolean(body.rivalReference) });
         const ts = new Date().toISOString();
         if (!composed.ok) {
           await db.prepare('UPDATE city_register SET notes = ?, updated_at = ? WHERE id = ?')

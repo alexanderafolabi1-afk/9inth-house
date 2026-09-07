@@ -9,7 +9,7 @@
 import { nowIso } from './db.js';
 import { checkOutreachRules } from './outreach.js';
 import { signatureBlock } from './owners.js';
-import { registerCampaignCopy, REGISTER_CAMPAIGN_VERTICALS } from './seeds/glotemp-register-campaign.js';
+import { registerCampaignCopy, REGISTER_CAMPAIGN_VERTICALS, rivalFollowUpCopy, RIVAL_FOLLOW_UP_VERTICALS, floridaWindowFollowUpCopy } from './seeds/glotemp-register-campaign.js';
 
 /* ---------- CSV parsing ---------- */
 
@@ -734,7 +734,7 @@ export async function daysSinceSent(db, registerRowId) {
   return (Date.now() - new Date(row.sent_at).getTime()) / 86400000;
 }
 
-export async function composeRegisterMessage(db, row, { owner } = {}) {
+export async function composeRegisterMessage(db, row, { owner, rivalReference = false } = {}) {
   const blockers = [];
 
   const wave = await waveAllowsRow(db, row);
@@ -772,23 +772,51 @@ export async function composeRegisterMessage(db, row, { owner } = {}) {
     blockers.push(`"${row.vertical}" has no register campaign template. Templates exist for: ${REGISTER_CAMPAIGN_VERTICALS.join(', ')} (club uses the restaurant template).`);
   }
 
-  // A second touch is never sent on the first-touch copy: it would read as
-  // a cold approach, which is exactly what the owner said not to do. It
-  // waits for its own approved copy, the same as it waited for its own
-  // sign-off before being written at all.
-  if (row.follow_up_of && !blockers.length) {
-    blockers.push('This is a second touch. It has no approved follow-up copy yet, and is not sent on the first-touch template.');
+  // Draft 1, locked: a rival follow-up is requested explicitly, never
+  // inferred, and reads the rival's actual live name off the same
+  // live_slots record that released this city's lock rather than trusting
+  // anything passed in. A board has no neighbouring venue to reference.
+  let rivalName = '';
+  if (rivalReference && !blockers.length) {
+    if (!RIVAL_FOLLOW_UP_VERTICALS.includes(templateVertical)) {
+      blockers.push(`"${row.vertical}" has no rival follow-up template. It covers restaurants and hotels (club uses the restaurant template), not boards.`);
+    } else {
+      const slot = await db.prepare(
+        `SELECT name FROM live_slots WHERE city = ? ORDER BY window_start DESC LIMIT 1`
+      ).bind(row.city).first();
+      if (!slot || !slot.name) {
+        blockers.push(`No live rival name is on record for ${row.city} yet. Record a live slot before a rival follow-up can be drafted.`);
+      } else {
+        rivalName = slot.name;
+      }
+    }
   }
 
   if (blockers.length) return { ok: false, blockers };
 
-  const copy = registerCampaignCopy({
-    vertical: templateVertical,
-    language: row.language,
-    city: row.city,
-    foodUrl: row.food_url,
-    pulseUrl: row.pulse_url
-  });
+  // Draft 3, locked as written: a second touch composes on its own
+  // follow-up copy, which references the first message rather than reading
+  // as a cold approach. Draft 1's rival follow-up takes priority when both
+  // could apply, since it is the more specific request; a row is never
+  // both at once in practice (a second touch is scheduled by wave, a rival
+  // follow-up by an explicit ask).
+  const copy = rivalReference
+    ? rivalFollowUpCopy({
+        vertical: templateVertical,
+        city: row.city,
+        rivalName,
+        foodUrl: row.food_url,
+        pulseUrl: row.pulse_url
+      })
+    : row.follow_up_of
+    ? floridaWindowFollowUpCopy({ vertical: templateVertical, city: row.city })
+    : registerCampaignCopy({
+        vertical: templateVertical,
+        language: row.language,
+        city: row.city,
+        foodUrl: row.food_url,
+        pulseUrl: row.pulse_url
+      });
 
   const stillOpen = [...new Set(copy.body.match(/\{[A-Za-z_][A-Za-z_ ]{1,30}\}/g) || [])];
   if (stillOpen.length) {
