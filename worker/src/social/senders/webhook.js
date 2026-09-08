@@ -10,6 +10,7 @@
 
 import { stripDashPunctuation } from '../text.js';
 import { PLATFORMS } from '../config.js';
+import { getMakeWebhookUrl, describeMakeWebhookUrl } from '../../makehook.js';
 
 // The five fields the rail expects, and nothing invented. The idempotency key
 // rides along as a sixth so a Make branch can dedupe on it too if it ever wants
@@ -79,9 +80,18 @@ export function readExternalId(body) {
 }
 
 export async function send(env, post) {
-  const endpoint = env.MAKE_WEBHOOK_URL;
+  // Read through the same accessor the desk writes to, so an address set from
+  // Settings works immediately and an address already on the Worker keeps
+  // working untouched. This used to read env.MAKE_WEBHOOK_URL alone, which
+  // meant the rail could only ever be pointed somewhere from the Cloudflare
+  // dashboard.
+  const endpoint = await getMakeWebhookUrl(env);
   if (!endpoint) {
-    return { ok: false, reason: 'MAKE_WEBHOOK_URL is not set on the Worker, so there is nowhere to publish to' };
+    return { ok: false, reason: 'No distribution rail address is set, so there is nowhere to publish to. Set it in the desk Settings, under the distribution rail.' };
+  }
+  const check = describeMakeWebhookUrl(endpoint);
+  if (!check.ok) {
+    return { ok: false, reason: 'The distribution rail address cannot be used: ' + check.problems.join(' ') };
   }
 
   let res;

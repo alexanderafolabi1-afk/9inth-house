@@ -62,6 +62,7 @@ import { DEAL_TIERS, FX_TO_GBP, REPORTING_CURRENCIES } from './seeds/deal-tiers.
 import { SENDABLE as PENDING_STATUSES } from './config.js';
 import { credentialDeliveries, credentialStatusFor, writeCredentialsFor } from './senders/index.js';
 import { getWebhookUrl, setWebhookUrl, describeWebhookUrl } from '../n8n.js';
+import { setMakeWebhookUrl, describeMakeWebhookUrl, makeWebhookStatus } from '../makehook.js';
 import { getAnthropicKey, setAnthropicKey, anthropicKeyStatus, describeAnthropicKey } from '../aikey.js';
 import { readPostalAddress, writePostalAddress, describePostalAddress } from '../postal.js';
 import { runGeneration } from './generate.js';
@@ -165,7 +166,7 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
   const noStoreNeeded = [
     '/social/push/keys', '/social/selfcheck',
     '/social/n8n-token', '/social/n8n-token/regenerate',
-    '/social/anthropic-key', '/social/credentials', '/social/n8n-webhook',
+    '/social/anthropic-key', '/social/credentials', '/social/n8n-webhook', '/social/make-webhook',
     '/social/postal-address', '/social/pages', '/social/origins'
   ];
   const needsStore = !noStoreNeeded.includes(path);
@@ -193,7 +194,7 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
         return json(request, env, {
           ok: true,
           storage: hasStore(env),
-          makeWebhook: Boolean(env.MAKE_WEBHOOK_URL),
+          makeWebhook: (await makeWebhookStatus(env)).configured,
           push: await pushConfigured(env),
           n8n: Boolean(env.LOGIN_ATTEMPTS),
           emailFallback: Boolean(env.NOTIFY_EMAIL_WEBHOOK),
@@ -255,7 +256,7 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
           // languages is a queue nobody can review.
           languages: IG_LANGUAGES,
           vapidPublicKey: (await getVapidKeys(env))?.publicKey || null,
-          makeReady: Boolean(env.MAKE_WEBHOOK_URL)
+          makeReady: (await makeWebhookStatus(env)).configured
         });
       }
 
@@ -1261,6 +1262,40 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
           return json(request, env, { ok: false, error: 'LOGIN_ATTEMPTS is not bound, so there is nowhere to store the address. See worker/README.md.' }, 503);
         }
         return json(request, env, { ok: true, url: url.trim(), check });
+      }
+
+      // The distribution rail's address. Same shape as the n8n one above and
+      // for the same reason: this was the last runtime value in the house that
+      // could only be set from the Cloudflare dashboard, and the desk showed a
+      // notice naming the variable with no field to put it in.
+      //
+      // The address itself is never sent back, only where it came from and a
+      // few characters to recognise it by. Anyone holding a Make hook address
+      // can post as the house, so it leaves KV to be used and to nowhere else.
+      case 'GET /social/make-webhook': {
+        return json(request, env, { ok: true, status: await makeWebhookStatus(env) });
+      }
+
+      case 'POST /social/make-webhook': {
+        const url = String(body.url || '');
+        const check = describeMakeWebhookUrl(url);
+        if (!check.ok) {
+          return json(request, env, { ok: false, error: check.problems.join(' ') }, 400);
+        }
+        // An environment variable beats KV in the accessor, so saving here
+        // while one is set would appear to work and change nothing. Said
+        // plainly rather than accepted and quietly ignored.
+        if (env.MAKE_WEBHOOK_URL) {
+          return json(request, env, {
+            ok: false,
+            error: 'A rail address is already set on the Worker itself, and that one wins over anything saved here. Remove MAKE_WEBHOOK_URL from the Worker to manage the address from this desk.'
+          }, 409);
+        }
+        const written = await setMakeWebhookUrl(env, url);
+        if (!written) {
+          return json(request, env, { ok: false, error: 'LOGIN_ATTEMPTS is not bound, so there is nowhere to store the address. See worker/README.md.' }, 503);
+        }
+        return json(request, env, { ok: true, status: await makeWebhookStatus(env), check });
       }
 
       case 'POST /social/push/subscribe': {

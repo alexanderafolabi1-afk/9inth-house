@@ -636,7 +636,14 @@ Every one of them is free, which is the point: this uses what the platform gives
 away rather than buying reach. The Reel carries the heaviest cadence because it
 is the only one of the four still shown to people who do not already follow.
 
-**What Make needs.** Three branches on the existing webhook, for the Reel, the
+**Where the rail address is set.** Desk Settings, under "Distribution rail".
+Paste the address the webhook module at the start of the Make scenario shows.
+It is held in KV like every other runtime value, so no deploy and no Cloudflare
+dashboard is involved. A `MAKE_WEBHOOK_URL` already set on the Worker still
+wins and still works; the desk says so and offers no field rather than a field
+that would silently lose to it.
+
+**What Make needs.** Three branches on the webhook, for the Reel, the
 carousel and the feed image, routing on `platform` exactly as the others do. The
 payload carries `media_type` ready to pass straight into the media container, so
 a branch maps a field rather than keeping its own table of which key means which

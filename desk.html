@@ -1757,7 +1757,7 @@ function openSettings(){
   // Fetched once per session, the first time Settings is opened, then the panel
   // is redrawn with it. Doing it here rather than at sign in keeps one more
   // request off the critical path of getting into the desk.
-  if(!LI_TRIED){ LI_TRIED = true; Promise.all([loadLinkedIn(), loadN8nHook(), loadAnthropicKey(), loadFacts(), loadPostal(), loadOutreachOwners(), loadRegisterStatus(), loadOrigins()]).then(openSettings); }
+  if(!LI_TRIED){ LI_TRIED = true; Promise.all([loadLinkedIn(), loadN8nHook(), loadMakeHook(), loadAnthropicKey(), loadFacts(), loadPostal(), loadOutreachOwners(), loadRegisterStatus(), loadOrigins()]).then(openSettings); }
   modal(`
     <h2>Firm Settings</h2>
     <div class="eyebrow">Account</div>
@@ -1968,6 +1968,20 @@ function openSettings(){
     </div>
 
     <div class="hr"></div>
+    <div class="eyebrow">Distribution rail</div>
+    <p class="tiny" style="margin-bottom:8px">The Make webhook every approved post is sent to. Without it nothing can publish, whatever is in the queue. Open the webhook module at the start of your Make scenario and copy the address it shows.</p>
+    ${MAKE_HOOK.configured ? `<p class="tiny" style="margin-bottom:8px;color:var(--gold)">Set${MAKE_HOOK.hint ? ', ' + esc(MAKE_HOOK.hint) : ''}${MAKE_HOOK.source === 'worker' ? ', on the Worker itself rather than here' : ''}.</p>` : `<p class="tiny" style="margin-bottom:8px;color:var(--rust)">Not set. Nothing can publish until it is.</p>`}
+    ${MAKE_HOOK.editable === false && MAKE_HOOK.source === 'worker'
+      ? `<p class="tiny">This address is set on the Worker, which wins over anything saved here. Remove MAKE_WEBHOOK_URL from the Worker to manage it from this desk.</p>`
+      : `<label>The webhook address</label>
+    <input type="text" id="make-hook-field" placeholder="https://hook.eu1.make.com/...">
+    ${MAKE_HOOK_MSG ? `<p class="tiny" style="margin-top:6px;color:${MAKE_HOOK_OK ? 'var(--gold)' : 'var(--rust)'}">${esc(MAKE_HOOK_MSG)}</p>` : ''}
+    ${(MAKE_HOOK_WARNINGS || []).map(w => `<p class="tiny" style="margin-top:6px;color:var(--rust)">${esc(w)}</p>`).join('')}
+    <div class="btnrow" style="margin-top:8px">
+      <button class="btn gold sm" id="make-hook-save" style="min-height:44px" onclick="saveMakeHook()">Save address</button>
+    </div>`}
+
+    <div class="hr"></div>
     <div class="eyebrow">Postal address</div>
     <p class="tiny" style="margin-bottom:8px">Goes in the footer of every outreach email. The United States requires a real one in every commercial message, and Canada and Australia require the sender to be identifiable. Sixteen of every twenty SetPostGo sends go to those three, so nothing can be drafted until this is set.</p>
     <label>The address, as it should read</label>
@@ -2112,6 +2126,47 @@ async function saveN8nHook(){
   openSettings();
 }
 
+// Where every approved post is actually sent. This used to be settable only
+// from the Cloudflare dashboard, and the desk's only word on it was a notice
+// naming an environment variable, which is no use at all to whoever is holding
+// the phone. The address is never read back: it is enough to know one is set
+// and to recognise which, since anyone holding it can post as the house.
+let MAKE_HOOK = { configured: false, source: 'none', hint: '', editable: true };
+let MAKE_HOOK_MSG = '';
+let MAKE_HOOK_OK = false;
+let MAKE_HOOK_WARNINGS = [];
+
+async function loadMakeHook(){
+  try{
+    const data = await engine('/social/make-webhook', null, 'GET');
+    MAKE_HOOK = data.status || MAKE_HOOK;
+  }catch(e){
+    // Leave the defaults. A settings screen that cannot read one panel should
+    // still open, with that panel saying it does not know rather than blank.
+  }
+}
+
+async function saveMakeHook(){
+  const btn = document.getElementById('make-hook-save');
+  if(!btn || btn.disabled) return;
+  const url = (document.getElementById('make-hook-field') || {}).value || '';
+  btn.innerHTML = '<i class="spin"></i> Saving…'; btn.disabled = true;
+  try{
+    const data = await engine('/social/make-webhook', { url }, 'POST', { timeoutMs: 15000 });
+    MAKE_HOOK = data.status || MAKE_HOOK;
+    MAKE_HOOK_WARNINGS = (data.check && data.check.warnings) || [];
+    MAKE_HOOK_MSG = MAKE_HOOK_WARNINGS.length ? 'Saved, but read the warnings below before relying on it.' : 'Saved. The rail can publish now.';
+    MAKE_HOOK_OK = MAKE_HOOK_WARNINGS.length === 0;
+    // The queue's banner is driven by the same answer, so refresh it rather
+    // than leaving "nothing can publish" on screen after it can.
+    load(true);
+  }catch(e){
+    MAKE_HOOK_MSG = e.message || 'Could not save that address.';
+    MAKE_HOOK_OK = false;
+  }
+  openSettings();
+}
+
 // The address in the footer of every outreach email. Not house style: the
 // United States requires one in every commercial message, and without it a
 // SetPostGo draft is refused rather than written, which is why this sits in
@@ -2229,7 +2284,13 @@ let REGISTER_OK = false;
 async function loadRegisterStatus(){
   try{
     const data = await engine('/social/register', null, 'GET');
-    REGISTER_STATUS = { routeSplit: data.routeSplit, currentWave: data.currentWave };
+    // An answer without a route split is treated as no answer. Held as
+    // { routeSplit: undefined } it reads as truthy, and the panel below then
+    // throws on the first field it reads, which takes the whole Settings
+    // screen down with it: no postal address, no Anthropic key and, since
+    // this work, no way to set the rail address either. Not loaded is a state
+    // the screen already renders; a half loaded one is not.
+    REGISTER_STATUS = data && data.routeSplit ? { routeSplit: data.routeSplit, currentWave: data.currentWave } : null;
   }catch(e){
     REGISTER_STATUS = null;
   }
@@ -3481,7 +3542,7 @@ function vQueue(){
     offline ? { html: `<div class="offline">No signal. You can still approve and skip: everything is held on this device and sent the moment the connection returns.</div>` } : null,
     !Q.storage ? { html: `<div class="offline">Storage is not connected on the Worker yet. Create the D1 database, add the binding, then use Prepare storage in Settings.</div>` } : null,
     Q.error ? { html: `<div class="qerr">${esc(Q.error)}</div>` } : null,
-    (!Q.makeReady && Q.storage && !Q.error) ? { html: `<div class="notice">The distribution rail is not configured on the Worker, so nothing can publish yet. Set MAKE_WEBHOOK_URL.</div>` } : null,
+    (!Q.makeReady && Q.storage && !Q.error) ? { html: `<div class="notice">The distribution rail has no address, so nothing can publish yet. Open Settings and set it under the distribution rail.</div>` } : null,
     pending ? { html: `<div class="notice">${pending} ${pending === 1 ? 'action is' : 'actions are'} waiting to reach the engine. <button class="btn sm ghost" style="min-height:44px" onclick="flushPending().then(()=>loadQueue())">Send now</button></div>` } : null
   ].filter(Boolean);
 
