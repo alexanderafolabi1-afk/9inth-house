@@ -19,7 +19,7 @@ export const SEED_VENTURES = [
     name: 'Ninth House Growth Partners',
     site_url: 'https://9thpoint.com',
     active: 1,
-    positioning: 'The world’s first openly AI operated growth studio. A firm of AI partners running marketing, outreach, brand growth and systems as a weekly discipline rather than a campaign, under the oversight and final authority of one human Chief Executive. The proof is that the house runs its own portfolio on the same protocol it sells, and publishes the results including the ones it is not proud of.',
+    positioning: 'A growth studio that runs marketing, outreach, brand growth and systems as a weekly discipline rather than a campaign, under the final authority of one Chief Executive. The proof is that the house runs its own portfolio on the same protocol it sells, and publishes the results including the ones it is not proud of.',
     audience: 'Founders and owner operators of small and mid sized businesses who are doing their own marketing and losing to it, plus corporate, institutional and government buyers arriving through the published catalogue.',
     tone: 'Assured, dry, specific. Short sentences. Present tense. Says the number or says nothing. Warm without being familiar, never salesy, never breathless. Professional throughout: the name refers to the ninth house of ambition and reputation, and the house is never framed as astrological or mystical.',
     banned_language: 'game changer, revolutionary, unlock, unleash, supercharge, in today’s fast paced world, thoughts?, drop a comment, DM me, secret sauce, hustle, grind, guru, ninja, rockstar, astrology, horoscope, chart reading, cosmic, destiny, manifest',
