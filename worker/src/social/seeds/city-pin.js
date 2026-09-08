@@ -213,11 +213,7 @@ Category exclusive on that vertical: USD 790. Only one restaurant.
 
 If the exclusive is not taken this week, it will be offered to another kitchen in {Neighbourhood}.
 
-Reply LIVE and we invoice today.
-
-Glotemp
-glo-temp.com
-{Agent name}, partnerships`;
+Reply LIVE and we invoice today.`;
 
 export const CITY_PIN_NIGHT_SUBJECT = '{City} is charged. The door is not named.';
 
@@ -229,11 +225,7 @@ For 90 days we will put {Trading name} on that city Entertainment plate and on T
 
 This is not a flyer. It is the name on the instrument.
 
-Reply LIVE.
-
-Glotemp
-glo-temp.com
-{Agent name}, partnerships`;
+Reply LIVE.`;
 
 export const CITY_PIN_ROOM_SUBJECT = '{City}, A room, 90 days';
 export const CITY_PIN_ROOM_SUBJECT_ORIGINAL = '{City} — A room, 90 days';
@@ -246,11 +238,7 @@ People who open Glotemp are not browsing 40 tabs. They are asking whether to go,
 
 Booking.com will still take its cut. This is the public plate before they arrive at that cut.
 
-Reply LIVE and the listing or site URL.
-
-Glotemp
-glo-temp.com
-{Agent name}, partnerships`;
+Reply LIVE and the listing or site URL.`;
 
 export const CITY_PIN_TOUR_SUBJECT = '{City} reads live. The desk does not.';
 
@@ -260,26 +248,16 @@ export const CITY_PIN_TOUR_EMAIL = `{First name},
 
 90 days USD 490. Exclusive USD 790.
 
-Reply LIVE.
-
-Glotemp
-glo-temp.com
-{Agent name}, partnerships`;
+Reply LIVE.`;
 
 /* ---------- the follow ups ---------- */
 
 // Three touches and then the file is let go. Written short on purpose: the
 // brief sets 110 to 160 words for the first, 60 for day three, 40 for day
 // seven, and a follow up that grows is a follow up that begs.
-export const CITY_PIN_FOLLOW_UP_DAY_3 = `{First name}, the {Vertical} exclusive on {City} is still open. If we do not hear by Friday we will offer it to another house on {Street or barrio}. Same terms. USD 790 exclusive, USD 490 named pin.
+export const CITY_PIN_FOLLOW_UP_DAY_3 = `{First name}, the {Vertical} exclusive on {City} is still open. If we do not hear by Friday we will offer it to another house on {Street or barrio}. Same terms. USD 790 exclusive, USD 490 named pin.`;
 
-Glotemp
-glo-temp.com`;
-
-export const CITY_PIN_FOLLOW_UP_DAY_7 = `We are pinning {City} / {Vertical} this week. Last note from us. Reply LIVE or we will let the file go.
-
-Glotemp
-glo-temp.com`;
+export const CITY_PIN_FOLLOW_UP_DAY_7 = `We are pinning {City} / {Vertical} this week. Last note from us. Reply LIVE or we will let the file go.`;
 
 export const CITY_PIN_CADENCE = [
   { day: 0, name: 'First email', words: '110 to 160', note: 'One city. One ask. One price. One reply instruction.' },

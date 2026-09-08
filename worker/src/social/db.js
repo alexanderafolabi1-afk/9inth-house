@@ -97,6 +97,11 @@ CREATE TABLE IF NOT EXISTS prospects (
   score INTEGER NOT NULL DEFAULT 0,
   status TEXT NOT NULL DEFAULT 'researching',
   notes TEXT NOT NULL DEFAULT '',
+  -- Set the moment a draft attempt fails a hard gate or a standing rule, and
+  -- cleared the moment one succeeds. A prospect with this set is never a
+  -- message: it sits in the needs-research list until the gap it names is
+  -- closed, rather than reaching the owner looking finished.
+  last_blocker TEXT NOT NULL DEFAULT '',
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
@@ -130,11 +135,34 @@ CREATE TABLE IF NOT EXISTS outreach_messages (
   status TEXT NOT NULL DEFAULT 'awaiting_approval',
   send_after TEXT,
   sent_at TEXT,
+  -- Set by hand, the same as sent_at: there is no inbound mail rail here
+  -- either, so a reply is recorded when the owner says one arrived. Null
+  -- means either never sent or sent and not yet replied to.
+  replied_at TEXT,
+  -- Section 5's form route. Where only a web form exists, the message is
+  -- prepared the same as an email and presented the same way, but the
+  -- owner's one tap opens the form rather than a mail client, and the
+  -- second tap pastes rather than sends. 'email' is the default so every
+  -- message from before this column existed reads the way it always did.
+  delivery_type TEXT NOT NULL DEFAULT 'email',
+  form_url TEXT NOT NULL DEFAULT '',
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_messages_status ON outreach_messages (status, send_after);
+
+-- Who signs a venture's outreach, set from the desk rather than hardcoded
+-- anywhere in a template. A message with nobody named in it is not from a
+-- legacy business, it is from a machine, so composing a draft for a venture
+-- with no row here is refused rather than left to sign itself "the house".
+CREATE TABLE IF NOT EXISTS outreach_owners (
+  venture TEXT PRIMARY KEY,
+  name TEXT NOT NULL DEFAULT '',
+  role TEXT NOT NULL DEFAULT '',
+  email TEXT NOT NULL DEFAULT '',
+  updated_at TEXT NOT NULL
+);
 
 CREATE TABLE IF NOT EXISTS suppression (
   email TEXT PRIMARY KEY,
@@ -206,6 +234,86 @@ CREATE TABLE IF NOT EXISTS feedback (
 CREATE INDEX IF NOT EXISTS idx_feedback_persona ON feedback (persona, venture);
 CREATE INDEX IF NOT EXISTS idx_feedback_created ON feedback (created_at);
 
+-- The Glotemp city register: the target list a wave-based campaign sends
+-- against. One row per organisation per vertical (a city can carry a
+-- restaurant row, a hotel row and a board row at once), editable from the
+-- admin so adding a city is a data change, never a code change.
+CREATE TABLE IF NOT EXISTS city_register (
+  id TEXT PRIMARY KEY,
+  venture TEXT NOT NULL DEFAULT 'glotemp',
+  city TEXT NOT NULL,
+  country TEXT NOT NULL DEFAULT '',
+  organisation TEXT NOT NULL DEFAULT '',
+  vertical TEXT NOT NULL,
+  language TEXT NOT NULL DEFAULT 'en',
+  wave INTEGER NOT NULL DEFAULT 0,
+  food_url TEXT NOT NULL DEFAULT '',
+  pulse_url TEXT NOT NULL DEFAULT '',
+  -- Held as imported, verbatim, so a correction is traceable back to what the
+  -- register actually said rather than to what somebody assumed it meant.
+  dmo_contact TEXT NOT NULL DEFAULT '',
+  operator_email_if_public TEXT NOT NULL DEFAULT '',
+  -- The organisation's own site (the board's for a board row, the
+  -- operator's for everything else), never Glotemp's own city page about
+  -- them. This is what "use form on board URL" in dmo_contact actually
+  -- points at, and a form route with no other target opens this rather
+  -- than a page on glo-temp.com.
+  organisation_url TEXT NOT NULL DEFAULT '',
+  resolved_contact_email TEXT NOT NULL DEFAULT '',
+  contact_source TEXT NOT NULL DEFAULT '',
+  route_type TEXT NOT NULL DEFAULT '',
+  form_url TEXT NOT NULL DEFAULT '',
+  -- Section 2's requirement, applied per link rather than per row: a link
+  -- that failed its check the last time this row was validated, so a row
+  -- with an unreachable link does not reach the queue.
+  url_check_ok INTEGER NOT NULL DEFAULT 0,
+  url_check_note TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'pending',
+  notes TEXT NOT NULL DEFAULT '',
+  -- Set when this row is a second touch on an organisation already
+  -- contacted in an earlier wave, holding that row's own id. Composing
+  -- against this row is refused until the referenced row's message has
+  -- actually been sent and enough time has passed, so a second touch can
+  -- never go out before or instead of the first.
+  follow_up_of TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_register_wave ON city_register (wave, status);
+CREATE INDEX IF NOT EXISTS idx_register_city ON city_register (city);
+
+-- Section 3's rival suspension: a city stays locked, by default, until the
+-- owner records a live name in it. Locked is the safe starting state for
+-- every city the register has ever held, so a city with no row here is
+-- treated as locked rather than open.
+CREATE TABLE IF NOT EXISTS rival_locks (
+  city TEXT PRIMARY KEY,
+  locked INTEGER NOT NULL DEFAULT 1,
+  released_at TEXT,
+  released_note TEXT NOT NULL DEFAULT '',
+  updated_at TEXT NOT NULL
+);
+
+-- Section 6's live slot: the one thing the owner records, and everything
+-- that follows from it. The window is stored as start and end rather than
+-- start and a duration, so the expiry a shift checks against is a plain
+-- comparison rather than arithmetic repeated on every read.
+CREATE TABLE IF NOT EXISTS live_slots (
+  id TEXT PRIMARY KEY,
+  city TEXT NOT NULL,
+  vertical TEXT NOT NULL,
+  name TEXT NOT NULL,
+  url TEXT NOT NULL,
+  window_start TEXT NOT NULL,
+  window_end TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active',
+  notified_expiring INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_live_slots_status ON live_slots (status, window_end);
+
 CREATE TABLE IF NOT EXISTS push_subs (
   endpoint TEXT PRIMARY KEY,
   p256dh TEXT NOT NULL,
@@ -214,11 +322,81 @@ CREATE TABLE IF NOT EXISTS push_subs (
   last_ok TEXT,
   fail_count INTEGER NOT NULL DEFAULT 0
 );
+
+-- The Backpack's ledger: one row per closed deal, held in the currency it
+-- was actually sold in. Nothing here is pre-converted: the reporting
+-- currency is a setting (firm_settings below) that can change, and
+-- converting on every read off the same static rate table means a deal
+-- never silently carries a stale conversion from before the setting or the
+-- table last changed. attribution is 'auto' when source_message_id
+-- resolved to a partner from the message's own sending identity, 'manual'
+-- when the owner named the partner directly, and 'unattributed' when
+-- neither happened, shown honestly rather than guessed.
+CREATE TABLE IF NOT EXISTS deals (
+  id TEXT PRIMARY KEY,
+  venture TEXT NOT NULL,
+  city TEXT NOT NULL DEFAULT '',
+  organisation TEXT NOT NULL DEFAULT '',
+  tier_label TEXT NOT NULL DEFAULT '',
+  amount REAL NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'GBP',
+  partner_id TEXT NOT NULL DEFAULT '',
+  attribution TEXT NOT NULL DEFAULT 'unattributed',
+  source_message_id TEXT NOT NULL DEFAULT '',
+  closed_date TEXT NOT NULL,
+  notes TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_deals_closed ON deals (closed_date);
+CREATE INDEX IF NOT EXISTS idx_deals_venture ON deals (venture);
+CREATE INDEX IF NOT EXISTS idx_deals_partner ON deals (partner_id);
+
+-- Targets, set from the admin and never hardcoded, each a plain number
+-- understood to be in the firm's reporting currency (firm_settings below),
+-- not independently currency-tagged the way a deal is: a target is a goal
+-- the owner set, not something sold. scope_key is 'firm' for the one
+-- firm-wide monthly figure, 'venture:<slug>' for a venture's own roll-up,
+-- and 'partner:<id>' for the optional per-partner figure. Reading what is
+-- not yet set is the caller's job (seedDefaultTargets seeds the firm
+-- figure once, the same way seedDefaultOwners seeds Glotemp's owner), so a
+-- missing row here means genuinely never set, not zero.
+CREATE TABLE IF NOT EXISTS targets (
+  scope_key TEXT PRIMARY KEY,
+  scope_type TEXT NOT NULL,
+  ref TEXT NOT NULL DEFAULT '',
+  amount REAL NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+-- Small, generic key/value settings, so a single explicit choice like the
+-- firm's reporting currency does not need its own table. Read with a
+-- default rather than assumed present, the same as every other seeded
+-- setting in this house.
+CREATE TABLE IF NOT EXISTS firm_settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
 `;
 
 export function hasStore(env) {
   return Boolean(env && env.DB && typeof env.DB.prepare === 'function');
 }
+
+// Columns added to tables that already shipped, so CREATE TABLE IF NOT
+// EXISTS above never sees them on a database that already has the table.
+// ALTER TABLE has no IF NOT EXISTS in SQLite, and D1 errors "duplicate
+// column name" on a second run, which is exactly the case every boot after
+// the first: caught and ignored below rather than avoided, since there is
+// no cheap way to ask D1 whether a column already exists first.
+const ADDITIVE_COLUMNS = [
+  "ALTER TABLE prospects ADD COLUMN last_blocker TEXT NOT NULL DEFAULT ''",
+  'ALTER TABLE outreach_messages ADD COLUMN replied_at TEXT',
+  "ALTER TABLE outreach_messages ADD COLUMN delivery_type TEXT NOT NULL DEFAULT 'email'",
+  "ALTER TABLE outreach_messages ADD COLUMN form_url TEXT NOT NULL DEFAULT ''"
+];
 
 export async function ensureSchema(db) {
   // D1 will not take several statements in one prepare, so they are split and run
@@ -230,6 +408,9 @@ export async function ensureSchema(db) {
     .filter(Boolean)
     .map((s) => db.prepare(s));
   await db.batch(statements);
+  for (const ddl of ADDITIVE_COLUMNS) {
+    try { await db.prepare(ddl).run(); } catch (e) { /* already there */ }
+  }
 }
 
 export const nowIso = () => new Date().toISOString();

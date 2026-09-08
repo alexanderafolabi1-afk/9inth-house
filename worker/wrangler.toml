@@ -10,28 +10,26 @@ main = "src/index.js"
 compatibility_date = "2026-07-28"
 compatibility_flags = ["nodejs_compat"]
 
-# Kept on alongside the Route below, on purpose: the .workers.dev address stays
-# reachable for curl (the Author Desk trigger, manual /social calls with a
-# bearer token) even once the admin itself moves to the Route.
-workers_dev = true
-
-# ============================================================================
-# SAME-SITE ROUTE FOR THE SESSION COOKIE
-# ============================================================================
-# desk.html lives on 9thpoint.com. For its login to set an HttpOnly,
-# SameSite=Strict cookie that the browser will actually send back, the Worker
-# has to answer on a hostname the browser considers the same site as
-# 9thpoint.com; a SameSite=Strict cookie is never sent on a cross-site fetch,
-# so leaving the Worker on only the .workers.dev domain would make the whole
-# login silently useless. Commented out, like the D1 block below, because an
-# uncommitted zone_name (wrong account, zone not actually on Cloudflare) fails
-# the deploy outright and would take the cron down with it.
+# The .workers.dev address is the only one this Worker answers on. desk.html
+# calls it directly, cross-origin, and CORS (allowedOrigins/corsHeaders in
+# worker/src/social/api.js, DESK_ORIGIN below) is what authorizes that call,
+# not same-origin cookies: login hands back a signed bearer token in the
+# response body (see mintSession/requireSession), so there is nothing for a
+# same-site cookie policy to need answering on 9thpoint.com's own zone for.
 #
-# Connected: 9thpoint.com's DNS is confirmed on the same Cloudflare account
-# used for `wrangler login`.
-[[routes]]
-pattern = "9thpoint.com/api/*"
-zone_name = "9thpoint.com"
+# A `[[routes]] pattern = "9thpoint.com/api/*"` binding used to live here,
+# left over from an earlier, abandoned same-site-cookie design. It was never
+# used by desk.html (see worker/README.md's Authentication section) and it
+# actively broke this Worker's CORS: with that Route bound, a request whose
+# Origin header is exactly "https://9thpoint.com" (the apex, no www, the
+# canonical origin the CNAME file and the installed PWA actually use) got
+# Access-Control-Allow-Origin echoing this Worker's own serving address
+# instead of the real Origin, which every browser's CORS check then rejects,
+# surfacing as a fetch() that throws rather than a login that merely fails.
+# It reproduced identically under `wrangler dev` against this exact
+# wrangler.toml, and it went away the moment the Route did. Do not add a
+# Route back here without re-running scripts/check-cors.mjs against it first.
+workers_dev = true
 
 # ============================================================================
 # LOGIN RATE LIMITING
@@ -69,16 +67,28 @@ id = "9a1f764305b74398a0bcdc109586e713"
 [vars]
 PASSWORD_RESET_UNTIL = "2026-08-30T14:00:00Z"
 
-# Who the browser is allowed to be when it calls this Worker. The code already
-# falls back to this exact value when the variable is absent, but "absent" and
-# "set by hand in the dashboard to something that no longer matches" look
-# identical from the outside: both mean desk.html gets no
-# Access-Control-Allow-Origin header back, and every fetch fails before it
-# ever reaches a route, reporting as "cannot reach the house" for a right
-# password and a wrong one alike. Committing it here means it deploys with
-# everything else on every push to main, rather than living as an invisible
-# setting nothing in this repo can see or fix.
-DESK_ORIGIN = "https://9thpoint.com,https://www.9thpoint.com"
+# DESK_ORIGIN, which used to live here, is gone. It was a single point of
+# failure this Worker could not see fail: whether it was absent, stale from
+# an old deploy, or set by hand on the Cloudflare dashboard to something
+# that no longer matched this file, every one of those looked identical
+# from the outside, and every one of them meant desk.html got no
+# Access-Control-Allow-Origin header back and every fetch failed before it
+# ever reached a route, for a right password and a wrong one alike. It
+# happened more than once, including after this exact variable was
+# "pinned" here the first time, which is what taught the lesson that a
+# value the admin's own real origin depends on cannot live in a variable
+# at all, however carefully it is committed.
+#
+# The two origins the admin has ever really lived at now ship inside the
+# Worker's own code (KNOWN_DESK_ORIGINS in worker/src/origins.js), so
+# accepting them can never again depend on a deploy syncing a separate
+# setting. Anything beyond that is additive only, set from the desk's own
+# Settings screen and held in KV (worker/src/origins.js again), the same
+# way the password hash, the session secret and the Anthropic key already
+# are. If a DESK_ORIGIN env var is ever set here or on the dashboard again,
+# the code now only ever adds it to the guaranteed list, never replaces
+# the list with it, so the failure mode this comment describes cannot
+# recur even by accident.
 
 # Four shifts a day, matching the retired GitHub Actions schedule exactly.
 # All times UTC. Cloudflare Cron Triggers are always UTC, so no conversion

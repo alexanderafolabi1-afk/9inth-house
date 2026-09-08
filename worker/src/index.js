@@ -1415,7 +1415,7 @@ export default {
     // the same headers merged on afterwards, see respond() and its call at
     // the end below.
     if (request.method === 'OPTIONS') {
-      return new Response(null, { status: 204, headers: corsHeaders(request, env) });
+      return new Response(null, { status: 204, headers: await corsHeaders(request, env) });
     }
     const respond = async () => {
     const url = new URL(request.url);
@@ -1893,7 +1893,7 @@ export default {
 
     const res = await respond();
     const headers = new Headers(res.headers);
-    for (const [key, value] of Object.entries(corsHeaders(request, env))) headers.set(key, value);
+    for (const [key, value] of Object.entries(await corsHeaders(request, env))) headers.set(key, value);
     return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
   }
 };

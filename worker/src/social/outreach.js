@@ -13,6 +13,7 @@
 // admin, since the owner has said there will be more.
 
 import { nowIso } from './db.js';
+import { getOutreachOwner, signatureBlock } from './owners.js';
 import {
   VISIT_DUBAI_EMAIL_BODY, VISIT_DUBAI_SUBJECT, VISIT_DUBAI_SUBJECT_ORIGINAL,
   VISIT_DUBAI_TO, VISIT_DUBAI_CC, VISIT_DUBAI_GUARDRAILS, VISIT_DUBAI_PROSPECT,
@@ -90,6 +91,13 @@ export const CAMPAIGN_TYPES = {
   city_pin: {
     label: 'City pin',
     guidance: 'Sells a named lock on one city and one vertical for 90 days to a single operator. Never the homepage, never a partnership of record. One offer, one city, one vertical, one price. The rival is a type and a direction, never a name. Priced at 490, 790 or 1900 with a floor of 390.'
+  },
+  // The wave-based city register campaign: a single fourteen day trial
+  // offer, in the order the register's waves say, never a rival name until
+  // the owner has confirmed one is live in that city.
+  register_wave: {
+    label: 'City register',
+    guidance: 'One fourteen day trial offer per organisation: On the table, Staying here, or the city pack, depending on vertical. No rival is named until the owner has recorded a live slot in that city and released the lock. Sent in the wave order the register sets, never out of turn.'
   }
 };
 
@@ -226,6 +234,14 @@ export const OUTREACH_RULES = [
     id: 'no_hype',
     test: (t) => /\b(game changer|revolutionary|unlock|unleash|supercharge|cutting edge|world class|best in class|synergy)\b/i.test(t),
     finding: 'It reaches for hype instead of saying something specific.'
+  },
+  {
+    // Named explicitly in the register campaign's own standing rules. Global
+    // rather than scoped: no outreach this house sends has a reason to name
+    // either one.
+    id: 'no_gta_mention',
+    test: (t) => /\b(GTA|Grand Theft Auto|Rockstar Games|Rockstar North)\b/i.test(t),
+    finding: 'It mentions GTA or Rockstar, which this campaign must never reference.'
   }
 ];
 
@@ -450,7 +466,7 @@ export function setPostGoTemplates() {
   return Object.keys(SETPOSTGO_TEMPLATES);
 }
 
-export function composeSetPostGo(prospect, { template = 'trade', postalAddress, agentName } = {}) {
+export function composeSetPostGo(prospect, { template = 'trade', postalAddress, agentName, owner } = {}) {
   const blockers = [];
   const warnings = [];
   const r = (prospect && prospect.research) || {};
@@ -474,6 +490,13 @@ export function composeSetPostGo(prospect, { template = 'trade', postalAddress, 
   // of every twenty sends, so it is a blocker and not a warning.
   if (!String(postalAddress || '').trim()) {
     blockers.push('No postal address was given. CAN-SPAM requires a real one in every commercial email, and Canada and Australia require the sender to be identifiable.');
+  }
+
+  // A message signed by nobody is not from a legacy business, it is from a
+  // machine. Refused here, before anything is written, rather than caught
+  // after the fact by the placeholder rule.
+  if (!owner) {
+    blockers.push('No outreach owner is assigned for SetPostGo yet. Assign one in Settings before this can be sent under anybody\'s name.');
   }
 
   if (blockers.length) return { ok: false, blockers, warnings };
@@ -518,19 +541,36 @@ export function composeSetPostGo(prospect, { template = 'trade', postalAddress, 
     subject = subject.split(token).join(value);
   }
 
-  body = body.trimEnd() + '\n\n' + SETPOSTGO_FOOTER.split('{Postal address}').join(String(postalAddress).trim());
+  // The personal signature, then the statutory footer. Two different blocks
+  // for two different reasons: one says who wrote this, the other is the
+  // minimum that makes it lawful in the three countries taking sixteen of
+  // every twenty sends. Neither substitutes for the other.
+  const signature = signatureBlock(owner, {
+    ventureLabel: 'SetPostGo',
+    locale: String(r.locale || prospect.locale || '').trim(),
+    named: Boolean(fills['{First name}'])
+  });
+  body = body.trimEnd() + '\n\n' + signature + '\n\n'
+    + SETPOSTGO_FOOTER.split('{Postal address}').join(String(postalAddress).trim());
 
   const stillOpen = [...new Set(body.match(/\{[A-Za-z][A-Za-z ]{1,30}\}/g) || [])];
   if (stillOpen.length) {
     return { ok: false, warnings, blockers: [`These are still unfilled and would go out as written: ${stillOpen.join(', ')}.`] };
   }
 
+  // Checked last, on the complete body, signature and footer included, and
+  // treated as a hard stop rather than a note attached to a draft that still
+  // reaches the owner. A message the house's own rules would refuse is not
+  // ready, and returning it is the exact failure this exists to prevent.
   const findings = checkOutreachRules(body, 'setpostgo');
+  if (findings.length) {
+    return { ok: false, warnings, blockers: findings.map((f) => f.finding) };
+  }
 
   return {
     ok: true,
     warnings,
-    findings,
+    findings: [],
     draft: {
       subject,
       body,
@@ -566,7 +606,7 @@ const CITY_PIN_TEMPLATES = {
 // It returns a draft or it returns why not. It never returns a draft with a gap
 // papered over, because a papered gap is what reaches an operator who can check
 // it in one click.
-export function composeCityPin(prospect, { sku = 'pin_90', priceUsd, agentName, neighbourhood, street } = {}) {
+export function composeCityPin(prospect, { sku = 'pin_90', priceUsd, agentName, neighbourhood, street, owner } = {}) {
   const blockers = [];
   const warnings = [];
   const r = (prospect && prospect.research) || {};
@@ -602,6 +642,13 @@ export function composeCityPin(prospect, { sku = 'pin_90', priceUsd, agentName, 
     blockers.push('The fashion and food hybrid is only sold with a booking or shop URL.');
   }
 
+  // A message signed by nobody is not from a legacy business, it is from a
+  // machine. Refused here, before anything is written, rather than caught
+  // after the fact by the placeholder rule.
+  if (!owner) {
+    blockers.push('No outreach owner is assigned for Glotemp yet. Assign one in Settings before this can be sent under anybody\'s name.');
+  }
+
   if (blockers.length) return { ok: false, blockers, warnings };
 
   const fills = {
@@ -611,8 +658,7 @@ export function composeCityPin(prospect, { sku = 'pin_90', priceUsd, agentName, 
     '{Vertical}': (CITY_PIN_VERTICALS[vertical] || {}).label || vertical,
     '{Seasonal hook}': String(r.seasonal_hook || '').trim(),
     '{Neighbourhood}': String(neighbourhood || r.neighbourhood || '').trim(),
-    '{Street or barrio}': String(street || r.street || neighbourhood || r.neighbourhood || '').trim(),
-    '{Agent name}': String(agentName || '').trim()
+    '{Street or barrio}': String(street || r.street || neighbourhood || r.neighbourhood || '').trim()
   };
 
   let body = template.body;
@@ -639,7 +685,17 @@ export function composeCityPin(prospect, { sku = 'pin_90', priceUsd, agentName, 
     warnings.push(`The body figure was moved from USD ${spec.priceUsd} to USD ${price} to match the offer.`);
   }
 
-  const findings = checkOutreachRules(body, 'city_pin');
+  // The real signature: who owns Glotemp's outreach, their role, and the
+  // sending address, closed with a sign-off matched to the recipient's
+  // market rather than a fixed line that reads oddly outside the market it
+  // was written for.
+  const signature = signatureBlock(owner, {
+    ventureLabel: 'Glotemp',
+    locale: String(r.locale || prospect.locale || '').trim(),
+    named: Boolean(fills['{First name}'])
+  });
+  body = body.trimEnd() + '\n\n' + signature;
+
   const stillOpen = (body.match(/\{[A-Za-z][A-Za-z ]{1,30}\}/g) || []);
   if (stillOpen.length) {
     return {
@@ -649,10 +705,19 @@ export function composeCityPin(prospect, { sku = 'pin_90', priceUsd, agentName, 
     };
   }
 
+  // Checked last, on the complete body, signature included, and treated as a
+  // hard stop rather than a note attached to a draft that still reaches the
+  // owner. A message the house's own rules would refuse is not ready, and
+  // returning it is the exact failure this exists to prevent.
+  const findings = checkOutreachRules(body, 'city_pin');
+  if (findings.length) {
+    return { ok: false, warnings, blockers: findings.map((f) => f.finding) };
+  }
+
   return {
     ok: true,
     warnings,
-    findings,
+    findings: [],
     draft: {
       subject,
       body,
@@ -665,6 +730,98 @@ export function composeCityPin(prospect, { sku = 'pin_90', priceUsd, agentName, 
       words: body.split(/\s+/).filter(Boolean).length
     }
   };
+}
+
+/* ---------- automatic follow ups ---------- */
+
+// Filled the same way the master emails are: a token survives only if
+// nothing was supplied for it, and a survivor still stops the follow up the
+// same as it stops a first email, since a half filled note reaching someone
+// twice is worse than reaching them once.
+function fillFollowUp(templateBody, fills) {
+  let body = templateBody;
+  for (const [token, value] of Object.entries(fills)) {
+    if (!value) continue;
+    body = body.split(token).join(value);
+  }
+  if (!fills['{First name}']) body = body.replace(/^\{First name\},\s*/, '');
+  return body;
+}
+
+const FOLLOW_UP_DAYS = [3, 7];
+
+// The half of "the follow up is scheduled automatically" that has to run the
+// moment a message is marked sent, not on a timer: this house has no cron
+// that touches outreach, so the two follow ups for a sent message are
+// written and queued right here, to come due on their own day exactly the
+// way the first message did. A follow up that cannot be composed cleanly
+// (no owner assigned, a rule it would break) is skipped rather than forced
+// in, since a scheduled follow up is not more important than an unfinished
+// one reaching the owner looking ready.
+export async function scheduleFollowUps(db, sentMessage) {
+  const campaignType = sentMessage.campaign_type;
+  if (campaignType !== 'city_pin' && campaignType !== 'setpostgo') return { scheduled: 0 };
+
+  const prospect = await db.prepare('SELECT * FROM prospects WHERE id = ?').bind(sentMessage.prospect_id).first();
+  if (!prospect) return { scheduled: 0 };
+  const r = safeJson(prospect.research, {});
+  const owner = await getOutreachOwner(db, sentMessage.venture);
+  if (!owner) return { scheduled: 0 };
+
+  const named = Boolean(String(r.owner_first_name || '').trim());
+  const signature = signatureBlock(owner, {
+    ventureLabel: campaignType === 'city_pin' ? 'Glotemp' : 'SetPostGo',
+    locale: String(r.locale || prospect.locale || '').trim(),
+    named
+  });
+
+  const templates = campaignType === 'city_pin'
+    ? { 3: CITY_PIN_FOLLOW_UP_DAY_3, 7: CITY_PIN_FOLLOW_UP_DAY_7 }
+    : { 3: SETPOSTGO_FOLLOW_UP_DAY_3, 7: SETPOSTGO_FOLLOW_UP_DAY_7 };
+
+  const fills = campaignType === 'city_pin'
+    ? {
+        '{First name}': String(r.owner_first_name || '').trim(),
+        '{Vertical}': (CITY_PIN_VERTICALS[String(r.vertical || '').toLowerCase()] || {}).label || String(r.vertical || ''),
+        '{City}': String(r.city || '').trim(),
+        '{Street or barrio}': String(r.street || r.neighbourhood || '').trim()
+      }
+    : {
+        '{First name}': String(r.owner_first_name || '').trim(),
+        '{Profession}': String(r.profession || '').trim(),
+        '{Trade}': String(r.trade || '').trim(),
+        '{Town}': String(r.town || '').trim()
+      };
+
+  const sentAt = sentMessage.sent_at ? new Date(sentMessage.sent_at) : new Date();
+  let scheduled = 0;
+  for (const day of FOLLOW_UP_DAYS) {
+    const raw = fillFollowUp(templates[day], fills);
+    const body = raw.trimEnd() + '\n\n' + signature;
+    const stillOpen = body.match(/\{[A-Za-z][A-Za-z ]{1,30}\}/g) || [];
+    if (stillOpen.length) continue;
+    const findings = checkOutreachRules(body, campaignType);
+    if (findings.length) continue;
+
+    const sendAfter = new Date(sentAt.getTime() + day * 86400000).toISOString();
+    const id = `${sentMessage.id}-day${day}`;
+    const exists = await db.prepare('SELECT id FROM outreach_messages WHERE id = ?').bind(id).first();
+    if (exists) continue;
+    const now = nowIso();
+    await db.prepare(
+      `INSERT INTO outreach_messages
+        (id, prospect_id, venture, campaign_type, identity, to_addresses, cc_addresses, subject, body, original_wording, locale_note, city, vertical, sku, price_usd, rule_findings, status, send_after, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).bind(
+      id, sentMessage.prospect_id, sentMessage.venture, campaignType, sentMessage.identity || '',
+      sentMessage.to_addresses, sentMessage.cc_addresses || '',
+      `Re: ${sentMessage.subject}`, body, '', `Day ${day} follow up, scheduled automatically when the first message was marked sent.`,
+      sentMessage.city || '', sentMessage.vertical || '', sentMessage.sku || '', sentMessage.price_usd || 0,
+      '[]', 'awaiting_approval', sendAfter, now, now
+    ).run();
+    scheduled += 1;
+  }
+  return { scheduled };
 }
 
 /* ---------- prospects, messages and the suppression list ---------- */
@@ -750,6 +907,36 @@ export function referenceBlock(references, campaignType) {
     '',
     'END OF REFERENCE.'
   ].join('\n');
+}
+
+// One prospect row per organisation per venture, converged on rather than
+// duplicated. A lead that failed a gate and is drafted again after the gap
+// is closed lands on the same record it left, not a new one next to it,
+// which is what keeps the needs-research list from filling up with retries
+// of the same lead under different ids.
+export async function upsertProspect(db, { venture, campaignType, organisation, research, status, blocker, evidence, notes }) {
+  const now = nowIso();
+  const existing = await db.prepare('SELECT id FROM prospects WHERE venture = ? AND lower(organisation) = ?')
+    .bind(String(venture), String(organisation || '').trim().toLowerCase()).first();
+  if (existing) {
+    await db.prepare(
+      `UPDATE prospects SET campaign_type = ?, research = ?, evidence = ?, status = ?, last_blocker = ?, notes = ?, updated_at = ? WHERE id = ?`
+    ).bind(
+      String(campaignType), JSON.stringify(research || {}), JSON.stringify(evidence || []),
+      String(status), String(blocker || ''), String(notes || ''), now, existing.id
+    ).run();
+    return { id: existing.id, created: false };
+  }
+  const id = (campaignType === 'city_pin' ? 'cp-' : campaignType === 'setpostgo' ? 'sp-' : 'nr-') + crypto.randomUUID();
+  await db.prepare(
+    `INSERT INTO prospects (id, venture, campaign_type, organisation, contacts, locale, research, evidence, score, status, notes, last_blocker, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).bind(
+    id, String(venture), String(campaignType), String(organisation || ''), '[]',
+    String((research && (research.city || research.town)) || ''), JSON.stringify(research || {}),
+    JSON.stringify(evidence || []), 0, String(status), String(notes || ''), String(blocker || ''), now, now
+  ).run();
+  return { id, created: true };
 }
 
 export async function listProspects(db, { venture, status, limit = 100 } = {}) {
@@ -918,23 +1105,46 @@ export async function seedOutreach(db, { sendAfter } = {}) {
   const messageId = 'visit-dubai-founding-01';
   const existingMessage = await db.prepare('SELECT id FROM outreach_messages WHERE id = ?').bind(messageId).first();
   if (!existingMessage) {
-    const findings = checkOutreachRules(VISIT_DUBAI_EMAIL_BODY);
-    await db.prepare(
-      `INSERT INTO outreach_messages
-        (id, prospect_id, venture, campaign_type, identity, to_addresses, cc_addresses, subject, body, original_wording, locale_note, rule_findings, status, send_after, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).bind(
-      messageId, prospectId, 'glotemp', 'founding_partner', '',
-      VISIT_DUBAI_TO, VISIT_DUBAI_CC,
-      VISIT_DUBAI_SUBJECT, VISIT_DUBAI_EMAIL_BODY,
-      VISIT_DUBAI_SUBJECT_ORIGINAL,
-      'Gulf English, formal. Addressed to a government tourism body, so the register stays deferential without being deferential about the price.',
-      JSON.stringify(findings),
-      'awaiting_approval',
-      sendAfter || VISIT_DUBAI_SEND_AFTER,
-      nowIso(), nowIso()
-    ).run();
-    created.message = true;
+    // The Visit Dubai pack arrived as a raw supplied letter, not a template,
+    // so it never goes through composeCityPin or composeSetPostGo. It gets
+    // the same treatment here by hand: a real signature in place of the
+    // brackets it was supplied with, then checked against every standing
+    // rule before it is ever allowed into the queue, exactly like a
+    // composed draft. Media relations and general enquiries are both
+    // role addresses, nobody named, which is why the closing is the
+    // unnamed formal one rather than the named one.
+    const owner = await getOutreachOwner(db, 'glotemp');
+    if (owner) {
+      const signature = signatureBlock(owner, { ventureLabel: 'Glotemp', locale: 'AE', named: false });
+      const body = VISIT_DUBAI_EMAIL_BODY.trimEnd() + '\n\n' + signature;
+      const findings = checkOutreachRules(body, 'founding_partner');
+      if (findings.length === 0) {
+        await db.prepare(
+          `INSERT INTO outreach_messages
+            (id, prospect_id, venture, campaign_type, identity, to_addresses, cc_addresses, subject, body, original_wording, locale_note, rule_findings, status, send_after, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        ).bind(
+          messageId, prospectId, 'glotemp', 'founding_partner', '',
+          VISIT_DUBAI_TO, VISIT_DUBAI_CC,
+          VISIT_DUBAI_SUBJECT, body,
+          VISIT_DUBAI_SUBJECT_ORIGINAL,
+          'Gulf English, formal. Addressed to a government tourism body, so the register stays deferential without being deferential about the price.',
+          '[]',
+          'awaiting_approval',
+          sendAfter || VISIT_DUBAI_SEND_AFTER,
+          nowIso(), nowIso()
+        ).run();
+        created.message = true;
+      } else {
+        await db.prepare('UPDATE prospects SET status = ?, last_blocker = ?, updated_at = ? WHERE id = ?')
+          .bind('needs_research', findings.map((f) => f.finding).join(' '), nowIso(), prospectId).run();
+      }
+    } else {
+      // No Glotemp owner assigned yet: this cannot be signed, so it is held
+      // as needing research rather than sent looking finished and unsigned.
+      await db.prepare('UPDATE prospects SET status = ?, last_blocker = ?, updated_at = ? WHERE id = ?')
+        .bind('needs_research', 'No outreach owner is assigned for Glotemp yet, so this cannot carry a real signature.', nowIso(), prospectId).run();
+    }
   }
   return created;
 }
