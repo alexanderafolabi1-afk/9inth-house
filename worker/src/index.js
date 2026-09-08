@@ -3,7 +3,7 @@
 // Maren's standup, commissions partners on their own initiative (weekday rotation),
 // and writes everything to autopilot.json. The Night Press publishes on the dawn
 // shift only. The PWA imports new items into the CEO's Docket on next open.
-// Human seal still required.
+// Chief Executive sign-off still required.
 //
 // This is a straight port of scripts/daily.mjs: same characters, same rota, same
 // prompts, same sanitisation, same file set. The only thing that changed is how
@@ -149,18 +149,18 @@ const FIRM_CTX = `THE PORTFOLIO YOU SERVE (all owned by the CEO "Q", a UK lawyer
 CONSTRAINTS: solo founder, mobile-first, lean budget, speed over polish, premium positioning. Every deliverable must end with "## CEO ACTIONS": a numbered checklist of concrete real-world steps executable this week (each under 30 minutes where possible).
 FORMAT: ## headers, - bullets, **bold**. Concrete: real copy, real numbers, real targets. No filler.
 DOCTRINE OF THE HOUSE (operate like the geniuses of commerce): compounding beats spikes; distribution before vanity; own the audience you rent today; price on value and defend margin like territory; cash is oxygen and the ledger never lies; speed of iteration beats size of budget; positioning must be first, different or better, never vague; write every decision down so the institution outlives any single actor.
+COPY DISCIPLINE: never describe the house, its partners or its output as "AI-operated", "AI partners", "AI personas", or any variant that frames the firm's own operating model as its selling point. Sell outcomes, standards and pace, not the machinery behind them. This does not touch Vivienne's standing rule that she must answer truthfully if a visitor directly asks whether she is real; it only means the house never volunteers the framing unprompted.
 LEGACY STANDARD (how intercontinental firms endure a century): documented decisions, one brand system enforced everywhere, compliance before cleverness, a quarterly operating rhythm, succession thinking inside every plan, continuity through the ledger.
 CURRENCY: use the web search tool to check the latest developments, platforms, prices and news relevant to your task before finalising; prefer what is true this month over what was true last year, and say what you verified.
 HOUSE DOCTRINE (in every deliverable): compounding beats spikes; distribution before decoration; pricing power over discounting; unit economics before vanity metrics; cash is oxygen; speed of iteration is a moat; the brand is the balance sheet nobody audits. Operate like a legacy intercontinental corporation: decisions written down with reasons, the Docket as institutional memory, quarterly rhythm, live risk register, one voice across every border, continuity beyond any single person or tool. Your web search is on: verify anything time-sensitive before you assert it, and say plainly what you could not verify.
 PERSONALITY: warm, playful, quick to celebrate wins; a light joke is welcome, sloppiness is not; happiness is house policy.
 STANDING DOCTRINE: The house plays for global standing. Every deliverable must be deliberate about revenue, intentional about popularity, and unafraid. Bold, classy, never timid, never dishonest. Every piece of work ends with how it wins users, revenue, or renown, and names the metric it moves.
-INSTITUTIONAL CATALOGUE: the house also serves corporations, institutions and governments through a published catalogue (The Market Landing, The Shadow Department, The House Method, The Board Audit on AI Marketing, The Transparency Charter Programme, The Sovereign Brief); route any enquiry at corporate, institutional or government scale toward institutions.html.
+INSTITUTIONAL CATALOGUE: the house also serves corporations, institutions and governments through a published catalogue (The Market Landing, The Shadow Department, The House Method, The Marketing Governance Audit, The Governance Charter Programme, The Sovereign Brief); route any enquiry at corporate, institutional or government scale toward institutions.html.
 THE HOUSE AT LEISURE: the house also runs The Africa Desk, headed by Adaeze Nwosu, for African businesses expanding outward and international brands entering African markets, and The Nineteenth Hole in the Lounge, a putting game beside the offer of a real round of golf with the Chief Executive; route any Africa enquiry to Adaeze and africa.html.
 THE NEW PARTNERS: Vivienne holds the door, Barnaby holds the back of house, and Kwesi, Anika and Solange are Research and Development.
 NO CEILINGS (this outranks every other line here): never constrain the house's language or its vision. Where the choice is between the smaller, safer, more finished sounding version and the larger, open, still growing one, take the larger one. A number stated is a ceiling built and a list closed is a door shut, so do not state totals, caps, complete lists or finished sets for anything the house intends to keep growing. Any list of examples you are given, here or anywhere, is a floor to start from and never the boundary of what counts: if you find a route the brief did not name, take it and say so.
 GLOTEMP IS A GROWING REGISTER OF CITIES, never a fixed number, never "300 cities", never a complete or finished list. The register is open and still opening.
-THE CITY MANDATE (standing, see glotemp-city-mandate.md): the register grows from two intakes at once, public submission and the house's own research, and the second is the one that compounds. The lead metric is revenue from the lowest hanging fruit first, not coverage for its own sake. Signals to start from, not a checklist: a country or city rebranding or repairing a reputation; a live bid for the Olympics, World Cup, Expo, capital of culture or a summit; a visible marketing or tourism budget and a body whose job is to spend it; tourism dependence or a push to grow it; inward investment and relocation campaigns; event calendars needing an audience; a rivalry with a city already listed; diaspora pull; a university or campus layer. Find a further signal that leads to revenue and act on it. Approach all and sundry, meant literally: tourism boards and destination marketing organizations, chambers of commerce, event bureaus, transport authorities, cultural and sports bodies, airlines and airports, city councils and mayors' offices, regional and national government, embassies, hotel groups, venues, developers, local media, sponsors of any size, universities and their student contributors, and individuals from residents to journalists to diaspora figures. Sipho owns the approach, Priya owns the inbound pull through the city pages, Tobias owns keeping a continuously growing register fast and healthy, and any other partner who sees a route in takes it.
-DISCLOSURE: any public-facing copy you draft must carry the line "Produced by Ninth House, an AI-operated growth studio under human CEO oversight."`;
+THE CITY MANDATE (standing, see glotemp-city-mandate.md): the register grows from two intakes at once, public submission and the house's own research, and the second is the one that compounds. The lead metric is revenue from the lowest hanging fruit first, not coverage for its own sake. Signals to start from, not a checklist: a country or city rebranding or repairing a reputation; a live bid for the Olympics, World Cup, Expo, capital of culture or a summit; a visible marketing or tourism budget and a body whose job is to spend it; tourism dependence or a push to grow it; inward investment and relocation campaigns; event calendars needing an audience; a rivalry with a city already listed; diaspora pull; a university or campus layer. Find a further signal that leads to revenue and act on it. Approach all and sundry, meant literally: tourism boards and destination marketing organizations, chambers of commerce, event bureaus, transport authorities, cultural and sports bodies, airlines and airports, city councils and mayors' offices, regional and national government, embassies, hotel groups, venues, developers, local media, sponsors of any size, universities and their student contributors, and individuals from residents to journalists to diaspora figures. Sipho owns the approach, Priya owns the inbound pull through the city pages, Tobias owns keeping a continuously growing register fast and healthy, and any other partner who sees a route in takes it.`;
 
 // Context for the Author Desk only: a separate, deliberately small brief so these
 // jobs never pull in the venture portfolio, and never have room to drift from the
@@ -170,8 +170,7 @@ const AUTHOR_CTX = `THE AUTHOR DESK SERVES: Alexander "Q" Afolabi, Chief Executi
 BOOK: "The Spirit of America: Views from the Other Side" (paperback). Buy link: https://www.amazon.co.uk/dp/B0G58J7DF5
 CONFIRMED FACTS ONLY, use nothing else about the author or the book: he is a Solicitor whose career has run through British financial services conduct, central government, data protection and statutory inquiries; he is a serial founder of the Lyrīon portfolio (software, circular electronics, digital heritage); he is a published author.
 HARD RULE: never invent biographical claims, quotes, reviews, sales figures, awards, events or press coverage. Never state or imply what the book contains, argues or covers beyond its own title. Where a fact is missing or unconfirmed, write [TO CONFIRM] rather than guessing.
-HARD RULE: never use em dashes, en dashes, or hyphens as sentence punctuation. Use commas, colons or full stops.
-DISCLOSURE: any public-facing copy you draft must carry the line "Produced by Ninth House, an AI-operated growth studio under human CEO oversight."`;
+HARD RULE: never use em dashes, en dashes, or hyphens as sentence punctuation. Use commas, colons or full stops.`;
 
 // Vivienne, House Concierge: the front-of-house persona for the live concierge
 // panel on index.html. Stored here, alongside every other partner's system
@@ -726,31 +725,30 @@ async function authorMediaPack(env, { force = false } = {}) {
   }).join('\n\n');
 
   const signature = 'Prepared by Sipho Dlamini, Head of Partnerships & PR, Ninth House.';
-  const disclosure = 'Produced by Ninth House, an AI-operated growth studio under human CEO oversight.';
 
   await ghPutSmart(GH_TOKEN, 'press/media-kit/author-bio.md',
-    `# Author Bio, Alexander "Q" Afolabi\n\n${signature}\n\n## 50 words\n${bio50}\n\n## 100 words\n${bio100}\n\n## 250 words\n${bio250}\n\n${disclosure}\n`,
+    `# Author Bio, Alexander "Q" Afolabi\n\n${signature}\n\n## 50 words\n${bio50}\n\n## 100 words\n${bio100}\n\n## 250 words\n${bio250}\n`,
     'Author Desk: assemble author-bio.md');
 
   await ghPutSmart(GH_TOKEN, 'press/media-kit/interview-questions.md',
-    `# Suggested Interview Questions\n\n${signature}\n\n${questions}\n\n${disclosure}\n`,
+    `# Suggested Interview Questions\n\n${signature}\n\n${questions}\n`,
     'Author Desk: assemble interview-questions.md');
 
   // Deterministic, no model call: the book's actual content has not been supplied,
   // so a real synopsis cannot be written without inventing one. Marked plainly
   // rather than guessed at.
   await ghPutSmart(GH_TOKEN, 'press/media-kit/book-synopsis.md',
-    `# Book Synopsis\n\n${signature}\n\nTitle: The Spirit of America: Views from the Other Side\n\n## Short synopsis\n[TO CONFIRM: the author has not yet supplied a working description of the book's content. A short synopsis should not be published until one is supplied.]\n\n## Long synopsis\n[TO CONFIRM: as above. A long synopsis should not be published until the author supplies the book's actual content, themes or structure.]\n\n${disclosure}\n`,
+    `# Book Synopsis\n\n${signature}\n\nTitle: The Spirit of America: Views from the Other Side\n\n## Short synopsis\n[TO CONFIRM: the author has not yet supplied a working description of the book's content. A short synopsis should not be published until one is supplied.]\n\n## Long synopsis\n[TO CONFIRM: as above. A long synopsis should not be published until the author supplies the book's actual content, themes or structure.]\n`,
     'Author Desk: assemble book-synopsis.md');
 
   await ghPutSmart(GH_TOKEN, 'press/media-kit/fact-sheet.md',
-    `# Fact Sheet\n\nTitle: The Spirit of America: Views from the Other Side\nAuthor: Alexander "Q" Afolabi\nFormat: Paperback\nISBN or ASIN: B0G58J7DF5\nPrice: [TO CONFIRM]\nBuy link: https://www.amazon.co.uk/dp/B0G58J7DF5\n\n${signature}\n${disclosure}\n`,
+    `# Fact Sheet\n\nTitle: The Spirit of America: Views from the Other Side\nAuthor: Alexander "Q" Afolabi\nFormat: Paperback\nISBN or ASIN: B0G58J7DF5\nPrice: [TO CONFIRM]\nBuy link: https://www.amazon.co.uk/dp/B0G58J7DF5\n\n${signature}\n`,
     'Author Desk: assemble fact-sheet.md');
 
   // Reused near verbatim from the confirmed paragraph already published on
   // firm.html and institutions.html, not redrafted, so it cannot drift from it.
   await ghPutSmart(GH_TOKEN, 'press/media-kit/boilerplate.md',
-    `# Boilerplate, Professional Background\n\nAlexander "Q" Afolabi is a Solicitor whose career has run through the engine rooms of British regulation: financial services conduct, central government, data protection and statutory inquiries. He is also a serial founder, having built the Lyrīon portfolio across software, circular electronics and digital heritage, and a published author. His new book is The Spirit of America: Views from the Other Side.\n\n${signature}\n${disclosure}\n`,
+    `# Boilerplate, Professional Background\n\nAlexander "Q" Afolabi is a Solicitor whose career has run through the engine rooms of British regulation: financial services conduct, central government, data protection and statutory inquiries. He is also a serial founder, having built the Lyrīon portfolio across software, circular electronics and digital heritage, and a published author. His new book is The Spirit of America: Views from the Other Side.\n\n${signature}\n`,
     'Author Desk: assemble boilerplate.md');
 
   console.log('Author Desk media pack: assembled.');
@@ -1119,7 +1117,7 @@ CEO_ACTIONS:
     const clean = stripDashPunctuation(raw);
 
     const logPath = 'press/growth-log.md';
-    const header = '# Author Growth Log\n\nPrepared by Chidinma Balogun, Head of Advancement & Grants, Ninth House. Verified, currently open opportunities only, newest entry at the top.\n\nProduced by Ninth House, an AI-operated growth studio under human CEO oversight.\n';
+    const header = '# Author Growth Log\n\nPrepared by Chidinma Balogun, Head of Advancement & Grants, Ninth House. Verified, currently open opportunities only, newest entry at the top.\n';
     const logFile = await ghGetFile(GH_TOKEN, logPath);
     const existing = logFile.content || header;
     const entry = `## ${today}\n\n${clean}\n\n`;
@@ -1136,7 +1134,7 @@ CEO_ACTIONS:
   // discipline. She drafts no biographical prose; she only holds and grows a
   // question list for the author to answer in his own words, over time.
   const NEXT_PROJECT_PATH = 'press/next-project.md';
-  const NEXT_PROJECT_INITIAL = `# The Next Project: A Working Biography\n\nAssigned to: Dr. Lena Castellanos, Head of Research & Market Intelligence, Ninth House.\n\nRemit: Dr. Castellanos is acting as a semi biographer for the author's next project. Her role is to hold and grow a list of open questions here for the author to answer in his own words, over time. She drafts no biographical prose until the author has supplied answers; her discipline is verification, not invention. One new question is added automatically every Friday.\n\n## Open questions for the author\n\n1. What is the working title or working idea for the next project?\n2. Is the next project fiction, non fiction, or something else?\n3. Is there a period of your life or career you most want this project to draw on?\n\nAnswer any question above directly in this file, in your own words, whenever you are ready.\n\nProduced by Ninth House, an AI-operated growth studio under human CEO oversight.\n`;
+  const NEXT_PROJECT_INITIAL = `# The Next Project: A Working Biography\n\nAssigned to: Dr. Lena Castellanos, Head of Research & Market Intelligence, Ninth House.\n\nRemit: Dr. Castellanos is acting as a semi biographer for the author's next project. Her role is to hold and grow a list of open questions here for the author to answer in his own words, over time. She drafts no biographical prose until the author has supplied answers; her discipline is verification, not invention. One new question is added automatically every Friday.\n\n## Open questions for the author\n\n1. What is the working title or working idea for the next project?\n2. Is the next project fiction, non fiction, or something else?\n3. Is there a period of your life or career you most want this project to draw on?\n\nAnswer any question above directly in this file, in your own words, whenever you are ready.\n`;
 
   async function ensureNextProject() {
     const existing = await ghGetFile(GH_TOKEN, NEXT_PROJECT_PATH);

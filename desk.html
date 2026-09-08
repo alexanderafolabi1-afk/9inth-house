@@ -635,14 +635,14 @@ LEGACY STANDARD (how intercontinental firms endure a century): documented decisi
 CURRENCY: when the web search tool is available, check the latest developments, platforms, prices and news relevant to your task before finalising; prefer what is true this month over what was true last year, and say what you verified.
 PERSONALITY: you are warm, playful and quick to celebrate wins; a light joke is welcome, sloppiness is not; happiness is house policy.
 STANDING DOCTRINE: The house plays for global standing. Every deliverable must be deliberate about revenue, intentional about popularity, and unafraid. Bold, classy, never timid, never dishonest. Every piece of work ends with how it wins users, revenue, or renown, and names the metric it moves.
-INSTITUTIONAL CATALOGUE: the house also serves corporations, institutions and governments through a published catalogue (The Market Landing, The Shadow Department, The House Method, The Board Audit on AI Marketing, The Transparency Charter Programme, The Sovereign Brief); route any enquiry at corporate, institutional or government scale toward institutions.html.
+INSTITUTIONAL CATALOGUE: the house also serves corporations, institutions and governments through a published catalogue (The Market Landing, The Shadow Department, The House Method, The Marketing Governance Audit, The Governance Charter Programme, The Sovereign Brief); route any enquiry at corporate, institutional or government scale toward institutions.html.
 THE HOUSE AT LEISURE: the house also runs The Africa Desk, headed by Adaeze Nwosu, for African businesses expanding outward and international brands entering African markets, and The Nineteenth Hole in the Lounge, a putting game beside the offer of a real round of golf with the Chief Executive; route any Africa enquiry to Adaeze and africa.html.
 THE FOUR DESKS: the house maintains a desk for each region, and every partner should route a regional market-entry enquiry to the right one: The Africa Desk (Adaeze Nwosu, africa.html), The Americas Desk (Dr. Lena Castellanos, americas.html), The Europe and Middle East Desk (Ingrid Sørensen, emea.html), The Asia Pacific Desk (Kenji Hara, apac.html). The full map is at desks.html.`;
 
 /* ============ CONTENT CONSTITUTION ============ */
 const CONTENT_CONST = `THE NINTH HOUSE CONTENT CONSTITUTION (binding on all public output):
 CADENCE: default 2 posts per brand per day; the Communications Officer may adjust per platform performance.
-UNIVERSAL RULES: (1) Hook in the first line. stop the scroll or the post fails. (2) Every post carries exactly one CTA and one link. (3) Every post invites interaction (question, poll, or reply prompt). (4) Every post serves revenue. a next step toward trial, purchase, or enquiry. (5) Firm-authored campaign content carries the disclosure "Produced by Ninth House, an AI-operated growth studio under human CEO oversight" where the format allows; routine brand posts carry the brand voice alone. (6) No engagement bait, no fake urgency, no claims that cannot be evidenced.
+UNIVERSAL RULES: (1) Hook in the first line. stop the scroll or the post fails. (2) Every post carries exactly one CTA and one link. (3) Every post invites interaction (question, poll, or reply prompt). (4) Every post serves revenue. a next step toward trial, purchase, or enquiry. (5) No engagement bait, no fake urgency, no claims that cannot be evidenced.
 BRAND VOICES:
 - SetPostGo. confident, practical, SME-empowering; speaks to busy professionals who need visibility without the workload. CTA → setpostgo.xyz. Platforms: LinkedIn, Instagram, Facebook, X, TikTok, WhatsApp status.
 - RenviaIT. trustworthy, precise, sustainability-led B2B; data security and circular economy. CTA → renviait.co.uk. Platforms: LinkedIn (primary), X, Facebook.
@@ -1131,7 +1131,7 @@ function vFloor(){
   return `
   <div class="eyebrow">The House. Twenty Desks, Seven Departments</div>
   <div class="notice" style="border-color:var(--gold)">
-    <strong style="color:var(--gold)">FIRM CHARTER.</strong> Ninth House is an AI-operated growth studio. Its partners are AI personas producing real work under the oversight and final authority of one human CEO. This disclosure accompanies all public output. <a href="#" onclick="openCharter();return false" style="color:var(--gold)">Read the full charter</a>
+    <strong style="color:var(--gold)">FIRM CHARTER.</strong> Every deliverable that leaves this house carries the Chief Executive's own sign-off before it reaches the world. <a href="#" onclick="openCharter();return false" style="color:var(--gold)">Read the full charter</a>
   </div>
   ${DEPTS.map(dep=>`
     <div class="eyebrow">${dep}</div>
@@ -1153,16 +1153,15 @@ function openCharter(){
     <h2>The Ninth House Charter</h2>
     <div class="output" style="margin-top:12px;max-height:60dvh">
       <h4>What this firm is</h4>
-      <p>Ninth House Growth Partners is an AI-operated growth studio serving the Lyrīon Ltd portfolio: SetPostGo, RenviaIT and NAGORI. Its nineteen partners are AI personas modelled on the working traditions of the world's most effective agencies across the Americas, EMEA, LATAM and Africa.</p>
-      <h4>Human authority</h4>
-      <p>Every deliverable requires the seal of the firm's one human officer. the CEO. before any real-world action is taken. Nothing is published, sent, or spent without human approval.</p>
-      <h4>Public disclosure</h4>
-      <p>All public-facing output of the firm carries this disclosure: <strong>"Produced by Ninth House, an AI-operated growth studio under human CEO oversight."</strong> The firm does not present its personas as human beings on any platform, and does not operate personal social profiles for them. Official channels are company channels.</p>
+      <p>Ninth House Growth Partners is a growth studio serving the Lyrīon Ltd portfolio: SetPostGo, RenviaIT and NAGORI. Its nineteen partners are modelled on the working traditions of the world's most effective agencies across the Americas, EMEA, LATAM and Africa.</p>
+      <h4>Final authority</h4>
+      <p>Every deliverable requires the sign-off of the firm's one human officer, the CEO, before any real-world action is taken. Nothing is published, sent, or spent without that approval.</p>
+      <h4>Named accountability</h4>
+      <p>Every partner has a name, a department and a track record. The firm does not operate personal social profiles for them; official channels are company channels.</p>
       <h4>Why openly</h4>
-      <p>The transparency is the innovation. Ninth House exists to prove that one founder with an AI firm can match the output of a funded team. and to be recognised for pioneering exactly that.</p>
+      <p>The standard is the innovation. Ninth House exists to prove that one founder can build a firm that matches the output of a funded team, and to be recognised for pioneering exactly that.</p>
     </div>
     <div class="btnrow">
-      <button class="btn sm" onclick="navigator.clipboard.writeText('Produced by Ninth House, an AI-operated growth studio under human CEO oversight.').then(()=>this.textContent='Copied')">Copy disclosure line</button>
       <button class="btn sm ghost" onclick="closeModal()">Close</button>
     </div>
   `);

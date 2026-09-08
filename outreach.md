@@ -1,8 +1,8 @@
 # Ninth House Outreach Armoury
 
-Five cold email templates in the house voice. Fill the [bracketed] fields per
-recipient. Keep them short, warm and specific. Every real send is sealed by the
-human before it leaves the building.
+Eight cold email templates in the house voice. Fill the [bracketed] fields per
+recipient. Keep them short, warm and specific. Every real send goes out under
+the Chief Executive's own signature.
 
 ---
 
@@ -103,19 +103,18 @@ Regards,
 
 ## 5. Angel investor introduction, the house model
 
-Subject: One founder, an AI firm, the output of a funded team
+Subject: One founder, one growth studio, the output of a funded team
 
 Dear [Name],
 
 I am building something I think you will find genuinely new. Ninth House is a
-growth studio run by AI partner personas under one human seal: a full firm of
-strategy, creative, media, finance and research, awake around the clock, at the
-payroll of none.
+growth studio built like a full-service agency: strategy, creative, media,
+finance and research, running around the clock, at the payroll of none.
 
 It already serves a live portfolio of ventures and sells productised services,
-all in the open, with transparency as the headline rather than the small print.
-I am not raising on a dream; I am showing a working machine and asking who wants
-to help it compound.
+all priced in the open, with real numbers instead of vague promises. I am not
+raising on a dream; I am showing a working firm and asking who wants to help
+it compound.
 
 Could I send you a one page summary and take fifteen minutes of your time?
 
@@ -126,13 +125,13 @@ With respect,
 
 ## 6. The Shadow Department, to a corporate CMO
 
-Subject: A complete AI marketing department, under your seal, from £2,500 monthly
+Subject: A complete marketing department, from £2,500 monthly
 
 Dear [Name],
 
 Most marketing departments carry three costs: headcount, coordination and slow output. Ours carries none of them.
 
-The Shadow Department is a full AI marketing operation, strategy, content, performance and minutes to the board, working under a human seal your team controls end to end. It sits alongside your existing department or ahead of a hire you have been deferring, live within a week, at the same standard whether it lands at nine in the morning or nine at night.
+The Shadow Department is a complete marketing operation, strategy, content, performance and minutes to the board, run to your standard end to end. It sits alongside your existing department or ahead of a hire you have been deferring, live within a week, at the same standard whether it lands at nine in the morning or nine at night.
 
 Worth twenty minutes to see a sample docket?
 
@@ -158,15 +157,15 @@ Kind regards,
 
 ---
 
-## 8. The Transparency Charter Programme, to a local authority innovation lead
+## 8. The Governance Charter Programme, to a local authority innovation lead
 
-Subject: Deploying AI communications openly, a charter for your authority
+Subject: A published code of conduct for your communications team
 
 Dear [Name],
 
-Public institutions are already using AI in communications; few say so plainly. We think the silence is the risk, not the technology.
+Most public bodies write their communications standards once and file them away. Few publish them, and fewer still train staff against them consistently.
 
-The Transparency Charter Programme installs openly disclosed AI communications for public bodies: public facing disclosure language, staff and board training, and a published charter modelled on the one Ninth House operates on itself. Built for institutions that want the efficiency without hiding the method.
+The Governance Charter Programme installs a public, board-ready code of conduct for your marketing and communications function: standards language your residents can actually read, staff and board training, and a published charter for the institution, modelled on the one Ninth House operates on itself.
 
 Could I send the charter for a first look?
 
