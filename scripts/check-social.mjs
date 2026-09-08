@@ -23,13 +23,14 @@ import { generateVapidKeys, encryptPayload, b64urlToBytes, bytesToB64url } from 
 import { checkOutreachRules, callPermitted, researchGate, MESSAGE_STATUSES, checkCityPinOffer, checkCityIsLive, checkEmailProvenance, CITY_PIN_SKUS, CITY_PIN_FLOOR_USD, TIER_A_CITIES } from '../worker/src/social/outreach.js';
 import { composeSetPostGo, SETPOSTGO_PLANS, SETPOSTGO_FLOOR_GBP, SETPOSTGO_GEOGRAPHY, SETPOSTGO_DAILY_MIX } from '../worker/src/social/outreach.js';
 import { CITY_PIN_FOOD_EMAIL, CITY_PIN_NIGHT_EMAIL, CITY_PIN_ROOM_EMAIL, CITY_PIN_TOUR_EMAIL, CITY_PIN_FOOD_SUBJECT } from '../worker/src/social/seeds/city-pin.js';
+import { describeMakeWebhookUrl } from '../worker/src/makehook.js';
 import { VISIT_DUBAI_EMAIL_BODY, VISIT_DUBAI_SUBJECT, VISIT_DUBAI_TO, VISIT_DUBAI_CC, VISIT_DUBAI_PROSPECT } from '../worker/src/social/seeds/visit-dubai.js';
 
 // Every module the Worker actually ships. Kept in one place because two checks
 // read it and a file missing from the list is a file nothing checks.
 const WORKER_FILES = [
   'worker/src/index.js', 'worker/src/aikey.js', 'worker/src/n8n.js', 'worker/src/auth.js',
-  'worker/src/postal.js',
+  'worker/src/postal.js', 'worker/src/makehook.js',
   'worker/src/social/facts.js', 'worker/src/social/generate.js', 'worker/src/social/api.js',
   'worker/src/social/db.js', 'worker/src/social/distribute.js', 'worker/src/social/outreach.js',
   'worker/src/social/metrics.js', 'worker/src/social/push.js', 'worker/src/social/text.js',
@@ -735,6 +736,31 @@ await test('a call may be offered to an agency of five, and to nobody else', () 
   }
   // Every refusal says why, since a blocker with no reason is a dead end.
   assert.ok(callPermitted({ research: {} }, 'agency').reason.length > 20);
+});
+
+await test('the rail address is checked before it is stored, and is settable at all', () => {
+  // This was the last runtime value in the house that could only be set from
+  // the Cloudflare dashboard: the sender read an environment variable and the
+  // desk showed a notice naming it with no field to fill in.
+  const good = 'https://hook.eu1.make.com/crtgybmve3qxcwj42q6cm14xqa5w5xia';
+  assert.equal(describeMakeWebhookUrl(good).ok, true);
+  assert.deepEqual(describeMakeWebhookUrl(good).problems, []);
+  assert.ok(describeMakeWebhookUrl(good).hint.includes('hook.eu1.make.com'));
+  // The hint identifies the hook without reproducing it: anyone holding the
+  // address can post as the house.
+  assert.ok(!describeMakeWebhookUrl(good).hint.includes('crtgybmve3qxcwj42q6cm14xqa5w5xia'));
+
+  // Empty means off, and is allowed.
+  assert.equal(describeMakeWebhookUrl('').empty, true);
+  assert.equal(describeMakeWebhookUrl('').ok, true);
+
+  // The mistakes that would otherwise fail silently at three in the morning.
+  assert.equal(describeMakeWebhookUrl('not a url').ok, false);
+  assert.equal(describeMakeWebhookUrl('http://hook.eu1.make.com/abc').ok, false, 'plain http must be refused');
+  assert.equal(describeMakeWebhookUrl('https://hook.eu1.make.com:8080/abc').ok, false, 'a port a Worker cannot reach must be refused');
+  const editor = describeMakeWebhookUrl('https://eu1.make.com/1234/scenarios/7303026/edit');
+  assert.equal(editor.ok, false, 'the scenario editor address is not the webhook');
+  assert.ok(editor.problems.join(' ').length > 30, 'a refusal has to say what to do instead');
 });
 
 /* ---------- Instagram ---------- */
