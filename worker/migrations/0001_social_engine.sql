@@ -37,6 +37,12 @@ CREATE TABLE IF NOT EXISTS posts (
   external_id TEXT,
   error TEXT,
   notes TEXT,
+  -- The language the copy is actually written in, as a short code, and the city
+  -- it is about where there is one. Both default to the old behaviour, so every
+  -- row written before these existed reads as an English post about no
+  -- particular city, which is exactly what those rows were.
+  language TEXT NOT NULL DEFAULT 'en',
+  city TEXT NOT NULL DEFAULT '',
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );

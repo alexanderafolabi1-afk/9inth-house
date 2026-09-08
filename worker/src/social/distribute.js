@@ -15,6 +15,7 @@
 import { PLATFORMS, SENDABLE, imageRequired } from './config.js';
 import { claimForSend, releaseClaim, markPosted, markFailed } from './db.js';
 import { senderFor } from './senders/index.js';
+import { imageUrls } from './senders/webhook.js';
 
 // Checks the row can actually be delivered before a claim is taken, so a post
 // that was always going to be rejected does not burn a rail call and does not
@@ -44,12 +45,24 @@ export function validateForSend(post) {
   if (imageRequired(post.platform, post.category) && !String(post.image_url || '').trim()) {
     problems.push(`${platform.label} needs an image for this kind of post, add an image URL before sending`);
   }
+  // A carousel is not one picture. Instagram refuses fewer than two and the
+  // house asks for three, so this is checked here, before a claim is taken and
+  // before the rail is called, rather than discovered as a failure afterwards.
+  if (platform.slides) {
+    const urls = imageUrls(post);
+    if (urls.length && urls.length < platform.slides.min) {
+      problems.push(`a ${platform.label.toLowerCase()} needs at least ${platform.slides.min} images and this one has ${urls.length}. Put one address per line in the image field.`);
+    }
+    if (urls.length > platform.slides.max) {
+      problems.push(`a ${platform.label.toLowerCase()} takes at most ${platform.slides.max} images and this one has ${urls.length}.`);
+    }
+  }
   return problems;
 }
 
 // Both moved to the webhook sender, where they belong, and re-exported so
 // existing callers and tests keep working unchanged.
-export { buildPayload, readExternalId } from './senders/webhook.js';
+export { buildPayload, readExternalId, imageUrls } from './senders/webhook.js';
 
 // Publishes exactly once.
 //

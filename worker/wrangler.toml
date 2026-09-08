@@ -29,6 +29,30 @@ compatibility_flags = ["nodejs_compat"]
 # It reproduced identically under `wrangler dev` against this exact
 # wrangler.toml, and it went away the moment the Route did. Do not add a
 # Route back here without re-running scripts/check-cors.mjs against it first.
+#
+# Tried again on 8 Sep 2026, and the answer is the same. The wish was a
+# tidier address for the poster rail: `9thpoint.com/n8n/next-post` instead of
+# the .workers.dev one, since the apex is GitHub Pages and serves a 404 page
+# for those paths today. A Route scoped to a path the desk never calls looks
+# like it should be safe, and it is not:
+#
+#   [[routes]]
+#   pattern = "9thpoint.com/n8n/*"
+#   zone_name = "9thpoint.com"
+#
+# With those three lines added, scripts/check-cors.mjs failed both apex
+# checks immediately, exactly as before: Access-Control-Allow-Origin came
+# back as the Worker's own serving address rather than https://9thpoint.com,
+# on the preflight and on the real response alike. The path pattern is not
+# what matters. Binding zone_name to the apex at all is what does it, and the
+# apex is the origin the installed PWA sends, so the cost is the owner
+# locked out of the desk on his phone again. Removing the three lines put
+# every check back to passing in the same run.
+#
+# So the rail keeps the .workers.dev address, which is not a workaround: it
+# is the address this Worker answers on, it costs nothing, and Make does not
+# care what a URL looks like. A prettier one is worth nothing next to a login
+# that works.
 workers_dev = true
 
 # ============================================================================

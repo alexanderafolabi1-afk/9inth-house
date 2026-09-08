@@ -22,10 +22,12 @@ import { PLATFORMS, CATEGORIES, SENDABLE, platformKeys, isPlatform } from './con
 import {
   hasStore, ensureSchema, seedVentures, listVentures, upsertVenture, getVenture,
   listPosts, getPost, setStatus, updatePostText, schedulePost, dueScheduled,
-  savePushSub, deletePushSub,
+  savePushSub, deletePushSub, insertPost,
   recordFeedback, feedbackFor, repeatedReasons
 } from './db.js';
 import { publishPost } from './distribute.js';
+import { seedNinthHousePosts } from './seeds/ninth-house-linkedin.js';
+import { readPages, writePage, describePageUrn } from './pages.js';
 import {
   seedOutreach, listReferences, listProspects, listMessages, addReference,
   checkOutreachRules, setMessageStatus, recentlyApproached, recentlyDrafted, isSuppressed,
@@ -63,6 +65,7 @@ import { getWebhookUrl, setWebhookUrl, describeWebhookUrl } from '../n8n.js';
 import { getAnthropicKey, setAnthropicKey, anthropicKeyStatus, describeAnthropicKey } from '../aikey.js';
 import { readPostalAddress, writePostalAddress, describePostalAddress } from '../postal.js';
 import { runGeneration } from './generate.js';
+import { IG_LANGUAGES } from './instagram.js';
 import { ingestMetrics, ventureSummary } from './metrics.js';
 import { getVapidKeys, pushConfigured, notifyOwner } from './push.js';
 import { sanitiseSocialText, hasDashPunctuation, stripDashPunctuation } from './text.js';
@@ -163,7 +166,7 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
     '/social/push/keys', '/social/selfcheck',
     '/social/n8n-token', '/social/n8n-token/regenerate',
     '/social/anthropic-key', '/social/credentials', '/social/n8n-webhook',
-    '/social/postal-address', '/social/origins'
+    '/social/postal-address', '/social/pages', '/social/origins'
   ];
   const needsStore = !noStoreNeeded.includes(path);
   if (needsStore && !hasStore(env)) return noStore(request, env);
@@ -177,6 +180,7 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
       case 'POST /social/migrate': {
         await ensureSchema(db);
         const seeded = await seedVentures(db);
+        await seedNinthHousePosts(db, { insertPost });
         return json(request, env, { ok: true, seeded, message: seeded ? 'Storage prepared and the first venture seeded.' : 'Storage prepared.' });
       }
 
@@ -246,6 +250,10 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
           // own copy of anything platform specific.
           platforms: PLATFORMS,
           categories: CATEGORIES,
+          // Same rule as the two above: the desk holds no copy of its own. A card
+          // written in Greek has to say so on its face, or a queue in eight
+          // languages is a queue nobody can review.
+          languages: IG_LANGUAGES,
           vapidPublicKey: (await getVapidKeys(env))?.publicKey || null,
           makeReady: Boolean(env.MAKE_WEBHOOK_URL)
         });
@@ -1055,6 +1063,24 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
       // rather than in a Cloudflare dashboard, for the reason every secret in
       // this house is: a value only settable somewhere the owner cannot reach
       // is a value that never gets set.
+      // Which company page each venture posts to. Read and set here rather
+      // than only in code, so a page id that turns out to be wrong is a
+      // correction from the phone and not a deploy.
+      case 'GET /social/pages': {
+        return json(request, env, { ok: true, pages: await readPages(env) });
+      }
+
+      case 'POST /social/pages': {
+        const venture = String(body.venture || '').trim().toLowerCase();
+        if (!venture) return json(request, env, { ok: false, error: 'A venture is required.' }, 400);
+        const check = describePageUrn(body.urn);
+        if (!check.ok) return json(request, env, { ok: false, error: check.problem }, 400);
+        if (!(await writePage(env, venture, check.value))) {
+          return json(request, env, { ok: false, error: 'LOGIN_ATTEMPTS is not bound, so there is nowhere to store it. See worker/README.md.' }, 503);
+        }
+        return json(request, env, { ok: true, pages: await readPages(env) });
+      }
+
       case 'GET /social/postal-address': {
         const address = await readPostalAddress(env);
         return json(request, env, { ok: true, address, set: Boolean(address) });

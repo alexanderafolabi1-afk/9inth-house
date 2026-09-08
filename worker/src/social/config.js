@@ -38,13 +38,97 @@ export const PLATFORMS = {
     // before it ever reaches the webhook.
     automated: false
   },
+  // Instagram is four platforms wearing one name.
+  //
+  // A Reel caption, a carousel, a still and a Story are four different jobs with
+  // four different lifespans and four different audiences, and the Graph API
+  // itself agrees: the media container takes a media_type of REELS, CAROUSEL or
+  // STORIES, or nothing at all for a plain image, and the four take different
+  // fields. Writing one piece of copy and pushing it to all four is the single
+  // most reliable way to make an account look automated.
+  //
+  // They are therefore four entries here rather than one entry with a mode flag,
+  // because this file's whole contract is that the platform key is the routing
+  // key: the rail branches on it, the cadence is set per key from the admin, and
+  // no logic downstream has to learn what a Reel is. mediaKind is the value Make
+  // passes straight to media_type, so a branch there is a field mapping and not
+  // a decision.
   instagram: {
-    label: 'Instagram',
+    label: 'Instagram feed',
+    surface: 'feed',
+    parent: 'instagram',
+    mediaKind: 'IMAGE',
+    reach: 'followers',
     limit: 2200,
     target: 900,
     imageRequired: true,
     hashtags: { max: 8, style: 'grouped at the end, specific over popular' },
-    guidance: 'The image carries the point and the caption earns the read. First line must work as the only line, because it is the only one shown unexpanded.'
+    guidance: 'One still. The image carries the point and the caption earns the read. First line must work as the only line, because it is the only one shown unexpanded.'
+  },
+  instagram_reel: {
+    label: 'Instagram Reel',
+    surface: 'reel',
+    parent: 'instagram',
+    mediaKind: 'REELS',
+    // The only Instagram surface still shown to people who do not follow the
+    // account, which makes it the one that grows a register rather than
+    // servicing it. That is why it leads the rota rather than closing it.
+    reach: 'people who do not follow the account',
+    limit: 2200,
+    target: 220,
+    imageRequired: true,
+    hashtags: { max: 5, style: 'at the end, specific over popular' },
+    guidance: 'A caption for a video, not a post. The first line has to work with the sound off, because most of the audience will never turn it on. Name the shot the video needs in one line prefixed "SHOT:", then write the caption. Nine to fifteen seconds of footage, one idea, no wind up.'
+  },
+  instagram_carousel: {
+    label: 'Instagram carousel',
+    surface: 'carousel',
+    parent: 'instagram',
+    mediaKind: 'CAROUSEL',
+    // Instagram gives a carousel a second showing to anyone who did not reach
+    // the last slide, so the format buys a second impression for free.
+    reach: 'followers, with a second showing to anyone who did not finish the swipe',
+    limit: 2200,
+    target: 400,
+    imageRequired: true,
+    slides: { min: 3, max: 10 },
+    hashtags: { max: 8, style: 'grouped at the end, specific over popular' },
+    guidance: 'Between three and ten slides. Slide one has to stand alone, because most people see only that one. Describe each slide on its own line prefixed "SLIDE 1:", "SLIDE 2:" and so on, then write the caption underneath them.'
+  },
+  instagram_story: {
+    label: 'Instagram Story',
+    surface: 'story',
+    parent: 'instagram',
+    mediaKind: 'STORIES',
+    reach: 'followers, for twenty four hours',
+    // Stories carry no caption field on the API at all: what is written here is
+    // the text set on the image itself, which is why the ceiling is a design
+    // constraint rather than a platform one. Kept short because it has to be
+    // readable at a glance on a phone held one handed.
+    limit: 300,
+    target: 90,
+    imageRequired: true,
+    ephemeral: true,
+    hashtags: { max: 1, style: 'one tag at most, set on the image' },
+    // Posted by hand, and this is not a gap waiting to be closed.
+    //
+    // Two separate walls, either of which would be enough. Make's Instagram
+    // Business app has no module that publishes a Story: it can create a Reel,
+    // a carousel and a photo post, and it can list stories, but it cannot make
+    // one, and it has no generic API call module to fall back to (checked
+    // against the app's full module list, deprecated and private included, on
+    // 8 Sep 2026). And underneath that, the Graph API cannot place a poll, a
+    // question, a quiz, a slider or a countdown on a Story at all. Stickers are
+    // app only. An automated Story would therefore be a still frame with no
+    // sticker on it, which is the one thing this surface exists not to be.
+    //
+    // So the engine writes the frame and the sticker and a human places it,
+    // which takes about fifteen seconds on the phone that was going to be
+    // holding the picture anyway. Same mechanism as X: distribute.js refuses to
+    // send anything marked automated: false before it reaches the rail, and the
+    // desk offers Copy instead of Approve.
+    automated: false,
+    guidance: 'Twenty four hours and then gone, and there is no caption box: what you write is set on the image. Short enough to read without stopping. Name one free interactive sticker in a line prefixed "STICKER:", chosen from poll, question, quiz, slider or countdown, and make the sticker the point of the frame rather than decoration on it. This one is placed by hand on the phone, so write it as the instruction for that: the line for the frame, and the sticker to put on it.'
   },
   facebook: {
     label: 'Facebook',
@@ -142,6 +226,13 @@ export function platformKeys() {
 
 export function isPlatform(key) {
   return Object.prototype.hasOwnProperty.call(PLATFORMS, key);
+}
+
+// Every platform key belonging to one family, in the order they are declared
+// above. Derived rather than listed, so a fifth Instagram surface is one entry
+// in PLATFORMS and nothing else anywhere.
+export function platformFamily(parent) {
+  return Object.keys(PLATFORMS).filter((k) => PLATFORMS[k].parent === parent);
 }
 
 export function isCategory(key) {

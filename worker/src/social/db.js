@@ -45,6 +45,12 @@ CREATE TABLE IF NOT EXISTS posts (
   external_id TEXT,
   error TEXT,
   notes TEXT,
+  -- The language the copy is actually written in, as a short code, and the city
+  -- it is about where there is one. Both default to the old behaviour, so every
+  -- row written before these existed reads as an English post about no
+  -- particular city, which is exactly what those rows were.
+  language TEXT NOT NULL DEFAULT 'en',
+  city TEXT NOT NULL DEFAULT '',
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
@@ -395,7 +401,9 @@ const ADDITIVE_COLUMNS = [
   "ALTER TABLE prospects ADD COLUMN last_blocker TEXT NOT NULL DEFAULT ''",
   'ALTER TABLE outreach_messages ADD COLUMN replied_at TEXT',
   "ALTER TABLE outreach_messages ADD COLUMN delivery_type TEXT NOT NULL DEFAULT 'email'",
-  "ALTER TABLE outreach_messages ADD COLUMN form_url TEXT NOT NULL DEFAULT ''"
+  "ALTER TABLE outreach_messages ADD COLUMN form_url TEXT NOT NULL DEFAULT ''",
+  "ALTER TABLE posts ADD COLUMN language TEXT NOT NULL DEFAULT 'en'",
+  "ALTER TABLE posts ADD COLUMN city TEXT NOT NULL DEFAULT ''"
 ];
 
 export async function ensureSchema(db) {
@@ -425,8 +433,68 @@ export async function seedVentures(db) {
     await upsertVenture(db, v);
     added += 1;
   }
+  // Done here rather than at each of the three call sites, so a fourth call site
+  // cannot be written that quietly leaves it out. Returns the same count it
+  // always has: this adds platforms to ventures, it does not add ventures.
+  await applyPlatformAdditions(db, PLATFORM_ADDITIONS);
   return added;
 }
+
+// A platform turned on for a venture that already exists.
+//
+// seedVentures deliberately never touches a venture that is already on the
+// table, because the admin is the authority on a live venture and a deploy that
+// silently rewrote one would be worse than useless. That is right, and it also
+// means a new platform in the seed reaches a fresh database and never reaches
+// the live one, which is the only database that matters.
+//
+// So this: strictly additive, and recorded so it happens exactly once. It can
+// only ever add a platform the venture does not have, it never removes one, it
+// never changes a cadence that is already set, and once the marker is written it
+// does not run again. An owner who turns Instagram off tomorrow finds it still
+// off the day after, which is the whole point of only running it once.
+export async function applyPlatformAdditions(db, additions, { now = new Date() } = {}) {
+  const applied = [];
+  for (const addition of additions) {
+    const marker = `platform_addition:${addition.id}`;
+    if (await readSetting(db, marker)) continue;
+
+    const venture = await getVenture(db, addition.venture);
+    if (!venture) {
+      // Nothing to add to. Left unmarked on purpose, so it applies on the day
+      // the venture is actually seeded rather than being permanently skipped.
+      continue;
+    }
+
+    const platforms = [...venture.platforms];
+    const cadence = { ...venture.cadence };
+    const gained = [];
+    for (const [platform, weekly] of Object.entries(addition.cadence)) {
+      if (platforms.includes(platform)) continue;
+      platforms.push(platform);
+      if (!(platform in cadence)) cadence[platform] = weekly;
+      gained.push(platform);
+    }
+
+    if (gained.length) {
+      await upsertVenture(db, { ...venture, platforms, cadence });
+      applied.push({ venture: addition.venture, added: gained });
+    }
+    await writeSetting(db, marker, now.toISOString());
+  }
+  return applied;
+}
+
+// The additions themselves. One entry, one id, for ever: changing the cadence
+// here after it has run changes nothing, because the marker is already written.
+// A second thought is a second entry with a new id.
+export const PLATFORM_ADDITIONS = [
+  {
+    id: 'glotemp_instagram_surfaces_v1',
+    venture: 'glotemp',
+    cadence: { instagram_reel: 5, instagram_carousel: 3, instagram: 3, instagram_story: 4 }
+  }
+];
 
 function parseJson(value, fallback) {
   try {
@@ -548,8 +616,8 @@ export async function insertPost(db, post) {
   const ts = nowIso();
   const id = post.id || crypto.randomUUID();
   await db.prepare(`
-    INSERT INTO posts (id, venture, platform, category, text, image_url, link, source_article, status, scheduled_for, notes, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO posts (id, venture, platform, category, text, image_url, link, source_article, status, scheduled_for, notes, language, city, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).bind(
     id,
     post.venture,
@@ -562,6 +630,8 @@ export async function insertPost(db, post) {
     post.status || 'queued',
     post.scheduled_for || null,
     post.notes || null,
+    post.language || 'en',
+    post.city || '',
     ts,
     ts
   ).run();
@@ -649,6 +719,57 @@ export async function dueScheduled(db, nowIsoStr, limit = 25) {
   return results || [];
 }
 
+// One post, claimed, for an external rail.
+//
+// The whole point is that it hands the same row to exactly one caller. The
+// selection is ordinary, the claim is the conditional UPDATE above, and the
+// loop is what makes the two safe together: candidates are tried in order and
+// the first successful claim wins, so two schedulers arriving in the same
+// second get different rows rather than the same row twice. A caller that
+// claims nothing is told there is nothing, which is the correct answer and not
+// an error.
+//
+// A row with no scheduled_for is due immediately. A row with one is not due
+// until its hour, which is what lets twelve posts sit in the table from today
+// and leave one at a time over four weeks.
+export async function claimNextDue(db, { venture, platform, statuses, now, limit = 10 } = {}) {
+  const where = ['status IN (' + statuses.map(() => '?').join(',') + ')'];
+  const binds = [...statuses];
+  if (venture) { where.push('venture = ?'); binds.push(String(venture).toLowerCase()); }
+  if (platform) { where.push('platform = ?'); binds.push(String(platform).toLowerCase()); }
+  where.push('(scheduled_for IS NULL OR scheduled_for <= ?)');
+  binds.push(now);
+
+  const { results } = await db.prepare(
+    `SELECT * FROM posts WHERE ${where.join(' AND ')}
+      ORDER BY scheduled_for IS NULL, scheduled_for ASC, created_at ASC, id
+      LIMIT ?`
+  ).bind(...binds, Math.min(Number(limit) || 10, 50)).all();
+
+  for (const row of results || []) {
+    if (await claimForSend(db, row.id, statuses)) {
+      return await getPost(db, row.id);
+    }
+  }
+  return null;
+}
+
+// A rail that crashes between claiming and reporting leaves a row in posting
+// with nobody coming back for it. Without this that row is stranded until
+// somebody notices by hand, which on a three times a week cadence could be a
+// fortnight. Anything held longer than the window is put back where it came
+// from, so the next call picks it up again rather than skipping it forever.
+export async function releaseStrandedClaims(db, { olderThanMinutes = 30, now = new Date() } = {}) {
+  const cutoff = new Date(now.getTime() - olderThanMinutes * 60000).toISOString();
+  const res = await db.prepare(
+    `UPDATE posts SET status = 'queued',
+        error = 'Claimed for sending and never reported back, so it was returned to the queue.',
+        updated_at = ?
+      WHERE status = 'posting' AND updated_at <= ?`
+  ).bind(nowIso(), cutoff).run();
+  return res && res.meta ? res.meta.changes : 0;
+}
+
 export async function postsNeedingMetrics(db, sinceIso, limit = 50) {
   const { results } = await db.prepare(
     'SELECT * FROM posts WHERE status = \'posted\' AND posted_at >= ? ORDER BY posted_at DESC LIMIT ?'
@@ -689,6 +810,25 @@ export async function countSince(db, { venture, platform, sinceIso, statuses }) 
     `SELECT COUNT(*) AS n FROM posts WHERE venture = ? AND platform = ? AND created_at >= ? AND status IN (${placeholders})`
   ).bind(venture, platform, sinceIso, ...statuses).first();
   return row ? Number(row.n) || 0 : 0;
+}
+
+/* ---------- settings ---------- */
+
+// firm_settings as a plain key value store, for the small pieces of state that
+// belong to the engine rather than to a row: where the Instagram rota had got
+// to, whether a one time migration has already run. Deliberately string in and
+// string out; a caller that wants a number parses it, so nothing here has to
+// guess what a value was meant to be.
+export async function readSetting(db, key, fallback = null) {
+  const row = await db.prepare('SELECT value FROM firm_settings WHERE key = ?').bind(key).first();
+  return row && row.value !== null && row.value !== undefined ? row.value : fallback;
+}
+
+export async function writeSetting(db, key, value) {
+  await db.prepare(`
+    INSERT INTO firm_settings (key, value, updated_at) VALUES (?, ?, ?)
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+  `).bind(key, String(value), nowIso()).run();
 }
 
 export async function ventureStats(db, sinceIso) {
