@@ -65,6 +65,7 @@ import { getWebhookUrl, setWebhookUrl, describeWebhookUrl } from '../n8n.js';
 import { getAnthropicKey, setAnthropicKey, anthropicKeyStatus, describeAnthropicKey } from '../aikey.js';
 import { readPostalAddress, writePostalAddress, describePostalAddress } from '../postal.js';
 import { runGeneration } from './generate.js';
+import { IG_LANGUAGES } from './instagram.js';
 import { ingestMetrics, ventureSummary } from './metrics.js';
 import { getVapidKeys, pushConfigured, notifyOwner } from './push.js';
 import { sanitiseSocialText, hasDashPunctuation, stripDashPunctuation } from './text.js';
@@ -249,6 +250,10 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
           // own copy of anything platform specific.
           platforms: PLATFORMS,
           categories: CATEGORIES,
+          // Same rule as the two above: the desk holds no copy of its own. A card
+          // written in Greek has to say so on its face, or a queue in eight
+          // languages is a queue nobody can review.
+          languages: IG_LANGUAGES,
           vapidPublicKey: (await getVapidKeys(env))?.publicKey || null,
           makeReady: Boolean(env.MAKE_WEBHOOK_URL)
         });

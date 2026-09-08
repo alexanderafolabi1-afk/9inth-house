@@ -10,8 +10,10 @@
 
 import { PLATFORMS, CATEGORIES, imageRequired } from './config.js';
 import { sanitiseSocialText, extractDirectives, trimHashtags } from './text.js';
-import { listVentures, insertPost, countSince, metricsWindow, listPosts } from './db.js';
+import { listVentures, insertPost, countSince, metricsWindow, listPosts, readSetting, writeSetting } from './db.js';
 import { factsFor, factsBlock } from './facts.js';
+import { listRegisterRows } from './register.js';
+import { isIgPlatform, cityPool, dayPlan, briefFor, IG_CURSOR_KEY, IG_LANGUAGES } from './instagram.js';
 
 // Statuses that mean the slot is already accounted for this week. A skipped or
 // failed row does not count as delivered, so the cadence is not quietly reduced
@@ -122,9 +124,15 @@ export function pickCategory({ mix, biasFor, venture, avoid, articlesAvailable, 
   return pool[pool.length - 1][0];
 }
 
-function buildSystemPrompt(venture, platform, category, factsText) {
+function buildSystemPrompt(venture, platform, category, factsText, assignment = null) {
   const p = PLATFORMS[platform];
   const c = CATEGORIES[category];
+  // The Instagram brief carries the surface, the city and the language, and it
+  // replaces the generic platform lines rather than sitting alongside them:
+  // two sets of instructions about the same post is how a writer ends up
+  // splitting the difference between them.
+  const ig = assignment ? briefFor(assignment) : null;
+  const foreign = assignment && assignment.language && assignment.language !== 'en';
   return [
     `You write social copy for ${venture.name}, one venture inside the Ninth House portfolio. You are writing as the venture, not as an agency describing it.`,
     '',
@@ -139,7 +147,7 @@ function buildSystemPrompt(venture, platform, category, factsText) {
     `TONE: ${venture.tone}`,
     venture.banned_language ? `NEVER USE THESE WORDS OR PHRASES: ${venture.banned_language}` : '',
     '',
-    `PLATFORM: ${p.label}. ${p.guidance}`,
+    ig || `PLATFORM: ${p.label}. ${p.guidance}`,
     `LENGTH: aim for about ${p.target} characters. The hard ceiling is ${p.limit} and copy over it is rejected, so stay under it.`,
     `HASHTAGS: at most ${p.hashtags.max}, ${p.hashtags.style}. Fewer is better than the maximum.`,
     '',
@@ -150,6 +158,11 @@ function buildSystemPrompt(venture, platform, category, factsText) {
     '',
     'HARD RULES:',
     'Never use em dashes, en dashes, or a hyphen surrounded by spaces as punctuation. Use commas, colons and full stops.',
+    // The banned list is written in English because the house writes in
+    // English. It is a list of registers, not of strings, so it has to travel.
+    foreign
+      ? `The words above that must never be used are given in English because that is the language they were written in. They name a register, not a set of strings: their equivalents in ${(IG_LANGUAGES[assignment.language] || {}).label || 'the target language'} are banned exactly as firmly, and translating one of them is not a way round it.`
+      : '',
     'Never invent a client, a testimonial, a case study, a statistic or a result. If you have not been given a number, do not use one.',
     'Every number, price, count, coverage figure and comparison must come from the facts sheet above, word for word in substance. Not from memory, not from an earlier draft, not from what you believe about this company.',
     'Never promise a timescale or a price that is not in the brief.',
@@ -158,8 +171,11 @@ function buildSystemPrompt(venture, platform, category, factsText) {
   ].filter(Boolean).join('\n');
 }
 
-function buildUserPrompt({ venture, category, article, today }) {
+function buildUserPrompt({ venture, category, article, today, assignment = null }) {
   const lines = [`Today is ${today}. Write one ${CATEGORIES[category].label.toLowerCase()} post for ${venture.name}.`];
+  if (assignment && assignment.city) {
+    lines.push('', `It is about ${assignment.country ? assignment.city + ', ' + assignment.country : assignment.city}, and about nowhere else. Do not compare it to another city by name unless the facts sheet gives you that comparison.`);
+  }
   if (CATEGORIES[category].requiresArticle && article) {
     lines.push('', 'It derives from this published article. Take one argument out of it rather than summarising the whole thing, and let the link carry the rest.');
     lines.push(`ARTICLE TITLE: ${article.title}`);
@@ -195,8 +211,27 @@ async function availableArticles(db, venture, articles) {
 
 /* ---------- the job ---------- */
 
-export async function runGeneration(env, db, { ask, articles = [], now = new Date(), maxPosts = 12 } = {}) {
-  const ventures = await listVentures(db, { activeOnly: true });
+// The ceiling on one run. It was twelve, which was comfortably above a day's
+// work when three ventures shared four platforms between them. Glotemp alone now
+// owes four Instagram surfaces, and each non English city is a pair, so twelve
+// stopped being a safety net and became the thing deciding what got written.
+//
+// Raised to cover a real morning with room over it. It is still a ceiling and
+// still says so in the notes when it is reached, because a limit that is hit
+// silently is not a limit, it is a bug nobody has found yet.
+const MAX_POSTS_PER_RUN = 24;
+
+export async function runGeneration(env, db, { ask, articles = [], now = new Date(), maxPosts = MAX_POSTS_PER_RUN } = {}) {
+  const all = await listVentures(db, { activeOnly: true });
+
+  // Whoever is last in the list is whoever loses when the ceiling is reached, and
+  // the list is always in the same order, so without this it would be the same
+  // venture every single day. Rotated by the day of the year: the cut still falls
+  // somewhere, it just stops always falling in one place.
+  const start = all.length
+    ? Math.floor(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) / 864e5) % all.length
+    : 0;
+  const ventures = [...all.slice(start), ...all.slice(0, start)];
   const biasFor = await buildBias(db, now);
   const weekStart = startOfIsoWeek(now).toISOString();
   const daysLeft = daysLeftInIsoWeek(now);
@@ -214,6 +249,11 @@ export async function runGeneration(env, db, { ask, articles = [], now = new Dat
     let articleCursor = 0;
     let lastCategory = null;
 
+    // What every platform owes today, worked out before anything is written.
+    // Instagram needs the whole day's shape up front to lay a rota of cities
+    // across its surfaces, and computing it here rather than inside the loop
+    // means both paths read the same number.
+    const slotsFor = {};
     for (const platform of venture.platforms) {
       if (!PLATFORMS[platform]) {
         notes.push(`${venture.slug} lists platform "${platform}", which is not configured, so it was skipped`);
@@ -221,13 +261,49 @@ export async function runGeneration(env, db, { ask, articles = [], now = new Dat
       }
       const target = Number(venture.cadence[platform] || 0);
       if (target <= 0) continue;
-
       const alreadyThisWeek = await countSince(db, {
         venture: venture.slug, platform, sinceIso: weekStart, statuses: COUNTS_AS_FILLED
       });
-      const slots = slotsDueToday({ target, alreadyThisWeek, daysLeft });
+      slotsFor[platform] = slotsDueToday({ target, alreadyThisWeek, daysLeft });
+    }
+
+    // The Instagram day: which city, which surface, which language. Held as a
+    // queue per platform and drawn from below, so a venture with no Instagram
+    // surfaces and a venture with four take exactly the same code path.
+    const igQueue = {};
+    const igOwed = {};
+    for (const [platform, slots] of Object.entries(slotsFor)) {
+      if (isIgPlatform(platform) && slots > 0) igOwed[platform] = slots;
+    }
+    if (Object.keys(igOwed).length) {
+      const pool = cityPool(await listRegisterRows(db, { venture: venture.slug, limit: 1000 }));
+      if (!pool.length) {
+        // A venture with no register is not a broken venture, it is a venture
+        // whose Instagram is not about cities. SetPostGo is exactly that, and it
+        // was posting to Instagram long before any of this existed. It keeps the
+        // path it always had: no city, no assignment, no change.
+        notes.push(`${venture.slug} has no cities in the register, so its Instagram posts were written without one`);
+      } else {
+        const cursor = Number(await readSetting(db, `${IG_CURSOR_KEY}:${venture.slug}`, '0')) || 0;
+        const plan = dayPlan(pool, igOwed, { cursor });
+        for (const assignment of plan.planned) {
+          (igQueue[assignment.platform] = igQueue[assignment.platform] || []).push(assignment);
+        }
+        // Written before a single post is generated. If the run dies half way
+        // the cursor has still moved, which costs one day's cities and keeps
+        // the rota moving; not writing it would hand the same cities to every
+        // run until somebody noticed.
+        await writeSetting(db, `${IG_CURSOR_KEY}:${venture.slug}`, plan.cursor);
+      }
+    }
+
+    for (const platform of Object.keys(slotsFor)) {
+      // A surface the rota planned writes exactly what it was given, pairs and
+      // all, which is why the queue length wins over the slot count here.
+      const slots = igQueue[platform] ? igQueue[platform].length : slotsFor[platform];
 
       for (let i = 0; i < slots; i++) {
+        const assignment = igQueue[platform] ? igQueue[platform][i] : null;
         if (created.length >= maxPosts) {
           notes.push(`stopped at the ceiling of ${maxPosts} posts for one run, the rest will be picked up tomorrow`);
           break;
@@ -252,8 +328,8 @@ export async function runGeneration(env, db, { ask, articles = [], now = new Dat
         let raw;
         try {
           raw = await ask(
-            buildSystemPrompt(venture, platform, category, ventureFacts),
-            buildUserPrompt({ venture, category, article, today }),
+            buildSystemPrompt(venture, platform, category, ventureFacts, assignment),
+            buildUserPrompt({ venture, category, article, today, assignment }),
             700
           );
         } catch (e) {
@@ -275,21 +351,38 @@ export async function runGeneration(env, db, { ask, articles = [], now = new Dat
         if (directives.image) noteParts.push('IMAGE: ' + directives.image);
         if (directives.shot) noteParts.push('SHOT: ' + directives.shot);
         if (directives.alt) noteParts.push('ALT: ' + directives.alt);
+        if (directives.sticker) noteParts.push('STICKER: ' + directives.sticker);
+        if (directives.slides) {
+          noteParts.push(directives.slides.map((s, n) => `SLIDE ${n + 1}: ${s}`).join('\n'));
+          const wanted = PLATFORMS[platform].slides;
+          if (wanted && directives.slides.length < wanted.min) {
+            noteParts.push(`Only ${directives.slides.length} slides were described and a carousel needs at least ${wanted.min}. Add the rest before approving.`);
+          }
+        }
         if (trimmed) noteParts.push('Trimmed to fit the platform limit, read it before approving.');
         if (imageRequired(platform, category)) noteParts.push('This one cannot be sent until an image URL is added.');
+        // The register said this city speaks something the house does not write
+        // in. Recorded on the row rather than swallowed, so the gap is visible on
+        // the desk instead of only in the code that decided it.
+        if (assignment && assignment.languageNote) noteParts.push(assignment.languageNote);
 
         const id = await insertPost(db, {
           venture: venture.slug,
           platform,
           category,
           text,
-          link: article ? article.url : (venture.site_url || null),
+          // A city post points at that city's own page where the register knows
+          // one, because sending somebody to the front door of the site to find
+          // Athens themselves is a link that loses most of the people who follow it.
+          link: (assignment && assignment.pulse_url) || (article ? article.url : (venture.site_url || null)),
           source_article: article ? article.url : null,
           notes: noteParts.length ? noteParts.join('\n') : null,
+          language: assignment ? assignment.language : 'en',
+          city: assignment ? assignment.city : '',
           status: 'queued'
         });
 
-        created.push({ id, venture: venture.slug, platform, category });
+        created.push({ id, venture: venture.slug, platform, category, language: assignment ? assignment.language : 'en', city: assignment ? assignment.city : '' });
         lastCategory = category;
       }
     }

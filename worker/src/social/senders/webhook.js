@@ -9,18 +9,31 @@
 // MAKE_WEBHOOK_URL secret at runtime.
 
 import { stripDashPunctuation } from '../text.js';
+import { PLATFORMS } from '../config.js';
 
 // The five fields the rail expects, and nothing invented. The idempotency key
 // rides along as a sixth so a Make branch can dedupe on it too if it ever wants
 // to; the rail ignores fields it does not read.
+//
+// Four more ride along for the same reason. media_type is the value Instagram's
+// own media container takes, REELS or CAROUSEL or STORIES, read straight off the
+// platform's config entry, so a Make branch maps a field instead of holding its
+// own table of which platform key means which kind of upload. city and language
+// are there for a branch that wants to route by them, or simply to make an
+// execution log legible when something goes wrong at three in the morning.
 export function buildPayload(post) {
+  const spec = PLATFORMS[post.platform] || {};
   return {
     venture: post.venture,
     platform: post.platform,
     text: stripDashPunctuation(String(post.text || '')),
     image_url: post.image_url || '',
     link: post.link || '',
-    idempotency_key: post.id
+    idempotency_key: post.id,
+    media_type: spec.mediaKind || '',
+    surface: spec.surface || '',
+    city: post.city || '',
+    language: post.language || 'en'
   };
 }
 

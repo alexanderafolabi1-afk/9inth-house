@@ -2763,7 +2763,7 @@ async function saveTarget(scopeType, ref, inputId){
 }
 
 const Q = {
-  posts: [], ventures: [], summary: [], platforms: {}, categories: {},
+  posts: [], ventures: [], summary: [], platforms: {}, categories: {}, languages: {},
   loaded: false, loading: false, error: '', makeReady: false, vapid: null,
   editing: {},      // post id -> true while its text area is open
   busy: {},         // post id -> true while a request for it is in flight
@@ -3436,6 +3436,7 @@ async function loadQueue(quiet){
     Q.summary = data.summary || [];
     Q.platforms = data.platforms || {};
     Q.categories = data.categories || {};
+    Q.languages = data.languages || {};
     Q.vapid = data.vapidPublicKey || null;
     Q.makeReady = Boolean(data.makeReady);
     Q.storage = data.storage !== false;
@@ -3452,6 +3453,7 @@ async function loadQueue(quiet){
 function platformLabel(key){ return (Q.platforms[key] && Q.platforms[key].label) || key; }
 function platformLimit(key){ return (Q.platforms[key] && Q.platforms[key].limit) || 3000; }
 function categoryLabel(key){ return (Q.categories[key] && Q.categories[key].label) || key; }
+function languageLabel(key){ return (Q.languages && Q.languages[key] && Q.languages[key].label) || key; }
 
 function vQueue(){
   const offline = !navigator.onLine;
@@ -3535,6 +3537,8 @@ function qcard(p){
         <span class="qtag venture ${ventureColor(p.venture)}">${esc(p.venture)}</span>
         <span class="qtag">${esc(platformLabel(p.platform))}</span>
         <span class="qtag">${esc(categoryLabel(p.category))}</span>
+        ${p.city ? `<span class="qtag">${esc(p.city)}</span>` : ''}
+        ${p.language && p.language !== 'en' ? `<span class="qtag">${esc(languageLabel(p.language))}</span>` : ''}
         <span class="qtag count ${over ? 'over' : ''}">${len}/${limit}</span>
         ${p.status !== 'queued' ? `<span class="qtag state ${esc(p.status)}">${esc(p.status)}</span>` : ''}
       </div>

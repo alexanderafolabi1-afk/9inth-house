@@ -62,16 +62,37 @@ export function sanitiseSocialText(input = '') {
 // Pulls a directive line such as "IMAGE: a flat lay of ..." or "SHOT: ..." out of
 // the copy, so the instruction reaches the admin as a note instead of shipping to
 // the platform as body text. Returns { text, directives }.
-export function extractDirectives(input = '', labels = ['IMAGE', 'SHOT', 'ALT']) {
+//
+// Some directives are numbered, because some surfaces need a sequence rather
+// than a single line: a carousel is asked for "SLIDE 1:", "SLIDE 2:" and so on.
+// Those collect into an array under the plural of the label, in the order the
+// numbers give rather than the order the lines happened to arrive in, so a model
+// that writes slide three before slide two still produces a carousel in the
+// right order. Everything unnumbered stays a plain string as before.
+export const DIRECTIVE_LABELS = ['IMAGE', 'SHOT', 'ALT', 'SLIDE', 'STICKER'];
+
+export function extractDirectives(input = '', labels = DIRECTIVE_LABELS) {
   const keep = [];
   const directives = {};
+  const numbered = {};
   for (const line of String(input || '').split('\n')) {
-    const m = line.match(/^\s*([A-Z]{3,6})\s*:\s*(.+)$/);
+    // The label is allowed to be longer than it once was: STICKER is seven
+    // characters and the old ceiling of six let it straight through into the
+    // caption, where it would have been posted as if it were the copy.
+    const m = line.match(/^\s*([A-Z]{3,10})(?:\s+(\d{1,2}))?\s*:\s*(.+)$/);
     if (m && labels.includes(m[1])) {
-      directives[m[1].toLowerCase()] = m[2].trim();
+      const key = m[1].toLowerCase();
+      if (m[2] === undefined) {
+        directives[key] = m[3].trim();
+      } else {
+        (numbered[key] = numbered[key] || []).push({ n: Number(m[2]), text: m[3].trim() });
+      }
       continue;
     }
     keep.push(line);
+  }
+  for (const [key, items] of Object.entries(numbered)) {
+    directives[key + 's'] = items.sort((a, b) => a.n - b.n).map((i) => i.text);
   }
   return { text: keep.join('\n').replace(/\n{3,}/g, '\n\n').trim(), directives };
 }

@@ -71,14 +71,24 @@ export const SEED_VENTURES = [
     audience: 'People deciding where to live, move, invest or expand a business, and anyone who wants a straight, current answer about how a city is actually performing rather than a tourist board’s version of it.',
     tone: 'Assured and factual, like a standing publication, not a product. Speaks about cities and rankings, never about itself, its history or its build. Never says or implies new, launch, launching, beta, early access, early stage, seed stage, just started, coming soon or building. Never explains how the index is scored, updated or put together: states the ranking as settled fact and moves on. Asked what it is, it answers with what it shows, not with an account of itself.',
     banned_language: 'new, just launched, launching soon, beta, early access, early stage, seed stage, just started, coming soon, we just built, our first, check back soon, how it works, under the hood, our algorithm, our methodology, game changer, revolutionary, unlock, unleash, supercharge, thoughts?, drop a comment, DM me, hustle, grind, guru, ninja, rockstar, 300 cities, three hundred cities, all 300, only 300, a fixed number of cities, complete list of cities, every city we cover, our full list',
-    // LinkedIn only. Instagram and Facebook automation stay off for GloTemp on
-    // purpose: that automation is separately known to be broken and is being fixed
-    // on its own timeline, so it is not switched on here until that fix lands and
-    // is confirmed. X is included for the same reason as SetPostGo above: config.js
-    // marks it automated: false, so the engine writes the copy but it can only ever
-    // leave the queue by a human copying it out, never through the webhook.
-    platforms: ['linkedin', 'x'],
-    cadence: { linkedin: 3, x: 3 },
+    // Instagram was off here because the rail behind it was pointed at the wrong
+    // Make account. That account is not the one the house holds, so nothing on it
+    // could ever have posted; the connection now lives in the right team, and the
+    // surfaces are on.
+    //
+    // Four Instagram entries rather than one, because config.js treats the Reel,
+    // the carousel, the still and the Story as four platforms with four specs and
+    // four Graph API media types. The Reel carries the heaviest cadence of the
+    // four on purpose: it is the only one of them Instagram still shows to people
+    // who do not follow the account, so it is the only one that grows the
+    // register rather than servicing it.
+    //
+    // Every one of these is written per city, in that city's own language, with
+    // an English companion behind it. See instagram.js. X is included for the same
+    // reason as SetPostGo above: config.js marks it automated: false, so the engine
+    // writes the copy but it can only leave the queue by a human copying it out.
+    platforms: ['linkedin', 'instagram_reel', 'instagram_carousel', 'instagram', 'instagram_story', 'x'],
+    cadence: { linkedin: 3, instagram_reel: 5, instagram_carousel: 3, instagram: 3, instagram_story: 4, x: 3 },
     category_mix: {
       short_form: 0.35,
       educational: 0.25,

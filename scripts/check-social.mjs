@@ -10,8 +10,10 @@
 import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 
-import { SCHEMA_SQL, validateVenture } from '../worker/src/social/db.js';
-import { PLATFORMS, CATEGORIES, imageRequired, socialCategories } from '../worker/src/social/config.js';
+import { SCHEMA_SQL, validateVenture, PLATFORM_ADDITIONS } from '../worker/src/social/db.js';
+import { PLATFORMS, CATEGORIES, imageRequired, socialCategories, platformFamily } from '../worker/src/social/config.js';
+import { SEED_VENTURES } from '../worker/src/social/seed.js';
+import { igPlatforms, isIgPlatform, languageFor, postsForCity, briefFor, interleave, dayPlan, cityPool } from '../worker/src/social/instagram.js';
 import { senderFor } from '../worker/src/social/senders/index.js';
 import { stripDashPunctuation, hasDashPunctuation, sanitiseSocialText, extractDirectives, trimHashtags } from '../worker/src/social/text.js';
 import { slotsDueToday, pickCategory, trimToLimit, buildBias } from '../worker/src/social/generate.js';
@@ -32,7 +34,11 @@ const WORKER_FILES = [
   'worker/src/social/db.js', 'worker/src/social/distribute.js', 'worker/src/social/outreach.js',
   'worker/src/social/metrics.js', 'worker/src/social/push.js', 'worker/src/social/text.js',
   'worker/src/social/config.js', 'worker/src/social/seeds/visit-dubai.js',
-  'worker/src/social/seeds/city-pin.js', 'worker/src/social/seeds/setpostgo.js'
+  'worker/src/social/seeds/city-pin.js', 'worker/src/social/seeds/setpostgo.js',
+  'worker/src/social/instagram.js', 'worker/src/social/register.js', 'worker/src/social/pages.js',
+  'worker/src/social/deals.js', 'worker/src/social/owners.js', 'worker/src/social/partners.js',
+  'worker/src/social/seed.js', 'worker/src/social/senders/webhook.js', 'worker/src/social/senders/linkedin.js',
+  'worker/src/social/senders/index.js', 'worker/src/social/seeds/ninth-house-linkedin.js'
 ];
 
 let passed = 0;
@@ -231,12 +237,29 @@ await test('an unconfigured platform is refused by name', () => {
   assert.ok(problems[0].includes('not configured'));
 });
 
-await test('the payload carries the five rail fields plus the idempotency key', () => {
+await test('the payload carries the rail fields, the idempotency key and the routing fields', () => {
   const payload = buildPayload({ id: 'abc', venture: 'v', platform: 'linkedin', text: 'a, b', image_url: null, link: null });
-  assert.deepEqual(Object.keys(payload).sort(), ['idempotency_key', 'image_url', 'link', 'platform', 'text', 'venture']);
+  assert.deepEqual(Object.keys(payload).sort(), [
+    'city', 'idempotency_key', 'image_url', 'language', 'link', 'media_type', 'platform', 'surface', 'text', 'venture'
+  ]);
   assert.equal(payload.idempotency_key, 'abc');
   assert.equal(payload.image_url, '');
   assert.ok(!hasDashPunctuation(payload.text));
+  // A platform with no surface of its own says so with an empty string rather
+  // than an absent key, so a Make branch can map the field unconditionally.
+  assert.equal(payload.media_type, '');
+  assert.equal(payload.language, 'en');
+});
+
+await test('an Instagram surface tells the rail which kind of upload it is', () => {
+  const reel = buildPayload({ id: 'r', venture: 'glotemp', platform: 'instagram_reel', text: 'x', city: 'Athens', language: 'el' });
+  assert.equal(reel.media_type, 'REELS');
+  assert.equal(reel.surface, 'reel');
+  assert.equal(reel.city, 'Athens');
+  assert.equal(reel.language, 'el');
+  assert.equal(buildPayload({ id: 'c', platform: 'instagram_carousel', text: 'x' }).media_type, 'CAROUSEL');
+  assert.equal(buildPayload({ id: 's', platform: 'instagram_story', text: 'x' }).media_type, 'STORIES');
+  assert.equal(buildPayload({ id: 'f', platform: 'instagram', text: 'x' }).media_type, 'IMAGE');
 });
 
 await test('an id is read from the rail answer, and "true" is not mistaken for one', () => {
@@ -667,6 +690,140 @@ await test('the SetPostGo ladder and the daily arithmetic are the ones in the br
 await test('a message status cannot become something the rest of the code does not know', () => {
   assert.ok(MESSAGE_STATUSES.includes('sent'));
   assert.ok(!MESSAGE_STATUSES.includes('delivered'), 'an unknown status is in the allowed list');
+});
+
+/* ---------- Instagram ---------- */
+
+await test('Instagram is four platforms, each carrying the media type its API takes', () => {
+  const family = platformFamily('instagram');
+  assert.deepEqual(family.slice().sort(), ['instagram', 'instagram_carousel', 'instagram_reel', 'instagram_story']);
+  assert.equal(igPlatforms()[0], 'instagram_reel', 'the Reel must lead: it is the only one that reaches non followers');
+  const kinds = family.map((k) => PLATFORMS[k].mediaKind).sort();
+  assert.deepEqual(kinds, ['CAROUSEL', 'IMAGE', 'REELS', 'STORIES']);
+  for (const key of family) {
+    assert.ok(PLATFORMS[key].imageRequired, `${key} must demand media`);
+    assert.ok(PLATFORMS[key].automated !== false, `${key} must be sendable on the rail`);
+    assert.ok(PLATFORMS[key].target < PLATFORMS[key].limit, `${key} aims at its own ceiling`);
+    assert.ok(isIgPlatform(key));
+  }
+  assert.equal(isIgPlatform('linkedin'), false);
+});
+
+await test('the city language leads and English follows as a second post', () => {
+  const pair = postsForCity({ city: 'Athens', country: 'Greece', language: 'Greek' }, ['instagram_reel']);
+  assert.equal(pair.length, 2);
+  assert.deepEqual(pair.map((p) => p.language), ['el', 'en']);
+  assert.equal(pair[0].lead, true);
+  // An English speaking city gets one post, not the same post twice.
+  assert.equal(postsForCity({ city: 'Miami', language: 'English' }, ['instagram_reel']).length, 1);
+});
+
+await test('a language the house cannot check falls back to English and records the gap', () => {
+  const out = languageFor({ city: 'Warsaw', language: 'Polish' });
+  assert.equal(out.code, 'en');
+  assert.equal(out.supported, false);
+  assert.match(out.note, /Warsaw/);
+  assert.match(out.note, /Polish/);
+  assert.equal(languageFor({ city: 'Athens', language: 'Greek' }).note, undefined, 'a supported language needs no note');
+});
+
+await test('the brief names the surface and forbids an English translation underneath', () => {
+  const [greek, english] = postsForCity({ city: 'Athens', country: 'Greece', language: 'el' }, ['instagram_carousel']);
+  const b = briefFor(greek);
+  assert.match(b, /Athens, Greece/);
+  assert.match(b, /not a translation/);
+  assert.match(b, /Do not append an English version/);
+  assert.match(b, /SLIDES: between 3 and 10/);
+  assert.match(briefFor(english), /English companion/);
+  assert.match(briefFor({ ...greek, platform: 'instagram_story' }), /STICKER/);
+  assert.equal(briefFor({ ...greek, platform: 'linkedin' }), null, 'this brief is for Instagram only');
+});
+
+await test('every city reaches every surface, whatever the wave size', () => {
+  // The obvious rota pins a city to one surface for ever whenever the city count
+  // and the surface count share a factor, and it does it invisibly: each single
+  // day still looks varied. Checked across the sizes a wave actually takes,
+  // including the multiples of five that break the natural choice of step.
+  for (const cityCount of [1, 2, 3, 4, 5, 8, 10, 12, 15, 20]) {
+    const cities = Array.from({ length: cityCount }, (_, i) => ({ city: `City${i}`, language: 'English' }));
+    const owed = { instagram_reel: 5, instagram_carousel: 3, instagram: 3, instagram_story: 4 };
+    const seen = new Set();
+    let cursor = 0;
+    for (let day = 0; day < 365; day += 1) {
+      const out = dayPlan(cities, owed, { cursor });
+      cursor = out.cursor;
+      for (const p of out.planned) seen.add(`${p.city}|${p.platform}`);
+    }
+    assert.equal(seen.size, cityCount * 4, `with ${cityCount} cities only ${seen.size} of ${cityCount * 4} pairs ever happen`);
+  }
+});
+
+await test('the day alternates surfaces, and a language pair is never split', () => {
+  assert.deepEqual(
+    interleave({ instagram_reel: 2, instagram_story: 2 }),
+    ['instagram_reel', 'instagram_story', 'instagram_reel', 'instagram_story']
+  );
+  const greekCities = [{ city: 'Athens', language: 'Greek' }, { city: 'Chania', language: 'Greek' }];
+  const out = dayPlan(greekCities, { instagram_reel: 3 }, { cursor: 0 });
+  assert.equal(out.planned.length, 4, 'a Greek post went out with no English companion');
+  // No cities means no posts and a cursor that has not moved.
+  assert.deepEqual(dayPlan([], { instagram_reel: 3 }, { cursor: 7 }), { planned: [], cursor: 7 });
+});
+
+await test('three register rows about one city are one city to post about', () => {
+  const pool = cityPool([
+    { city: 'Athens', country: 'Greece', language: 'Greek', vertical: 'hotel', pulse_url: '', wave: 1 },
+    { city: 'Athens', country: 'Greece', language: 'Greek', vertical: 'restaurant', pulse_url: 'https://glo-temp.com/athens', wave: 1 },
+    { city: 'Miami', country: 'United States', language: 'English', vertical: 'hotel', pulse_url: '', wave: 2 }
+  ]);
+  assert.deepEqual(pool.map((c) => c.city), ['Athens', 'Miami']);
+  assert.equal(pool[0].pulse_url, 'https://glo-temp.com/athens', 'a later row must supply the link the first one lacked');
+});
+
+await test('slide and sticker lines leave the caption instead of being posted as it', () => {
+  const { text, directives } = extractDirectives([
+    'SLIDE 2: the band, in one number.',
+    'SLIDE 1: Athens, at seven in the evening.',
+    'STICKER: poll, would you go tonight',
+    '',
+    'Athens is level this evening.'
+  ].join('\n'));
+  assert.deepEqual(directives.slides, ['Athens, at seven in the evening.', 'the band, in one number.']);
+  assert.equal(directives.sticker, 'poll, would you go tonight', 'STICKER is seven characters, which the old ceiling of six let through');
+  assert.equal(text, 'Athens is level this evening.');
+  // A caption line that merely looks like a directive is left where it is.
+  assert.equal(extractDirectives('MONDAY: the week opens level.').text, 'MONDAY: the week opens level.');
+});
+
+await test('Glotemp is seeded with the Instagram surfaces and the Reel carries the most', () => {
+  const glotemp = SEED_VENTURES.find((v) => v.slug === 'glotemp');
+  for (const p of ['instagram_reel', 'instagram_carousel', 'instagram', 'instagram_story']) {
+    assert.ok(glotemp.platforms.includes(p), `glotemp is missing ${p}`);
+    assert.ok(Number(glotemp.cadence[p]) > 0, `glotemp has no cadence for ${p}`);
+  }
+  assert.ok(glotemp.cadence.instagram_reel > glotemp.cadence.instagram);
+  // Every platform a seeded venture names has to exist, or generation skips it.
+  for (const v of SEED_VENTURES) {
+    for (const p of v.platforms) assert.ok(PLATFORMS[p], `${v.slug} names platform "${p}", which is not configured`);
+    for (const p of Object.keys(v.cadence)) assert.ok(v.platforms.includes(p), `${v.slug} has a cadence for "${p}" but does not list it`);
+  }
+});
+
+await test('the one time platform addition matches what the seed says', () => {
+  // The seed reaches a fresh database and the addition reaches the live one. If
+  // they disagree, the two databases quietly diverge and nobody finds out.
+  const glotemp = SEED_VENTURES.find((v) => v.slug === 'glotemp');
+  for (const addition of PLATFORM_ADDITIONS) {
+    const seeded = SEED_VENTURES.find((v) => v.slug === addition.venture);
+    assert.ok(seeded, `the addition targets "${addition.venture}", which is not seeded`);
+    for (const [platform, weekly] of Object.entries(addition.cadence)) {
+      assert.ok(PLATFORMS[platform], `the addition names platform "${platform}", which is not configured`);
+      assert.ok(seeded.platforms.includes(platform), `the addition adds "${platform}" but the seed does not list it`);
+      assert.equal(seeded.cadence[platform], weekly, `the addition and the seed disagree on the cadence for "${platform}"`);
+    }
+  }
+  assert.ok(glotemp);
+  assert.equal(new Set(PLATFORM_ADDITIONS.map((a) => a.id)).size, PLATFORM_ADDITIONS.length, 'two additions share an id, so one will never run');
 });
 
 /* ---------- report ---------- */
