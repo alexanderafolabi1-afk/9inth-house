@@ -838,13 +838,29 @@ async function doSetup(){
   }
 }
 
+// A CORS refusal is not a login failure: no password, right or wrong,
+// could ever get past it, and the owner needs to know that at a glance
+// rather than read it as "I mistyped something." engine()'s own message
+// for this case always names the refused address, which is the one
+// reliable way to tell it apart from every other reason a fetch failed.
+function isOriginRefusal(msg){
+  return Boolean(msg) && /refused this address/i.test(msg);
+}
+
 function vLogin(){
+  const configError = isOriginRefusal(LOGIN_MSG);
   return `
   <div class="eyebrow">Ninth House</div>
-  <div class="card" style="max-width:420px;margin:10vh auto 0">
+  ${configError ? `
+  <div class="card" style="max-width:420px;margin:10vh auto 0;border-color:var(--amber)">
+    <h3 class="serif" style="font-size:16px;margin-bottom:6px;color:var(--amber)">&#9888; This is not a login problem</h3>
+    <p class="sub">${esc(LOGIN_MSG)}</p>
+    <p class="tiny" style="margin-top:8px">No password can fix this. The Worker refused this browser's address before it ever looked at a password. 9thpoint.com and www.9thpoint.com are always accepted, so if you are on one of those and still seeing this, the Worker itself needs attention. Reaching this from anywhere else needs that address added first, from Settings &rarr; Allowed origins, signed in from a session that already works.</p>
+  </div>` : ''}
+  <div class="card" style="max-width:420px;margin:${configError ? '14px' : '10vh'} auto 0">
     <h3 class="serif" style="font-size:19px;margin-bottom:6px">Sign in</h3>
     <p class="sub">One owner, one password. The house waits for you.</p>
-    ${LOGIN_MSG ? `<p class="sub" style="color:var(--rust);margin-top:8px">${esc(LOGIN_MSG)}</p>` : ''}
+    ${LOGIN_MSG && !configError ? `<p class="sub" style="color:var(--rust);margin-top:8px">${esc(LOGIN_MSG)}</p>` : ''}
     <label style="margin-top:14px">Password</label>
     ${pwField('login-password', 'current-password', `onkeydown="if(event.key==='Enter')doLogin()"`)}
     <div class="btnrow" style="margin-top:14px">
@@ -1742,13 +1758,32 @@ function openSettings(){
   // Fetched once per session, the first time Settings is opened, then the panel
   // is redrawn with it. Doing it here rather than at sign in keeps one more
   // request off the critical path of getting into the desk.
-  if(!LI_TRIED){ LI_TRIED = true; Promise.all([loadLinkedIn(), loadN8nHook(), loadAnthropicKey(), loadFacts(), loadPostal(), loadOutreachOwners(), loadRegisterStatus()]).then(openSettings); }
+  if(!LI_TRIED){ LI_TRIED = true; Promise.all([loadLinkedIn(), loadN8nHook(), loadAnthropicKey(), loadFacts(), loadPostal(), loadOutreachOwners(), loadRegisterStatus(), loadOrigins()]).then(openSettings); }
   modal(`
     <h2>Firm Settings</h2>
     <div class="eyebrow">Account</div>
     <p class="sub">Signed in as the owner.</p>
     <div class="btnrow" style="margin-top:8px">
       <button class="btn ghost" style="min-height:44px" onclick="logout()">Sign out</button>
+    </div>
+
+    <div class="hr"></div>
+    <div class="eyebrow">&#128274; Allowed origins</div>
+    <p class="tiny" style="margin-top:2px">Which web addresses may sign in here. 9thpoint.com and www.9thpoint.com are always allowed, built into the Worker itself rather than a Cloudflare dashboard field, so this can never again be the reason a login fails. Add another only if the admin is genuinely ever reached from somewhere else too.</p>
+    ${ORIGINS_MSG ? `<p class="tiny" style="margin-top:8px;color:${ORIGINS_OK ? 'var(--gold)' : 'var(--rust)'}">${esc(ORIGINS_MSG)}</p>` : ''}
+    ${KNOWN_ORIGINS.map(o => `
+      <div class="qnote" style="white-space:normal;margin-top:10px">
+        <b>${esc(o)}</b> <span class="tiny">always allowed, built into the code</span>
+      </div>`).join('')}
+    ${EXTRA_ORIGINS.length ? EXTRA_ORIGINS.map((o,i) => `
+      <div class="kpirow">
+        <span>${esc(o)}</span>
+        <button class="btn sm ghost" style="color:var(--rust)" onclick="removeExtraOrigin(${i})">Remove</button>
+      </div>`).join('') : '<p class="tiny" style="margin-top:8px">No extra origins added.</p>'}
+    <label style="margin-top:10px">Add an origin</label>
+    <input type="text" id="origin-add" placeholder="https://staging.example.com">
+    <div class="btnrow" style="margin-top:8px">
+      <button class="btn sm" style="min-height:44px" onclick="addExtraOrigin()">Add</button>
     </div>
 
     <div class="hr"></div>
@@ -2119,6 +2154,45 @@ let OWNER_MSG = '';
 let OWNER_OK = false;
 let TARGETS_MSG = '';
 let TARGETS_OK = false;
+
+// The two origins that always work (KNOWN_DESK_ORIGINS in worker/src/
+// origins.js, mirrored here only for display) plus whatever has been
+// added from this screen, held in KV on the Worker. Never the other way
+// round: nothing in this UI can remove a known origin, since there is no
+// control here that touches KNOWN_DESK_ORIGINS at all.
+let KNOWN_ORIGINS = ['https://9thpoint.com', 'https://www.9thpoint.com'];
+let EXTRA_ORIGINS = [];
+let ORIGINS_MSG = '';
+let ORIGINS_OK = false;
+
+async function loadOrigins(){
+  try{
+    const data = await engine('/social/origins', null, 'GET', { retries:1, timeoutMs:15000 });
+    KNOWN_ORIGINS = data.knownOrigins || KNOWN_ORIGINS;
+    EXTRA_ORIGINS = data.extraOrigins || [];
+  }catch(e){ /* Settings shows what it last knew rather than clearing the list */ }
+}
+
+async function saveExtraOrigins(list){
+  try{
+    const data = await engine('/social/origins', { origins: list }, 'POST', { timeoutMs:15000 });
+    EXTRA_ORIGINS = data.extraOrigins || [];
+    ORIGINS_MSG = 'Saved.'; ORIGINS_OK = true;
+  }catch(e){
+    ORIGINS_MSG = e.message || 'Could not save that.'; ORIGINS_OK = false;
+  }
+  openSettings();
+}
+function addExtraOrigin(){
+  const el = document.getElementById('origin-add');
+  if(!el || !el.value.trim()) return;
+  saveExtraOrigins([...EXTRA_ORIGINS, el.value.trim()]);
+}
+function removeExtraOrigin(i){
+  const next = EXTRA_ORIGINS.slice();
+  next.splice(i, 1);
+  saveExtraOrigins(next);
+}
 
 async function loadOutreachOwners(){
   try{
@@ -3292,7 +3366,7 @@ async function engine(path, body, method, opts){
         ? new Error('The house did not answer in time. It searches the web before answering, so give it a full minute before deciding it is stuck.')
         : isNetworkLevel
           ? (await probeReachable(ENGINE_BASE)
-              ? new Error('The house answered but refused this address (' + location.origin + '). This is a CORS setting on the Worker, not your connection: tell whoever maintains it that DESK_ORIGIN needs to include ' + location.origin + '.')
+              ? new Error('The house answered but refused this address (' + location.origin + '). 9thpoint.com and www.9thpoint.com are always accepted; reaching this from anywhere else needs that address added from Settings → Allowed origins, signed in from a session that already works.')
               : new Error('Could not reach the house at all. Check your connection and try again.'))
           : (e instanceof Error ? e : new Error(String(e)));
       if(!isNetworkLevel || attempt >= attempts) throw lastErr;

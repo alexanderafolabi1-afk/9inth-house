@@ -67,16 +67,28 @@ id = "9a1f764305b74398a0bcdc109586e713"
 [vars]
 PASSWORD_RESET_UNTIL = "2026-08-30T14:00:00Z"
 
-# Who the browser is allowed to be when it calls this Worker. The code already
-# falls back to this exact value when the variable is absent, but "absent" and
-# "set by hand in the dashboard to something that no longer matches" look
-# identical from the outside: both mean desk.html gets no
-# Access-Control-Allow-Origin header back, and every fetch fails before it
-# ever reaches a route, reporting as "cannot reach the house" for a right
-# password and a wrong one alike. Committing it here means it deploys with
-# everything else on every push to main, rather than living as an invisible
-# setting nothing in this repo can see or fix.
-DESK_ORIGIN = "https://9thpoint.com,https://www.9thpoint.com"
+# DESK_ORIGIN, which used to live here, is gone. It was a single point of
+# failure this Worker could not see fail: whether it was absent, stale from
+# an old deploy, or set by hand on the Cloudflare dashboard to something
+# that no longer matched this file, every one of those looked identical
+# from the outside, and every one of them meant desk.html got no
+# Access-Control-Allow-Origin header back and every fetch failed before it
+# ever reached a route, for a right password and a wrong one alike. It
+# happened more than once, including after this exact variable was
+# "pinned" here the first time, which is what taught the lesson that a
+# value the admin's own real origin depends on cannot live in a variable
+# at all, however carefully it is committed.
+#
+# The two origins the admin has ever really lived at now ship inside the
+# Worker's own code (KNOWN_DESK_ORIGINS in worker/src/origins.js), so
+# accepting them can never again depend on a deploy syncing a separate
+# setting. Anything beyond that is additive only, set from the desk's own
+# Settings screen and held in KV (worker/src/origins.js again), the same
+# way the password hash, the session secret and the Anthropic key already
+# are. If a DESK_ORIGIN env var is ever set here or on the dashboard again,
+# the code now only ever adds it to the guaranteed list, never replaces
+# the list with it, so the failure mode this comment describes cannot
+# recur even by accident.
 
 # Four shifts a day, matching the retired GitHub Actions schedule exactly.
 # All times UTC. Cloudflare Cron Triggers are always UTC, so no conversion
