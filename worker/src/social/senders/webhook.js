@@ -21,13 +21,33 @@ import { PLATFORMS } from '../config.js';
 // own table of which platform key means which kind of upload. city and language
 // are there for a branch that wants to route by them, or simply to make an
 // execution log legible when something goes wrong at three in the morning.
+// A carousel is several pictures, and the queue has always held one image_url.
+//
+// Rather than a second column and a second box on the desk, the one box takes
+// several addresses, one per line or separated by commas, and they come out
+// here as a list in the order they were typed, which is the order the slides
+// will be in. A single address still produces a list of one, so nothing that
+// only ever had one image behaves differently.
+export function imageUrls(post) {
+  return String(post.image_url || '')
+    .split(/[\s,]+/)
+    .map((u) => u.trim())
+    .filter((u) => /^https?:\/\//i.test(u));
+}
+
 export function buildPayload(post) {
   const spec = PLATFORMS[post.platform] || {};
+  const urls = imageUrls(post);
   return {
     venture: post.venture,
     platform: post.platform,
     text: stripDashPunctuation(String(post.text || '')),
-    image_url: post.image_url || '',
+    // Kept exactly as it was for every branch already reading it: the first
+    // address, or the empty string. Nothing on the rail has to change to keep
+    // working.
+    image_url: urls[0] || post.image_url || '',
+    // The whole list, for the one branch that needs more than one.
+    image_urls: urls,
     link: post.link || '',
     idempotency_key: post.id,
     media_type: spec.mediaKind || '',

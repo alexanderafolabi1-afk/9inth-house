@@ -17,7 +17,7 @@ import { igPlatforms, isIgPlatform, languageFor, postsForCity, briefFor, interle
 import { senderFor } from '../worker/src/social/senders/index.js';
 import { stripDashPunctuation, hasDashPunctuation, sanitiseSocialText, extractDirectives, trimHashtags } from '../worker/src/social/text.js';
 import { slotsDueToday, pickCategory, trimToLimit, buildBias } from '../worker/src/social/generate.js';
-import { validateForSend, buildPayload, readExternalId } from '../worker/src/social/distribute.js';
+import { validateForSend, buildPayload, readExternalId, imageUrls } from '../worker/src/social/distribute.js';
 import { streakFrom } from '../worker/src/social/metrics.js';
 import { generateVapidKeys, encryptPayload, b64urlToBytes, bytesToB64url } from '../worker/src/social/push.js';
 import { checkOutreachRules, callPermitted, researchGate, MESSAGE_STATUSES, checkCityPinOffer, checkCityIsLive, checkEmailProvenance, CITY_PIN_SKUS, CITY_PIN_FLOOR_USD, TIER_A_CITIES } from '../worker/src/social/outreach.js';
@@ -240,7 +240,7 @@ await test('an unconfigured platform is refused by name', () => {
 await test('the payload carries the rail fields, the idempotency key and the routing fields', () => {
   const payload = buildPayload({ id: 'abc', venture: 'v', platform: 'linkedin', text: 'a, b', image_url: null, link: null });
   assert.deepEqual(Object.keys(payload).sort(), [
-    'city', 'idempotency_key', 'image_url', 'language', 'link', 'media_type', 'platform', 'surface', 'text', 'venture'
+    'city', 'idempotency_key', 'image_url', 'image_urls', 'language', 'link', 'media_type', 'platform', 'surface', 'text', 'venture'
   ]);
   assert.equal(payload.idempotency_key, 'abc');
   assert.equal(payload.image_url, '');
@@ -249,6 +249,29 @@ await test('the payload carries the rail fields, the idempotency key and the rou
   // than an absent key, so a Make branch can map the field unconditionally.
   assert.equal(payload.media_type, '');
   assert.equal(payload.language, 'en');
+});
+
+await test('a carousel carries several pictures and is refused with too few', () => {
+  // One image box on the desk, several addresses in it, one per line. The list
+  // comes out in the order it was typed, which is the order the slides go in.
+  const three = 'https://a/1.jpg\nhttps://a/2.jpg\nhttps://a/3.jpg';
+  assert.deepEqual(buildPayload({ id: 'c', platform: 'instagram_carousel', text: 'x', image_url: three }).image_urls,
+    ['https://a/1.jpg', 'https://a/2.jpg', 'https://a/3.jpg']);
+  // Commas work as well as newlines, and anything that is not an address is dropped.
+  assert.deepEqual(imageUrls({ image_url: 'https://a/1.jpg, https://a/2.jpg, notaurl' }),
+    ['https://a/1.jpg', 'https://a/2.jpg']);
+  // The old single field still reads the same for every branch already using it.
+  assert.equal(buildPayload({ id: 'l', platform: 'linkedin', text: 'x', image_url: 'https://a/1.jpg' }).image_url, 'https://a/1.jpg');
+
+  // Instagram refuses a carousel of one, so it is caught before a claim is
+  // taken rather than after the rail has been called and failed.
+  const tooFew = validateForSend({ platform: 'instagram_carousel', category: 'visual', text: 'x', image_url: 'https://a/1.jpg' });
+  assert.ok(tooFew.some((p) => /at least 3 images/.test(p)), tooFew.join('; '));
+  assert.deepEqual(validateForSend({ platform: 'instagram_carousel', category: 'visual', text: 'x', image_url: three }), []);
+  const tooMany = Array.from({ length: 11 }, (_, i) => `https://a/${i}.jpg`).join('\n');
+  assert.ok(validateForSend({ platform: 'instagram_carousel', category: 'visual', text: 'x', image_url: tooMany }).some((p) => /at most 10/.test(p)));
+  // A Reel is one video and must not be caught by any of that.
+  assert.deepEqual(validateForSend({ platform: 'instagram_reel', category: 'short_form', text: 'x', image_url: 'https://a/v.mp4' }), []);
 });
 
 await test('an Instagram surface tells the rail which kind of upload it is', () => {
