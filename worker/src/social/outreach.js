@@ -118,7 +118,13 @@ export const OUTREACH_RULES = [
   {
     id: 'no_call_ask',
     test: (t) => /\b(hop on a|jump on a|quick call|phone call|video call|zoom|google meet|teams call|give me a ring|call you)\b/i.test(t),
-    finding: 'It asks for a call. Every next step stays in writing.'
+    finding: 'It asks for a call. Every next step stays in writing.',
+    // The one exception the owner wrote himself: "do not ask for a call on
+    // email one unless they are an agency of 5+". Permission has to be earned
+    // by a recorded headcount, not by the template a sender happened to pick,
+    // or a three person shop gets the call ask meant for a fifteen person one.
+    // See callPermitted below for what actually grants it.
+    allowWhen: (context) => context.callPermitted === true
   },
   {
     id: 'no_stacking',
@@ -252,12 +258,41 @@ export const OUTREACH_RULES = [
 // the right one: a rule that has to be opted into is a rule that gets forgotten
 // on the next campaign. Only a rule that would be wrong somewhere names where
 // it applies.
-export function checkOutreachRules(text, campaignType) {
+// A rule may also name a condition under which it does not apply, and the
+// condition is evidence about the prospect rather than a flag a caller can
+// simply pass. Absent context, no exception is granted: a caller that knows
+// nothing about the lead gets the strict rule, which is the safe direction for
+// this to fail in.
+export function checkOutreachRules(text, campaignType, context = {}) {
   const body = String(text || '');
   return OUTREACH_RULES
     .filter((r) => !r.campaigns || (campaignType && r.campaigns.includes(campaignType)))
+    .filter((r) => !r.allowWhen || !r.allowWhen(context || {}))
     .filter((r) => r.test(body))
     .map((r) => ({ id: r.id, finding: r.finding }));
+}
+
+// Whether this lead may be asked for a call on the first email.
+//
+// The owner's rule is "not unless they are an agency of 5+", so three things
+// have to be true at once and each is checked rather than assumed: the message
+// is the agency one, a headcount is actually recorded, and it is five or more.
+// A missing headcount is a no, not a maybe, because the whole point of the rule
+// is that a call ask is wrong for the small operator this campaign mostly
+// writes to, and "we did not know" is precisely the case it protects.
+export function callPermitted(prospect, template) {
+  if (template !== 'agency') {
+    return { permitted: false, reason: 'A call is only ever offered on the agency email.' };
+  }
+  const raw = ((prospect && prospect.research) || {}).headcount;
+  const n = Number(String(raw === undefined || raw === null ? '' : raw).trim());
+  if (!Number.isFinite(n) || n <= 0) {
+    return { permitted: false, reason: 'No headcount is recorded for this agency, and a call is only offered at five people or more. Record the headcount or leave the call out.' };
+  }
+  if (n < 5) {
+    return { permitted: false, reason: `This agency is recorded at ${n} people. A call is only offered at five or more, so this one stays in writing.` };
+  }
+  return { permitted: true, headcount: n };
 }
 
 // Section 4's research gate. A message is not written until all three are
@@ -562,9 +597,16 @@ export function composeSetPostGo(prospect, { template = 'trade', postalAddress, 
   // treated as a hard stop rather than a note attached to a draft that still
   // reaches the owner. A message the house's own rules would refuse is not
   // ready, and returning it is the exact failure this exists to prevent.
-  const findings = checkOutreachRules(body, 'setpostgo');
+  const call = callPermitted(prospect, template);
+  const findings = checkOutreachRules(body, 'setpostgo', { callPermitted: call.permitted });
   if (findings.length) {
     return { ok: false, warnings, blockers: findings.map((f) => f.finding) };
+  }
+
+  // Said out loud on the draft, because a permission this narrow is one an
+  // agent will otherwise either forget he has or assume he has everywhere.
+  if (call.permitted) {
+    warnings.push(`This agency is recorded at ${call.headcount} people, so a call may be offered on this first email. It is the only case where one may.`);
   }
 
   return {

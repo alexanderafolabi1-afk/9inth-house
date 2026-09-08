@@ -20,7 +20,7 @@ import { slotsDueToday, pickCategory, trimToLimit, buildBias } from '../worker/s
 import { validateForSend, buildPayload, readExternalId } from '../worker/src/social/distribute.js';
 import { streakFrom } from '../worker/src/social/metrics.js';
 import { generateVapidKeys, encryptPayload, b64urlToBytes, bytesToB64url } from '../worker/src/social/push.js';
-import { checkOutreachRules, researchGate, MESSAGE_STATUSES, checkCityPinOffer, checkCityIsLive, checkEmailProvenance, CITY_PIN_SKUS, CITY_PIN_FLOOR_USD, TIER_A_CITIES } from '../worker/src/social/outreach.js';
+import { checkOutreachRules, callPermitted, researchGate, MESSAGE_STATUSES, checkCityPinOffer, checkCityIsLive, checkEmailProvenance, CITY_PIN_SKUS, CITY_PIN_FLOOR_USD, TIER_A_CITIES } from '../worker/src/social/outreach.js';
 import { composeSetPostGo, SETPOSTGO_PLANS, SETPOSTGO_FLOOR_GBP, SETPOSTGO_GEOGRAPHY, SETPOSTGO_DAILY_MIX } from '../worker/src/social/outreach.js';
 import { CITY_PIN_FOOD_EMAIL, CITY_PIN_NIGHT_EMAIL, CITY_PIN_ROOM_EMAIL, CITY_PIN_TOUR_EMAIL, CITY_PIN_FOOD_SUBJECT } from '../worker/src/social/seeds/city-pin.js';
 import { VISIT_DUBAI_EMAIL_BODY, VISIT_DUBAI_SUBJECT, VISIT_DUBAI_TO, VISIT_DUBAI_CC, VISIT_DUBAI_PROSPECT } from '../worker/src/social/seeds/visit-dubai.js';
@@ -690,6 +690,28 @@ await test('the SetPostGo ladder and the daily arithmetic are the ones in the br
 await test('a message status cannot become something the rest of the code does not know', () => {
   assert.ok(MESSAGE_STATUSES.includes('sent'));
   assert.ok(!MESSAGE_STATUSES.includes('delivered'), 'an unknown status is in the allowed list');
+});
+
+await test('a call may be offered to an agency of five, and to nobody else', () => {
+  const asks = 'Reply SEATS and the headcount, or we can hop on a call.';
+  // The rule is strict by default, including when nothing is known about the lead.
+  assert.ok(checkOutreachRules(asks, 'setpostgo').some((f) => f.id === 'no_call_ask'));
+  assert.ok(checkOutreachRules(asks, 'setpostgo', {}).some((f) => f.id === 'no_call_ask'));
+  assert.ok(!checkOutreachRules(asks, 'setpostgo', { callPermitted: true }).some((f) => f.id === 'no_call_ask'));
+
+  assert.equal(callPermitted({ research: { headcount: 12 } }, 'agency').permitted, true);
+  assert.equal(callPermitted({ research: { headcount: 5 } }, 'agency').permitted, true, 'five is the line the owner drew');
+  assert.equal(callPermitted({ research: { headcount: 4 } }, 'agency').permitted, false);
+  // An unknown headcount is a no. That is the case the rule exists to protect.
+  assert.equal(callPermitted({ research: {} }, 'agency').permitted, false);
+  assert.equal(callPermitted({}, 'agency').permitted, false);
+  assert.equal(callPermitted({ research: { headcount: 'lots' } }, 'agency').permitted, false);
+  // And no other email ever offers one, however big the shop.
+  for (const t of ['trade', 'hospitality', 'professional']) {
+    assert.equal(callPermitted({ research: { headcount: 40 } }, t).permitted, false, `${t} must never offer a call`);
+  }
+  // Every refusal says why, since a blocker with no reason is a dead end.
+  assert.ok(callPermitted({ research: {} }, 'agency').reason.length > 20);
 });
 
 /* ---------- Instagram ---------- */

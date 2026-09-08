@@ -601,7 +601,8 @@ Two steps, in this order.
    routing on the `platform` field, in which case there is nothing to write; or
    add a sender beside `worker/src/social/senders/linkedin.js` and name it in
    `senders/index.js`. The rail receives `venture`, `platform`, `text`,
-   `image_url` and `link` on every post.
+   `image_url`, `link`, `idempotency_key`, `media_type`, `surface`, `city` and
+   `language` on every post.
 2. **In the code**, add one entry to `worker/src/social/config.js` under
    `PLATFORMS`, giving its label, its character limit, whether it needs an image,
    and how many hashtags it takes. Add `delivery` only if it is not the rail.
@@ -617,6 +618,52 @@ The senders are the only place besides the config allowed to know a platform by
 name. `distribute.js` looks a sender up by delivery name and never learns which
 platform it is carrying, which is what keeps send-exactly-once decided in one
 place no matter how a post leaves the house.
+
+## Instagram, and Glotemp's cities
+
+Instagram is four platform keys rather than one, because a Reel caption, a
+carousel, a still and a Story are four different jobs and the Graph API takes a
+different `media_type` for each:
+
+| Platform key | Label | `media_type` | Aims at | Reaches |
+| --- | --- | --- | --- | --- |
+| `instagram_reel` | Instagram Reel | `REELS` | 220 chars | people who do not follow the account |
+| `instagram_carousel` | Instagram carousel | `CAROUSEL` | 400 chars | followers, plus a second showing on an unfinished swipe |
+| `instagram` | Instagram feed | `IMAGE` | 900 chars | followers |
+| `instagram_story` | Instagram Story | `STORIES` | 90 chars | followers, for 24 hours |
+
+Every one of them is free, which is the point: this uses what the platform gives
+away rather than buying reach. The Reel carries the heaviest cadence because it
+is the only one of the four still shown to people who do not already follow.
+
+**What Make needs.** One branch per key on the existing webhook, routing on
+`platform` exactly as the others do. The payload carries `media_type` ready to
+pass straight into the media container, so a branch maps a field rather than
+keeping its own table of which key means which upload. `surface`, `city` and
+`language` ride along for routing or simply for a legible execution log.
+
+**Cities and languages.** For a venture that has rows in the city register,
+Glotemp being the one that does, every Instagram post is about one city and is
+written in that city's own language, with an English companion behind it as a
+second post rather than a replacement. The register has carried a language per
+city since it was imported; this is the first thing besides outreach email that
+reads it. Eight languages are written: English, Spanish, Greek, Croatian, Dutch,
+Icelandic, French and Japanese. A city recorded as anything else is written in
+English with the gap noted on the card, so it shows on the desk rather than only
+in the code. A venture with no register, SetPostGo for instance, posts to
+Instagram exactly as it always did, with no city and no change.
+
+The rota lives in `worker/src/social/instagram.js`. It walks the cities in
+register order and rotates the surface, and its cursor is kept in `firm_settings`
+so a redeploy or a missed morning continues the queue instead of handing the same
+cities another turn. The one subtlety worth knowing: the daily step is nudged to
+stay coprime with the number of cities, because the obvious walk pins a city to
+one surface for ever whenever the two counts share a factor, and does it
+invisibly, since every individual day still looks varied.
+
+Turning it on for a database that already exists is `applyPlatformAdditions` in
+`db.js`: strictly additive, recorded in `firm_settings`, and run exactly once, so
+turning Instagram off from the admin afterwards stays off.
 
 ## Outreach
 
@@ -735,6 +782,16 @@ statement about the town. Neither version drops the pressure.
 suppresses the address and withdraws anything still queued to it. A reply of
 STOP goes through the same door. A promise the system cannot keep is a promise
 the house should not make.
+
+**The one call the brief allows.** No first email asks for a call, except the
+agency one to an agency of five people or more, which the owner's own brief
+permits. `callPermitted` grants it, and grants it on evidence rather than on
+which template a sender picked: the message has to be the agency one, a
+headcount has to actually be recorded on the lead, and it has to be five or
+more. An unrecorded headcount is a refusal, not a maybe, because the small
+operator is exactly who the rule protects. When it is granted the draft says so
+on its face, since a permission this narrow is otherwise one an agent either
+forgets he has or assumes he has everywhere.
 
 ## Checking it yourself
 
