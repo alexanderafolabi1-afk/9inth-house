@@ -23,6 +23,7 @@ import {
   getVenture, listVentures, claimNextDue, releaseStrandedClaims, releaseClaim, markPosted
 } from './social/db.js';
 import { pageFor } from './social/pages.js';
+import { buildCommentary } from './social/senders/linkedin.js';
 import { seedNinthHousePosts } from './social/seeds/ninth-house-linkedin.js';
 import { runFactsSweep } from './social/facts.js';
 import { seedOutreach, dueMessages } from './social/outreach.js';
@@ -1743,6 +1744,13 @@ export default {
           platform: post.platform,
           category: post.category,
           text: post.text,
+          // The same text, escaped for LinkedIn's Little Text Format, which is
+          // what the commentary field actually accepts. The Worker's own sender
+          // has always run text through this; an external rail reading `text`
+          // straight out of the queue was bypassing it, and an unescaped @ in a
+          // signature line like hello@9thpoint.com reads to LinkedIn as the
+          // start of a mention it cannot resolve. Send this one, not `text`.
+          commentary: post.platform === 'linkedin' ? buildCommentary(post) : post.text,
           image_url: post.image_url,
           link: post.link,
           scheduled_for: post.scheduled_for
