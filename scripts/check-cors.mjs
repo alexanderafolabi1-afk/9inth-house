@@ -36,6 +36,7 @@
 
 import { spawn } from 'node:child_process';
 import { setTimeout as sleep } from 'node:timers/promises';
+import { KNOWN_DESK_ORIGINS } from '../worker/src/origins.js';
 
 const WORKER_DIR = new URL('../worker/', import.meta.url).pathname;
 const PORT = 18787 + (process.pid % 500); // spread out to dodge a leftover listener on a re-run
@@ -97,13 +98,15 @@ async function corsRequest(method, origin) {
 }
 
 try {
-  // The two origins DESK_ORIGIN actually names in wrangler.toml. Read from
-  // there rather than hardcoded twice, so this test fails loudly if the
-  // configured origins and this test's expectations ever drift apart.
-  const wranglerToml = await (await import('node:fs/promises')).readFile(WORKER_DIR + 'wrangler.toml', 'utf8');
-  const match = wranglerToml.match(/DESK_ORIGIN\s*=\s*"([^"]+)"/);
-  const configuredOrigins = match ? match[1].split(',').map((s) => s.trim()) : ['https://9thpoint.com', 'https://www.9thpoint.com'];
-  check('wrangler.toml actually pins DESK_ORIGIN (not left to the code default)', Boolean(match), wranglerToml.slice(0, 200));
+  // The two origins this Worker guarantees unconditionally, imported
+  // straight from the code that enforces them (worker/src/origins.js)
+  // rather than duplicated here, so this test fails loudly the moment the
+  // guaranteed list and this test's expectations ever drift apart. This
+  // used to read DESK_ORIGIN out of wrangler.toml instead; that variable is
+  // gone (see the comment in wrangler.toml explaining why), precisely
+  // because a value only wrangler.toml or the Cloudflare dashboard knew
+  // about was the fragility this whole file exists to catch.
+  const configuredOrigins = KNOWN_DESK_ORIGINS;
 
   for (const origin of configuredOrigins) {
     const preflight = await corsRequest('OPTIONS', origin);

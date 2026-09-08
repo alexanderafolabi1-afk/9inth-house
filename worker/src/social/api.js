@@ -67,8 +67,11 @@ import { ingestMetrics, ventureSummary } from './metrics.js';
 import { getVapidKeys, pushConfigured, notifyOwner } from './push.js';
 import { sanitiseSocialText, hasDashPunctuation, stripDashPunctuation } from './text.js';
 import { requireSession, getOrCreateN8nToken, regenerateN8nToken } from '../auth.js';
+import { KNOWN_DESK_ORIGINS, allowedOrigins, extraOrigins, setExtraOrigins } from '../origins.js';
 
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' };
+
+export { allowedOrigins };
 
 // One place decides who may call this API from a browser. Anything not on the
 // list gets no CORS headers at all, which is what a browser needs in order to
@@ -77,15 +80,13 @@ const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8', 'cache
 // 9thpoint.com's point of view, so every route in the Worker needs these
 // headers available, not only the ones under /social; index.js applies this
 // same function to everything it answers, see the fetch wrapper there.
-export function allowedOrigins(env) {
-  const raw = env.DESK_ORIGIN || 'https://9thpoint.com,https://www.9thpoint.com';
-  return raw.split(',').map((s) => s.trim()).filter(Boolean);
-}
-
-export function corsHeaders(request, env) {
+// Async because allowedOrigins() reads KV for any admin-added extra origin;
+// see worker/src/origins.js for why the two real origins never depend on
+// that read succeeding at all.
+export async function corsHeaders(request, env) {
   const origin = request.headers.get('Origin');
   const headers = { 'Vary': 'Origin' };
-  if (origin && allowedOrigins(env).includes(origin)) {
+  if (origin && (await allowedOrigins(env)).includes(origin)) {
     headers['Access-Control-Allow-Origin'] = origin;
     headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS';
     // Authorization is what carries the bearer session token (see
@@ -101,10 +102,14 @@ export function corsHeaders(request, env) {
   return headers;
 }
 
-function json(request, env, body, status = 200) {
+// Returning a Promise from an async function's own return statement is
+// adopted, not double-wrapped, so every one of this file's many
+// `return json(...)` call sites needed no change to become correct once
+// corsHeaders became async: json() itself is the only place that awaits it.
+async function json(request, env, body, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...JSON_HEADERS, ...corsHeaders(request, env) }
+    headers: { ...JSON_HEADERS, ...(await corsHeaders(request, env)) }
   });
 }
 
@@ -138,7 +143,7 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
   const path = url.pathname.replace(/\/+$/, '') || '/social';
 
   if (request.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers: corsHeaders(request, env) });
+    return new Response(null, { status: 204, headers: await corsHeaders(request, env) });
   }
 
   if (!(await requireSession(request, env))) {
@@ -158,7 +163,7 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
     '/social/push/keys', '/social/selfcheck',
     '/social/n8n-token', '/social/n8n-token/regenerate',
     '/social/anthropic-key', '/social/credentials', '/social/n8n-webhook',
-    '/social/postal-address'
+    '/social/postal-address', '/social/origins'
   ];
   const needsStore = !noStoreNeeded.includes(path);
   if (needsStore && !hasStore(env)) return noStore(request, env);
@@ -179,6 +184,8 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
         // Proves the configuration rather than asserting it, including the dash
         // rule, which is checked against a string that deliberately breaks it.
         const probe = stripDashPunctuation('One thing, then, another, and a third');
+        const originsNow = await allowedOrigins(env);
+        const requestOrigin = request.headers.get('Origin');
         return json(request, env, {
           ok: true,
           storage: hasStore(env),
@@ -191,8 +198,35 @@ export async function handleSocial(request, env, ctx, { ask, gatherArticles }) {
           loginRateLimit: Boolean(env.LOGIN_ATTEMPTS),
           platforms: platformKeys(),
           dashRuleHolds: !hasDashPunctuation(probe),
-          allowedOrigins: allowedOrigins(env)
+          allowedOrigins: originsNow,
+          // Whether THIS caller's own origin, if it sent one, is on the
+          // list. desk.html only ever gets an answer to this at all if the
+          // preflight already let the request through, so a false here
+          // would mean the guaranteed baseline in worker/src/origins.js
+          // itself is broken, not a KV or dashboard drift.
+          requestOriginAccepted: requestOrigin ? originsNow.includes(requestOrigin) : null
         });
+      }
+
+      // The admin's own view of who may call it: the guaranteed baseline
+      // that ships with the code (never editable, never able to be
+      // subtracted from), and whatever extra origins have been added from
+      // here, held in KV. See worker/src/origins.js.
+      case 'GET /social/origins': {
+        return json(request, env, {
+          ok: true,
+          knownOrigins: KNOWN_DESK_ORIGINS,
+          extraOrigins: await extraOrigins(env)
+        });
+      }
+
+      case 'POST /social/origins': {
+        try {
+          const list = await setExtraOrigins(env, Array.isArray(body.origins) ? body.origins : []);
+          return json(request, env, { ok: true, knownOrigins: KNOWN_DESK_ORIGINS, extraOrigins: list });
+        } catch (e) {
+          return json(request, env, { ok: false, error: e.message || String(e) }, 400);
+        }
       }
 
       /* ---- the queue ---- */
