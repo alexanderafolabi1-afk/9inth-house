@@ -763,6 +763,28 @@ await test('the rail address is checked before it is stored, and is settable at 
   assert.ok(editor.problems.join(' ').length > 30, 'a refusal has to say what to do instead');
 });
 
+await test('the hint never prints a short secret in full', () => {
+  // The hint exists to tell one hook from another at a glance. The trap is
+  // that the last six characters of a six character token is the token, and
+  // anyone holding a Make hook address can post as the house with it. So the
+  // tail is shown only when withholding the rest still withholds something.
+  // Asserted as "the hint is the host and nothing else" rather than "the
+  // secret does not appear in the string": a one character secret like "a"
+  // appears in the hostname itself, so the looser assertion passes whatever
+  // the code does.
+  for (const secret of ['a', 'ab', 'abc123', 'abcdef', 'abcdefghij', 'abcdefghijklmno']) {
+    const hint = describeMakeWebhookUrl(`https://hook.eu1.make.com/${secret}`).hint;
+    assert.equal(hint, 'hook.eu1.make.com', `a ${secret.length} character secret got a tail: ${hint}`);
+  }
+  // A real Make token is thirty two characters, and is worth hinting at.
+  const real = describeMakeWebhookUrl('https://hook.eu1.make.com/crtgybmve3qxcwj42q6cm14xqa5w5xia');
+  assert.equal(real.hint, 'hook.eu1.make.com/...5w5xia');
+  assert.ok(!real.hint.includes('crtgybmve3qxcwj42q6cm14xqa5w5xia'));
+  // The threshold itself, from both sides.
+  assert.equal(describeMakeWebhookUrl('https://hook.eu1.make.com/abcdefghijklmnop').hint, 'hook.eu1.make.com/...klmnop');
+  assert.equal(describeMakeWebhookUrl('https://hook.eu1.make.com/abcdefghijklmno').hint, 'hook.eu1.make.com');
+});
+
 /* ---------- Instagram ---------- */
 
 await test('Instagram is four platforms, each carrying the media type its API takes', () => {

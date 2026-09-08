@@ -19,10 +19,30 @@
 
 const MAKE_KV_KEY = 'make:webhook_url:v1';
 
+// Every address in this file passes through here first.
+//
+// describeMakeWebhookUrl has always trimmed before validating, and the readers
+// did not, which is a disagreement with real consequences. An address pasted
+// with a trailing newline, which is what copying out of a Make panel tends to
+// give you, validated clean and was then handed to fetch with the newline still
+// on it. Worse, a value that is nothing but whitespace read as set: the status
+// below reported the rail configured and not editable, so the desk hid the
+// field, and the owner was left looking at a rail that could never publish and
+// no way to correct it.
+//
+// One accessor, one answer, and whitespace only is the same as nothing.
+function tidy(value) {
+  return String(value === undefined || value === null ? '' : value).trim();
+}
+
 export async function getMakeWebhookUrl(env) {
-  if (env && env.MAKE_WEBHOOK_URL) return String(env.MAKE_WEBHOOK_URL);
+  const fromEnv = tidy(env && env.MAKE_WEBHOOK_URL);
+  if (fromEnv) return fromEnv;
   if (!env || !env.LOGIN_ATTEMPTS) return '';
-  return (await env.LOGIN_ATTEMPTS.get(MAKE_KV_KEY)) || '';
+  // Trimmed on the way out as well as the way in: setMakeWebhookUrl has always
+  // trimmed before storing, but a value written by hand or by an older version
+  // has not necessarily been through it.
+  return tidy(await env.LOGIN_ATTEMPTS.get(MAKE_KV_KEY));
 }
 
 export async function setMakeWebhookUrl(env, url) {
@@ -41,18 +61,44 @@ export async function setMakeWebhookUrl(env, url) {
 // from the desk, so the desk has to say so rather than offering a field that
 // silently loses to an environment variable.
 export async function makeWebhookStatus(env) {
-  const fromEnv = Boolean(env && env.MAKE_WEBHOOK_URL);
+  // Trimmed, so an environment variable holding nothing but whitespace counts
+  // as absent rather than as an address. Untrimmed it read as set, which made
+  // the rail look configured, marked it not editable, and hid the only field
+  // that could have fixed it.
+  const fromEnv = tidy(env && env.MAKE_WEBHOOK_URL);
   const stored = (!fromEnv && env && env.LOGIN_ATTEMPTS)
-    ? (await env.LOGIN_ATTEMPTS.get(MAKE_KV_KEY)) || ''
+    ? tidy(await env.LOGIN_ATTEMPTS.get(MAKE_KV_KEY))
     : '';
   return {
-    configured: fromEnv || Boolean(stored),
+    configured: Boolean(fromEnv || stored),
     source: fromEnv ? 'worker' : (stored ? 'desk' : 'none'),
     // Enough to recognise which hook is set without printing the address,
     // since anyone holding it can post as the house.
-    hint: describeMakeWebhookUrl(fromEnv ? String(env.MAKE_WEBHOOK_URL) : stored).hint,
+    hint: describeMakeWebhookUrl(fromEnv || stored).hint,
     editable: !fromEnv && Boolean(env && env.LOGIN_ATTEMPTS)
   };
+}
+
+// How much of the address the desk is allowed to show.
+//
+// The point of a hint is to tell one hook from another at a glance, and the
+// last few characters do that. The trap is that "the last few characters" of a
+// short secret is the whole secret: a six character token printed six
+// characters at a time is not a hint, it is the credential, and anyone holding
+// a Make hook address can post as the house with it.
+//
+// So the tail is shown only when withholding the rest still leaves something
+// worth withholding. A real Make hook token is thirty two characters, so the
+// threshold costs nothing in practice and closes the case where a short or
+// wrong value would otherwise be printed in full. Below it the host alone is
+// the hint, which still says which Make region is configured.
+const HINT_TAIL = 6;
+const HINT_MIN_SECRET = 16;
+
+export function hintFor(url) {
+  const tail = url.pathname.replace(/\/+$/, '').split('/').pop() || '';
+  if (tail.length < HINT_MIN_SECRET) return url.hostname;
+  return `${url.hostname}/...${tail.slice(-HINT_TAIL)}`;
 }
 
 // Says what is wrong with an address before it is saved.
@@ -95,10 +141,5 @@ export function describeMakeWebhookUrl(raw) {
     warnings.push('A Make hook address normally begins hook. followed by the region, for example hook.eu1.make.com. Check this is the address the webhook module shows.');
   }
 
-  // The last few characters only. Enough to tell one hook from another on the
-  // desk, useless to anyone who reads it over a shoulder.
-  const tail = url.pathname.replace(/\/+$/, '').split('/').pop() || '';
-  const hint = tail ? `${url.hostname}/...${tail.slice(-6)}` : url.hostname;
-
-  return { ok: problems.length === 0, empty: false, problems, warnings, hint };
+  return { ok: problems.length === 0, empty: false, problems, warnings, hint: hintFor(url) };
 }
