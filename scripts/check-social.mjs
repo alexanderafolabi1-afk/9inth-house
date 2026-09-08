@@ -724,11 +724,23 @@ await test('Instagram is four platforms, each carrying the media type its API ta
   assert.deepEqual(kinds, ['CAROUSEL', 'IMAGE', 'REELS', 'STORIES']);
   for (const key of family) {
     assert.ok(PLATFORMS[key].imageRequired, `${key} must demand media`);
-    assert.ok(PLATFORMS[key].automated !== false, `${key} must be sendable on the rail`);
     assert.ok(PLATFORMS[key].target < PLATFORMS[key].limit, `${key} aims at its own ceiling`);
     assert.ok(isIgPlatform(key));
   }
   assert.equal(isIgPlatform('linkedin'), false);
+
+  // The three Make can actually publish, and the one it cannot. Make's
+  // Instagram Business app has no module that creates a Story and no generic
+  // API call module either, and underneath that the Graph API cannot place a
+  // poll or a question sticker on one at all, because stickers are app only.
+  // A Story is therefore posted by hand, and marking it automated would mean
+  // the rail silently failing on a quarter of the Instagram queue.
+  for (const key of ['instagram_reel', 'instagram_carousel', 'instagram']) {
+    assert.ok(PLATFORMS[key].automated !== false, `${key} must be sendable on the rail`);
+  }
+  assert.equal(PLATFORMS.instagram_story.automated, false, 'a Story cannot be published by the rail');
+  assert.ok(validateForSend({ platform: 'instagram_story', category: 'short_form', text: 'x', image_url: 'https://e/x.jpg' })
+    .some((p) => /manual delivery/.test(p)), 'a Story must be refused before it reaches the webhook');
 });
 
 await test('the city language leads and English follows as a second post', () => {

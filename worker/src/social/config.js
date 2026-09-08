@@ -110,7 +110,25 @@ export const PLATFORMS = {
     imageRequired: true,
     ephemeral: true,
     hashtags: { max: 1, style: 'one tag at most, set on the image' },
-    guidance: 'Twenty four hours and then gone, and there is no caption box: what you write is set on the image. Short enough to read without stopping. Name one free interactive sticker in a line prefixed "STICKER:", chosen from poll, question, quiz, slider or countdown, and make the sticker the point of the frame rather than decoration on it.'
+    // Posted by hand, and this is not a gap waiting to be closed.
+    //
+    // Two separate walls, either of which would be enough. Make's Instagram
+    // Business app has no module that publishes a Story: it can create a Reel,
+    // a carousel and a photo post, and it can list stories, but it cannot make
+    // one, and it has no generic API call module to fall back to (checked
+    // against the app's full module list, deprecated and private included, on
+    // 8 Sep 2026). And underneath that, the Graph API cannot place a poll, a
+    // question, a quiz, a slider or a countdown on a Story at all. Stickers are
+    // app only. An automated Story would therefore be a still frame with no
+    // sticker on it, which is the one thing this surface exists not to be.
+    //
+    // So the engine writes the frame and the sticker and a human places it,
+    // which takes about fifteen seconds on the phone that was going to be
+    // holding the picture anyway. Same mechanism as X: distribute.js refuses to
+    // send anything marked automated: false before it reaches the rail, and the
+    // desk offers Copy instead of Approve.
+    automated: false,
+    guidance: 'Twenty four hours and then gone, and there is no caption box: what you write is set on the image. Short enough to read without stopping. Name one free interactive sticker in a line prefixed "STICKER:", chosen from poll, question, quiz, slider or countdown, and make the sticker the point of the frame rather than decoration on it. This one is placed by hand on the phone, so write it as the instruction for that: the line for the frame, and the sticker to put on it.'
   },
   facebook: {
     label: 'Facebook',

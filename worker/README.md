@@ -636,11 +636,29 @@ Every one of them is free, which is the point: this uses what the platform gives
 away rather than buying reach. The Reel carries the heaviest cadence because it
 is the only one of the four still shown to people who do not already follow.
 
-**What Make needs.** One branch per key on the existing webhook, routing on
-`platform` exactly as the others do. The payload carries `media_type` ready to
-pass straight into the media container, so a branch maps a field rather than
-keeping its own table of which key means which upload. `surface`, `city` and
-`language` ride along for routing or simply for a legible execution log.
+**What Make needs.** Three branches on the existing webhook, for the Reel, the
+carousel and the feed image, routing on `platform` exactly as the others do. The
+payload carries `media_type` ready to pass straight into the media container, so
+a branch maps a field rather than keeping its own table of which key means which
+upload. `surface`, `city` and `language` ride along for routing or simply for a
+legible execution log. The Glotemp Make account's Facebook connection already
+carries `instagram_basic`, `instagram_content_publish` and
+`instagram_manage_insights`, which is everything those three need, and the
+matching modules are `CreateAReelPost`, `CreateCarouselPhoto` and
+`CreatePostPhoto` on the native Instagram Business app.
+
+**The Story is posted by hand, and that is not a gap waiting to be closed.** Two
+separate walls. Make's Instagram Business app has no module that publishes a
+Story: it creates Reels, carousels and photo posts, it lists stories, and it
+cannot make one, with no generic API call module to fall back on. And underneath
+that, the Graph API cannot place a poll, question, quiz, slider or countdown on
+a Story at all, because stickers are app only. An automated Story would be a
+still frame with no sticker, which is the one thing this surface exists not to
+be. So `instagram_story` is marked `automated: false`, the same as X:
+`distribute.js` refuses it before the rail, the desk offers Copy instead of
+Approve, and the card carries the line for the frame and the sticker to place
+on it. It takes about fifteen seconds on the phone that was holding the picture
+anyway.
 
 **Cities and languages.** For a venture that has rows in the city register,
 Glotemp being the one that does, every Instagram post is about one city and is
